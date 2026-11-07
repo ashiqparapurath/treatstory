@@ -6,6 +6,7 @@ import { SellerStorefrontProducts } from '@/components/seller-storefront-product
 import { ProductGridContainer } from '@/components/product-grid';
 import Link from 'next/link';
 import Image from 'next/image';
+import { OptimizedImage } from '@/components/optimized-image';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,7 +48,7 @@ function BannerCarousel() {
           <CarouselItem key={banner.id}>
             <Card className="overflow-hidden rounded-[24px] border-0 shadow-none">
               <CardContent className="relative flex h-56 items-center justify-center p-0 md:h-72 lg:h-[340px]">
-                <Image src={banner.imageUrl} alt={banner.title} fill sizes="100vw" className="object-cover" />
+                <OptimizedImage src={banner.imageUrl} alt={banner.title} fill sizes="100vw" className="object-cover" />
                 <div className="absolute inset-0 bg-black/40" />
                 <div className="relative max-w-2xl px-5 text-center text-white sm:px-10">
                   <p className="eyebrow text-white/80">The TreatStory edit</p>
