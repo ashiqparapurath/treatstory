@@ -25,6 +25,7 @@ export interface Seller {
   description: string;
   contactEmail: string;
   contactPhone: string;
+  whatsappNumber?: string;
   logoUrl?: string;
   coverUrl?: string;
   isOpen: boolean;
@@ -54,6 +55,7 @@ export interface MarketplaceProduct {
   weightValue?: number;
   weightUnit?: 'g' | 'kg' | 'ml' | 'l' | 'pieces';
   careInstructions?: string;
+  weightOptions?: Array<{value:number;unit:'g'|'kg'|'ml'|'l'|'pieces'}>;
   customizationOptions?: string[];
   stockQuantity?: number;
 }

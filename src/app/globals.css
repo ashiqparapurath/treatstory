@@ -97,3 +97,24 @@ nav a[aria-current="page"] { color: hsl(var(--foreground)); text-decoration: und
   html { scroll-behavior: auto !important; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+
+
+/* Product imagery moves softly between photos; touch users swipe instead of using arrows. */
+@keyframes treatstory-photo-next {
+  from { opacity: .32; transform: translateX(12%) scale(1.035); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes treatstory-photo-previous {
+  from { opacity: .32; transform: translateX(-12%) scale(1.035); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+.treatstory-photo-next { animation: treatstory-photo-next 330ms cubic-bezier(.2,.75,.25,1) both; }
+.treatstory-photo-previous { animation: treatstory-photo-previous 330ms cubic-bezier(.2,.75,.25,1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .treatstory-photo-next, .treatstory-photo-previous { animation: none; }
+}
+/* Avoid a 1–2px horizontal shift when dashboard tabs have different heights. */
+@media (min-width: 768px) {
+  html { scrollbar-gutter: stable; }
+}
+.seller-workspace { overflow-x: clip; }

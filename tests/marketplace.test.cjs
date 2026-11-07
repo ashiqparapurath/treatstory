@@ -148,6 +148,11 @@ test('seller product card cycles two separately supplied image URLs and opens a 
   const { SellerProductCard } = load('src/components/seller-product-card.tsx', {
     'next/link': 'a',
     '@/components/product-image': { ProductImage: props => React.createElement('img', props) },
+    '@/hooks/use-product-gallery': { useProductGallery: length => {
+      const [index, setIndex] = React.useState(0);
+      return { index, direction: 'next', move: delta => setIndex(n => (n + delta + length) % length),
+        select: setIndex, onTouchStart() {}, onTouchEnd() {}, onClickCapture() {} };
+    } },
   });
   const product = {
     id: 'cake-1', sellerId: 'seller-a', name: 'Red Velvet Cake',
@@ -157,7 +162,7 @@ test('seller product card cycles two separately supplied image URLs and opens a 
   let tree;
   act(() => { tree = create(React.createElement(SellerProductCard, { product, addToBag: () => {}, buyNow: () => {} })); });
   assert.equal(tree.root.findAllByType('img')[0].props.src, product.imageUrls[0]);
-  assert.equal(tree.root.findByType('a').props.href, '/product/seller%3Acake-1');
+  assert.equal(tree.root.findByType('a').props.href, '/product/seller:cake-1');
   const next = tree.root.findAllByType('button').find(b => b.props['aria-label'] === 'Next photo of Red Velvet Cake');
   assert.ok(next, 'multi-photo card exposes a next-photo button');
   act(() => next.props.onClick({ preventDefault() {}, stopPropagation() {} }));

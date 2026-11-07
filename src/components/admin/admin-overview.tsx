@@ -31,8 +31,13 @@ export function AdminOverview({ navigate }: { navigate?: (tab: string) => void }
 
   // Only the five newest pending applications are streamed. Other figures are
   // server-side aggregations, not document downloads or approximate revenue.
-  const queueQuery = useMemoFirebase(() => db ? query(collection(db, 'seller_applications'), where('status', '==', 'pending'), orderBy('submittedAt', 'desc'), limit(5)) : null, [db]);
+  const queueQuery = useMemoFirebase(() => db ? query(collection(db, 'seller_applications'), where('status', '==', 'pending'), limit(20)) : null, [db]);
   const { data: queue, isLoading: queueLoading, error: queueError, retry: retryQueue } = useCollection<SellerApplication>(queueQuery);
+  // A single-field status index is automatic; sort the small bounded queue client-side.
+  const recentQueue = [...(queue ?? [])].sort((a,b) => {
+    const value = (v: unknown) => (v as { toMillis?: () => number } | null)?.toMillis?.() ?? 0;
+    return value(b.submittedAt) - value(a.submittedAt);
+  }).slice(0,5);
 
   useEffect(() => {
     if (!db) return;
@@ -84,7 +89,7 @@ export function AdminOverview({ navigate }: { navigate?: (tab: string) => void }
     </div>
     <div className="grid gap-5 xl:grid-cols-[1.2fr_1fr]">
       <div className="rounded-2xl border border-[#e8e1d6] bg-white p-5 sm:p-7"><div className="flex items-center justify-between"><div><p className="text-xs font-medium text-[#a68a64]">Seller onboarding</p><h3 className="mt-1 text-xl font-medium">Applications queue</h3></div><ClipboardList className="h-5 w-5 text-[#a68a64]" /></div>
-        <div className="mt-5 space-y-3">{queueError ? <button className="text-xs underline" onClick={retryQueue}>Could not load applications · Retry</button> : queueLoading ? <p className="text-sm text-muted-foreground">Loading recent applications…</p> : !queue?.length ? <p className="rounded-xl bg-[#f7f5f1] p-4 text-sm text-muted-foreground">No applications awaiting review.</p> : queue.map(a => <div key={a.id} className="flex items-center justify-between gap-3 border-b pb-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{a.businessName}</p><p className="mt-1 text-xs text-muted-foreground">{a.businessCategory} · {a.contactEmail}</p></div><span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-medium text-amber-800">Pending</span></div>)}</div>
+        <div className="mt-5 space-y-3">{queueError ? <button className="text-xs underline" onClick={retryQueue}>Application queue unavailable ({(queueError as { code?: string }).code || 'unknown'}) · Retry</button> : queueLoading ? <p className="text-sm text-muted-foreground">Loading recent applications…</p> : !queue?.length ? <p className="rounded-xl bg-[#f7f5f1] p-4 text-sm text-muted-foreground">No applications awaiting review.</p> : recentQueue.map(a => <div key={a.id} className="flex items-center justify-between gap-3 border-b pb-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{a.businessName}</p><p className="mt-1 text-xs text-muted-foreground">{a.businessCategory} · {a.contactEmail}</p></div><span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-medium text-amber-800">Pending</span></div>)}</div>
         <button onClick={() => navigate?.('applications')} className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#856b48] hover:underline">Review all applications <ArrowUpRight className="h-4 w-4" /></button>
       </div>
       <div className="rounded-2xl border border-[#e8e1d6] bg-white p-5 sm:p-7"><div className="flex items-center justify-between"><div><p className="text-xs font-medium text-[#a68a64]">Business mix</p><h3 className="mt-1 text-xl font-medium">Seller categories</h3></div><Layers3 className="h-5 w-5 text-[#a68a64]" /></div>
