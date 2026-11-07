@@ -10,12 +10,15 @@ In **Vercel → TreatStory Project → Settings → Environment Variables**, con
 
 | Name | Example | Location |
 |---|---|---|
-| `CLOUDINARY_CLOUD_NAME` | `your-cloud-name` | Server only |
+| `CLOUDINARY_CLOUD_NAME` | `your-cloud-name` | Server upload API |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Same Cloud name | Public image delivery SDK |
 | `CLOUDINARY_API_KEY` | Your API key | Server only |
 | `CLOUDINARY_API_SECRET` | Your API secret | **Secret; server only** |
 | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | `treatstory-online` | Existing Firebase client project ID |
 
 Use **Preview** for the PR preview deployment; select Production when ready to merge. Redeploy after setting or updating environment variables. **Never** prefix the API secret with `NEXT_PUBLIC_`, paste it into Firestore, send it in chat, or commit it to GitHub.
+
+For **Next.js 15**, we install the compatible **`next-cloudinary@6.19.3`** SDK (version 7 requires Next.js 16+). Its `CldImage` component optimizes new Cloudinary banner and product photos using automatic quality/format and responsive sizes. Legacy image sources continue to work through the Next.js Image fallback. The Cloud name is safe to expose publicly; never expose the API secret.
 
 This implementation uses an authenticated **server-side upload proxy** with Cloudinary Basic Auth. **Do not create an unsigned upload preset.** It verifies a Firebase Auth ID token with Firebase Admin and checks the current user's Firestore role with the same bearer token:
 - Homepage `banner` images: only users with `roles_admin/{uid}`.
@@ -45,7 +48,7 @@ Cloudinary replaces Firebase Storage **for new banner and product image uploads*
 
 ## 4. Test before merging
 
-1. In Vercel, configure the three Cloudinary environment variables for the PR preview and redeploy the latest commit.
+1. In Vercel, configure all four Cloudinary environment variables (including `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`) for the PR preview and redeploy the latest commit.
 2. As a verified admin, add a new banner from a JPG under 1 MB; it should appear in Firestore as an `https://res.cloudinary.com/...` URL and display on the homepage.
 3. As an active seller, upload two different product photos, rearrange them, publish, and verify the card/detail galleries work on phone and desktop.
 4. As an admin managing legacy products, test the gallery upload in the admin product editor.
