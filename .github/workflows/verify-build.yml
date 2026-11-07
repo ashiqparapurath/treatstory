@@ -5,8 +5,6 @@ on:
     branches: [multi-vendor-foundation]
   pull_request:
 
-permissions:
-  contents: write
 
 jobs:
   build:
@@ -14,24 +12,11 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
-      - name: Update next-cloudinary dependency lockfile
-        if: github.event_name == 'pull_request' && github.head_ref == 'feature/mobile-seller-catalog-checkout'
-        run: |
-          npm install --package-lock-only --ignore-scripts
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          if ! git diff --quiet package-lock.json; then
-            git add package-lock.json
-            git commit -m "Lock Next.js 15 compatible Cloudinary SDK dependencies"
-            git push origin HEAD:${{ github.head_ref }}
-          fi
       - name: Install dependencies
         run: npm ci
       - name: Regression tests
