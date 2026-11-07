@@ -230,3 +230,24 @@ test('Admin and seller photo forms save only Cloudinary image URLs to Firestore'
   assert.equal(pkg.dependencies['firebase-admin'], lock.packages[''].dependencies['firebase-admin']);
 });
 
+
+
+test('Next.js 15 uses compatible Cloudinary SDK for optimized images with legacy fallback', () => {
+  const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+  assert.equal(pkg.dependencies['next-cloudinary'], '6.19.3');
+  assert.equal(lock.packages['node_modules/next-cloudinary'].version, '6.19.3');
+
+  const image = fs.readFileSync('src/components/optimized-image.tsx', 'utf8');
+  assert.match(image, /import \{ CldImage \} from 'next-cloudinary'/);
+  assert.match(image, /NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME/);
+  assert.match(image, /https:\\\/\\\/res\\\.cloudinary/);
+  assert.match(image, /<CldImage/);
+  assert.match(image, /<Image/);
+  const product = fs.readFileSync('src/components/product-image.tsx', 'utf8');
+  assert.match(product, /OptimizedImage/);
+  const home = fs.readFileSync('src/app/page.tsx', 'utf8');
+  assert.match(home, /<OptimizedImage src=\{banner\.imageUrl\}/);
+  const banners = fs.readFileSync('src/components/admin/banner-list.tsx', 'utf8');
+  assert.match(banners, /<OptimizedImage src=\{banner\.imageUrl\}/);
+});
