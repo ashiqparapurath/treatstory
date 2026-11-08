@@ -355,6 +355,8 @@ test('checkout reuses the saved PIN and accepts address changes from a popup', a
   assert.equal(tree.root.findByProps({role:'dialog'}).props.role, 'dialog');
   act(() => tree.root.findAllByType('button').find(n => n.props.children === 'Use this address').props.onClick());
   assert.equal(tree.root.findAllByProps({role:'dialog'}).length, 0);
+  assert.equal(tree.root.findAllByType('button').find(n => n.props.type === 'submit').props.disabled, true);
+  act(() => tree.root.findAllByType('input').find(n => n.props.type === 'radio' && n.props.value === 'cod').props.onChange());
   await act(async () => { await tree.root.findByType('form').props.onSubmit({preventDefault(){}}); });
   // A valid PIN passes local validation and reaches checkout, rather than the PIN error.
   assert.equal(sent.pincode, '680001');
@@ -366,6 +368,8 @@ test('checkout reuses the saved PIN and accepts address changes from a popup', a
   await act(async () => { tree = create(React.createElement(CreatorCheckout)); });
   const place = tree.root.findAllByType('button').find(n => n.props.type === 'submit');
   assert.equal(place.props.disabled, true, 'advance must be acknowledged before ordering');
+  assert.equal(tree.root.findAllByType('input').filter(n => n.props.type === 'checkbox').length, 0, 'advance notice stays hidden until COD is selected');
+  act(() => tree.root.findAllByType('input').find(n => n.props.type === 'radio' && n.props.value === 'cod').props.onChange());
   const acknowledgement = tree.root.findAllByType('input').find(n => n.props.type === 'checkbox');
   act(() => acknowledgement.props.onChange({target:{checked:true}}));
   assert.equal(tree.root.findAllByType('button').find(n => n.props.type === 'submit').props.disabled, false);

@@ -27,7 +27,8 @@ function HomePageContent() {
 
   if (error) return <LoadError retry={retry} />;
   if (isLoading) return <ProductGridSkeleton count={8} />;
-  return <ProductGridContainer products={products || []} />;
+  if (!products?.length) return null;
+  return <ProductGridContainer products={products} />;
 }
 
 function BannerCarousel() {
