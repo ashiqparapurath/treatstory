@@ -15,12 +15,15 @@ export type ProductDraft = {
   imageUrls: string; availability: MarketplaceProduct['availability']; stockQuantity: string;
   preparationDays: string; minimumOrderQuantity: string; weightValue: string; weightUnit: WeightUnit;
   weightOptions: WeightOptionDraft[]; customizationOptions: string; careInstructions: string;
+  ingredients: string; allergens: string; dietaryTags: string; shelfLifeDays: string; storageInstructions: string;
   showPrice: boolean; status: 'draft' | 'published';
 };
 export const emptyDraft: ProductDraft = {
   name: '', description: '', category: '', price: '', imageUrls: '', availability: 'available',
   stockQuantity: '', preparationDays: '', minimumOrderQuantity: '1', weightValue: '', weightUnit: 'g',
-  weightOptions: [], customizationOptions: '', careInstructions: '', showPrice: true, status: 'draft'
+  weightOptions: [], customizationOptions: '', careInstructions: '',
+  ingredients: '', allergens: '', dietaryTags: '', shelfLifeDays: '', storageInstructions: '',
+  showPrice: true, status: 'draft'
 };
 const presets = ['Home bakery', 'Cakes', 'Cookies', 'Desserts', 'Art', 'Paintings', 'Handmade crafts', 'Gifts', 'Candles', 'Accessories'];
 const units: WeightUnit[] = ['g', 'kg', 'ml', 'l', 'pieces'];
@@ -125,6 +128,7 @@ export function SellerProductEditor({ open, editing, busy, enabled, draft, setDr
               <label className="space-y-1 text-xs font-medium">Listing status<select className="h-10 w-full rounded-md border bg-white px-3" value={draft.status} onChange={e=>set('status',e.target.value as ProductDraft['status'])}><option value="draft">Draft</option><option value="published">Published</option></select></label>
               <label className="space-y-1 text-xs font-medium sm:col-span-2">Customization prompts (one per line)<Textarea rows={3} maxLength={500} placeholder={"Cake message\nColour preference\nGift note"} value={draft.customizationOptions} onChange={e=>set('customizationOptions',e.target.value)} /><span className="block text-[11px] text-muted-foreground">Up to six prompts (80 characters each). Requests do not change pricing.</span></label>
               <label className="space-y-1 text-xs font-medium sm:col-span-2">Ingredients, care or handling notes<Textarea rows={2} maxLength={500} value={draft.careInstructions} onChange={e=>set('careInstructions',e.target.value)} /></label>
+              <div className="space-y-3 rounded-xl border border-[#eee7dd] p-4 sm:col-span-2"><h4 className="text-sm font-semibold">Food safety & ingredient details (for bakers)</h4><p className="text-xs text-muted-foreground">Enter accurate information for customers with food sensitivities. These claims are supplied by the seller and aren't independently certified by TreatStory.</p><label className="block space-y-1 text-xs font-medium">Ingredients <Textarea rows={2} maxLength={1000} value={draft.ingredients} onChange={e=>set('ingredients',e.target.value)} placeholder="Flour, milk, eggs, cocoa…"/></label><div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-medium">Allergens (comma separated)<Input maxLength={300} value={draft.allergens} onChange={e=>set('allergens',e.target.value)} placeholder="Milk, eggs, wheat"/></label><label className="block space-y-1 text-xs font-medium">Dietary claims (comma separated)<Input maxLength={300} value={draft.dietaryTags} onChange={e=>set('dietaryTags',e.target.value)} placeholder="Vegetarian, eggless"/></label></div><div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-medium">Shelf life (days)<Input type="number" min={0} max={365} value={draft.shelfLifeDays} onChange={e=>set('shelfLifeDays',e.target.value)} placeholder="e.g. 2"/></label><label className="block space-y-1 text-xs font-medium">Storage instructions<Input maxLength={500} value={draft.storageInstructions} onChange={e=>set('storageInstructions',e.target.value)} placeholder="Refrigerate; consume within 2 days"/></label></div></div>
               <label className="flex items-center gap-2 text-xs font-medium sm:col-span-2"><input type="checkbox" checked={draft.showPrice} onChange={e=>set('showPrice',e.target.checked)} />Show price publicly</label>
             </div>
           </details>
