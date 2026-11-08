@@ -139,7 +139,7 @@ export function OrderManagement({ mode }: { mode: 'seller' | 'admin' | 'customer
     if (!user || working || !next[order.status]?.includes(status)) return;
     setWorking(order.id); setConfirm(null);
     try {
-      await sendOrderAction(user, order.id, status, reason);
+      await sendOrderAction(user, order.id, status as OrderAction, reason);
       toast({ title: 'Order updated', description: `Order #${order.id.slice(0,8)} is now ${labels[status].toLowerCase()}.` });
     } catch (err) {
       toast({ variant:'destructive', title:'Could not update order', description: err instanceof Error ? err.message : 'Please try again.' });
