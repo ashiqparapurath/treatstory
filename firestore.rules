@@ -321,6 +321,12 @@ service cloud.firestore {
     }
     // Order creation is server-only. Direct client writes bypass transactional inventory checks.
 
+    match /product_reviews/{reviewId} {
+      allow get, list: if isAdmin() ||
+        resource.data.status == 'published' ||
+        (isSignedIn() && resource.data.buyerUid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
     match /support_tickets/{ticketId} {
       allow get, list: if isAdmin() ||
         (isSignedIn() && resource.data.ownerUid == request.auth.uid);
