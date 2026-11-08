@@ -52,7 +52,7 @@ function findWeight(product: Listing, choice: CheckoutLine['weight']) {
   return result;
 }
 function lineKey(line: CheckoutLine) {
-  return JSON.stringify([line.productId, line.weight?.value ?? null, line.weight?.unit ?? null]);
+  return JSON.stringify([line.productId, line.weight?.value ?? null, line.weight?.unit ?? null, line.customizationNote]);
 }
 function validValue(value: number) { return Number.isFinite(value) && value >= 0 && value <= 10000000; }
 
