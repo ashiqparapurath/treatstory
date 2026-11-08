@@ -170,8 +170,8 @@ function SellerContent() {
       ...(w.price.trim() !== '' ? { price: Number(w.price) } : {}),
       ...(w.stockQuantity.trim() !== '' ? { stockQuantity: Number(w.stockQuantity) } : {}) }));
     if (weights.length > 8 || weights.some(w => !Number.isFinite(w.value) || w.value <= 0 || w.value > 100000 || !['g','kg','ml','l','pieces'].includes(w.unit) ||
-      ('price' in w && (!Number.isFinite(w.price) || w.price < 0 || w.price > 10000000)) ||
-      ('stockQuantity' in w && (!Number.isInteger(w.stockQuantity) || w.stockQuantity < 0 || w.stockQuantity > 1000000)))) return toast({ variant: 'destructive', title: 'Check size options, prices and stock (maximum 8 sizes)' });
+      ('price' in w && (!Number.isFinite(w.price) || (w.price ?? -1) < 0 || (w.price ?? 10000001) > 10000000)) ||
+      ('stockQuantity' in w && (!Number.isInteger(w.stockQuantity) || (w.stockQuantity ?? -1) < 0 || (w.stockQuantity ?? 1000001) > 1000000)))) return toast({ variant: 'destructive', title: 'Check size options, prices and stock (maximum 8 sizes)' });
     if (draft.category.trim().length < 2) return toast({ variant: 'destructive', title: 'Enter a product category' });
     setBusy(true);
     try {
