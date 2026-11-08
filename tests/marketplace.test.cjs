@@ -299,7 +299,10 @@ test('a single seller listing supports separately priced weight and unit variant
   assert.match(editor, /Add another size & price/);
   assert.match(editor, /Price preview/);
   assert.match(editor, /required=\{!draft.weightOptions.length\}/);
-  assert.match(save, /weights\.map\(w => w\.price \?\? basePrice/);
+  assert.match(save, /weights\.some\(w => w\.price === undefined\)/);
+  assert.match(save, /weights\.map\(w => w\.price!/);
+  assert.match(editor, /required type="number"/);
+  assert.match(save, /String\(product\.price\)/);
   assert.match(save, /Duplicate sizes/);
   assert.match(save, /weightOptions: weights/);
   assert.match(detail, /selectedPrice = selectedWeight\?\.price \?\?/);
