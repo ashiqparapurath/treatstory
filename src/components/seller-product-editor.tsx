@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
 export type WeightUnit = 'g' | 'kg' | 'ml' | 'l' | 'pieces';
-export type WeightOptionDraft = { value: string; unit: WeightUnit };
+export type WeightOptionDraft = { value: string; unit: WeightUnit; price: string; stockQuantity: string };
 export type ProductDraft = {
   name: string; description: string; category: string; price: string;
   imageUrls: string; availability: MarketplaceProduct['availability']; stockQuantity: string;
@@ -104,13 +104,15 @@ export function SellerProductEditor({ open, editing, busy, enabled, draft, setDr
           <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Weights, sizes & quantity <span className="flex items-center gap-2 text-xs font-normal text-[#8b795e]">{draft.weightOptions.length} choices<ChevronDown className="h-4 w-4 transition group-open:rotate-180"/></span></summary>
             <div className="mt-4 space-y-4">
-              <p className="text-xs text-muted-foreground">Offer up to eight weight or size choices. All choices currently use the listing price; the buyer can select a preferred weight. Different prices per weight are not enabled.</p>
-              {draft.weightOptions.map((option,i) => <div key={i} className="grid grid-cols-[minmax(0,1fr)_110px_36px] items-end gap-2">
+              <p className="text-xs text-muted-foreground">Offer up to eight sizes, each with an optional price and stock. Leave a size price blank to use the main price; leave its stock blank to use total listing stock.</p>
+              {draft.weightOptions.map((option,i) => <div key={i} className="grid grid-cols-2 items-end gap-2 rounded-xl border border-[#eee8df] p-3 sm:grid-cols-[minmax(0,1fr)_100px_120px_100px_36px]">
                 <label className="space-y-1 text-xs font-medium">Weight / count<Input type="number" inputMode="decimal" min="0.01" max="100000" step="any" value={option.value} placeholder="500" onChange={e => set('weightOptions', draft.weightOptions.map((v,n)=>n===i?{...v,value:e.target.value}:v))}/></label>
                 <label className="space-y-1 text-xs font-medium">Unit<select className="h-10 w-full rounded-md border bg-white px-2" value={option.unit} onChange={e=>set('weightOptions',draft.weightOptions.map((v,n)=>n===i?{...v,unit:e.target.value as WeightUnit}:v))}>{units.map(u=><option key={u} value={u}>{u}</option>)}</select></label>
+                <label className="space-y-1 text-xs font-medium">Price (₹)<Input type="number" inputMode="decimal" min={0} max={10000000} step="0.01" value={option.price} placeholder="Base price" onChange={e => set('weightOptions', draft.weightOptions.map((v,n)=>n===i?{...v,price:e.target.value}:v))}/></label>
+                <label className="space-y-1 text-xs font-medium">Size stock<Input type="number" inputMode="numeric" min={0} max={1000000} step={1} value={option.stockQuantity} placeholder="Total stock" onChange={e => set('weightOptions', draft.weightOptions.map((v,n)=>n===i?{...v,stockQuantity:e.target.value}:v))}/></label>
                 <button type="button" aria-label={`Remove weight option ${i+1}`} className="flex h-10 w-9 items-center justify-center rounded-md border text-red-700" onClick={()=>set('weightOptions',draft.weightOptions.filter((_,n)=>n!==i))}><Trash2 className="h-4 w-4"/></button>
               </div>)}
-              <Button type="button" variant="outline" className="h-10 rounded-full" disabled={draft.weightOptions.length>=8} onClick={()=>set('weightOptions',[...draft.weightOptions,{value:'',unit:'g'}])}><Plus className="mr-2 h-4 w-4"/>Add weight option</Button>
+              <Button type="button" variant="outline" className="h-10 rounded-full" disabled={draft.weightOptions.length>=8} onClick={()=>set('weightOptions',[...draft.weightOptions,{value:'',unit:'g',price:'',stockQuantity:''}])}><Plus className="mr-2 h-4 w-4"/>Add weight option</Button>
               <label className="block max-w-xs space-y-1 text-xs font-medium">Minimum order quantity (units)<Input type="number" min={1} max={99} value={draft.minimumOrderQuantity} onChange={e=>set('minimumOrderQuantity',e.target.value)}/></label>
             </div>
           </details>
