@@ -118,7 +118,7 @@ export async function placeAtomicCheckout(db: Firestore, uid: string, input: Che
       ref: bookingRefs[i], current: (bookings[i].data()?.count as number | undefined) ?? 0,
     }]));
 
-    const pendingPrices: Array<{ productId: string; name: string; expected: number; current: number }> = [];
+    const pendingPrices: Array<{ lineIndex: number; productId: string; name: string; expected: number; current: number }> = [];
     const orders: Array<{ refId: string; record: Record<string, unknown> }> = [];
     let itemSubtotal = 0;
     const qtyBySeller = new Map<string, number>();
@@ -132,7 +132,7 @@ export async function placeAtomicCheckout(db: Firestore, uid: string, input: Che
       const choice = findWeight(p, line.weight);
       const price = positiveNumber(choice?.price, p.price);
       if (!validValue(price)) throw new ApiError(409, 'A product price is invalid. Contact the seller.');
-      if (price !== line.expectedPrice) pendingPrices.push({ productId: line.productId, name: p.name, expected: line.expectedPrice, current: price });
+      if (price !== line.expectedPrice) pendingPrices.push({ lineIndex: idx, productId: line.productId, name: p.name, expected: line.expectedPrice, current: price });
       // For made-to-order products, only booking capacity is enforced.
       let source: StockReservation['stockSource'] = 'none';
       if (p.availability === 'available') {
