@@ -32,8 +32,8 @@ const ACCEPTED_TYPES = new Set(['image/jpeg', 'image/png']);
 
 function bannerSaveError(error: unknown): string {
   const code = (error as { code?: string } | null)?.code;
-  if (code === 'permission-denied') return 'Firestore denied the banner change. Check your administrator role and published Firestore rules.';
-  return error instanceof Error ? error.message : 'Unable to save the banner. Check Cloudinary configuration and Firestore permissions.';
+  if (code === 'permission-denied') return 'You do not have permission to change this banner. Check your administrator access.';
+  return error instanceof Error ? error.message : 'Unable to save the banner. Please try again or contact support.';
 }
 
 const formSchema = z.object({
@@ -182,7 +182,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
                           <span className="font-semibold">Click to upload</span>
                         </p>
                         <p className="text-xs text-muted-foreground">Recommended: 1280x720px (16:9)</p>
-                        <p className="text-xs text-muted-foreground">PNG, JPG (under 1 MB). Stored on Cloudinary.</p>
+                        <p className="text-xs text-muted-foreground">PNG, JPG (under 1 MB).</p>
                         <Input 
                           type="file" 
                           accept="image/png, image/jpeg" 

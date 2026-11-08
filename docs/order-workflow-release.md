@@ -72,3 +72,10 @@ Firebase `auth/invalid-credential` is a separate email/password sign-in rejectio
 - TypeScript validation and the production Next.js build pass.
 - Firestore/Storage emulators load the rules and transactional tests pass, including stock races, retries, size prices, cancellation restoration, and rejecting an advance order until acknowledged, then snapshotting its terms without marking it paid.
 - Chromium checks at 360, 390, 768 and 1440 pixels pass for the homepage, brand-only mobile header, bottom dock and manifest credential attribute. Mobile products, empty checkout, seller entry and login have no horizontal overflow or uncaught page errors. Authenticated live buyer/seller and production payment flows remain unverified; no real orders were placed.
+
+### Follow-up presentation refinements
+
+- Anchor the mobile dock flush to the bottom edge and retain safe-area padding.
+- Match the profile's My favourites tab to neighbouring tabs with the same outline icon family, 16-pixel icon size, spacing, type size and background treatment.
+- Remove infrastructure/provider names from account security copy, image-upload instructions, and visible access/save errors. Upload failures return plain user guidance while server logs retain technical diagnostics.
+- Validation: 18 regression tests, TypeScript validation and the production build pass. Chromium confirms the dock touches the viewport bottom at 360/390 pixels before and after scrolling, with no horizontal overflow.

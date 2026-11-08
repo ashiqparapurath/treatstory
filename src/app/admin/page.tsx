@@ -65,7 +65,7 @@ function AdminContent() {
   }
 
   if (isUserLoading || !user || isRoleLoading) return <div className="min-h-screen bg-[#f7f5f1]"><Header /><DashboardShellSkeleton title="Control center" /></div>;
-  if (roleError) return <div className="min-h-screen bg-[#f7f5f1]"><Header /><main className="section-shell py-10"><h1 className="text-xl font-semibold">Unable to verify administrator access</h1><p className="mt-3 text-sm text-muted-foreground">Check Firestore permissions and reload. Access has not been granted.</p></main></div>;
+  if (roleError) return <div className="min-h-screen bg-[#f7f5f1]"><Header /><main className="section-shell py-10"><h1 className="text-xl font-semibold">Unable to verify administrator access</h1><p className="mt-3 text-sm text-muted-foreground">Check your account access and reload. Access has not been granted.</p></main></div>;
   if (role !== 'admin') return <div className="min-h-screen bg-[#f7f5f1]"><Header /><main className="section-shell mx-auto max-w-xl py-20"><ShieldCheck className="h-8 w-8 text-[#a68a64]" /><h1 className="mt-5 text-3xl font-medium">Administrator access required</h1><p className="mt-3 text-sm text-muted-foreground">This workspace is restricted to verified TreatStory administrators.</p><Link href="/account" className="editorial-button mt-7">Return to account</Link></main></div>;
 
   return <div className="min-h-screen bg-[#f7f5f1]"><Header />

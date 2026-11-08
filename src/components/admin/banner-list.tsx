@@ -69,7 +69,7 @@ export function BannerList() {
       setBannerToDelete(null);
     } catch (error) {
       console.error('Banner deletion failed', error);
-      toast({ variant: 'destructive', title: 'Could not delete banner', description: error instanceof Error ? error.message : 'Check Firestore administrator permissions.' });
+      toast({ variant: 'destructive', title: 'Could not delete banner', description: error instanceof Error ? error.message : 'Check your administrator access and try again.' });
     } finally { setWorkingBannerId(null); }
   };
 
@@ -83,7 +83,7 @@ export function BannerList() {
       toast({ title: 'Banner status updated', description: `"${banner.title}" is now ${!banner.isActive ? 'active' : 'inactive'}.` });
     } catch (error) {
       console.error('Banner status change failed', error);
-      toast({ variant: 'destructive', title: 'Could not change banner status', description: error instanceof Error ? error.message : 'Check Firestore administrator permissions.' });
+      toast({ variant: 'destructive', title: 'Could not change banner status', description: error instanceof Error ? error.message : 'Check your administrator access and try again.' });
     } finally { setWorkingBannerId(null); }
   };
 

@@ -135,8 +135,8 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
     if (!firestore) {
       toast({
         variant: 'destructive',
-        title: 'Firestore Error',
-        description: 'Firestore is not available. Please try again later.',
+        title: 'Unable to save',
+        description: 'Saving is temporarily unavailable. Please try again later.',
       });
       return;
     }
@@ -231,7 +231,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
                             <p className="text-sm text-muted-foreground">
                                 <span className="font-semibold">Click to upload</span>
                             </p>
-                            <p className="text-xs text-muted-foreground">JPG, PNG or WebP · max 2 MB · Cloudinary</p>
+                            <p className="text-xs text-muted-foreground">JPG, PNG or WebP · max 2 MB</p>
                             <Input
                                 type="file"
                                 accept="image/png, image/jpeg, image/webp"
@@ -245,7 +245,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
                         </div>
                     </FormControl>
                     <FormDescription>
-                      You can upload between 1 and {MAX_IMAGES} images. Images are stored on Cloudinary, not in Firestore.
+                      You can upload between 1 and {MAX_IMAGES} images. Your uploaded images are saved securely.
                     </FormDescription>
                     
                     {imagePreviews.length > 0 && (

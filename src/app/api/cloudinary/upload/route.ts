@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
   const apiKey = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
   if (!projectId || !cloudName || !apiKey || !apiSecret) {
-    return json({ error: 'Cloudinary upload is not configured yet. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in Vercel.' }, 503);
+    return json({ error: 'Image uploads are temporarily unavailable. Please contact support.' }, 503);
   }
   const authHeader = request.headers.get('authorization') || '';
   if (!authHeader.startsWith('Bearer ')) return json({ error: 'Sign in before uploading images.' }, 401);
@@ -123,11 +123,11 @@ export async function POST(request: NextRequest) {
     const result = await response.json() as { secure_url?: string; public_id?: string; error?: { message?: string } };
     if (!response.ok || !result.secure_url || !result.public_id) {
       console.error('Cloudinary upload failed', response.status, result.error?.message);
-      return json({ error: result.error?.message || 'Cloudinary rejected this image. Try a smaller photo.' }, 502);
+      return json({ error: 'This image could not be uploaded. Try a smaller photo or try again later.' }, 502);
     }
     const assetUrl = new URL(result.secure_url);
     if (assetUrl.protocol !== 'https:' || assetUrl.hostname !== 'res.cloudinary.com') {
-      return json({ error: 'Cloudinary returned an unexpected image URL.' }, 502);
+      return json({ error: 'The image could not be saved. Please try again.' }, 502);
     }
     return json({ url: result.secure_url, publicId: result.public_id }, 200);
   } catch (error) {

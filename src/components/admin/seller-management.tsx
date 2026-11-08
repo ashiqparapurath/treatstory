@@ -53,7 +53,7 @@ export function SellerManagement() {
       await updateDoc(doc(db, 'sellers', seller.id), { ...patch, updatedAt: serverTimestamp() });
       toast({ title: 'Seller access updated', description });
     } catch (err) {
-      toast({ variant: 'destructive', title: 'Could not update seller', description: err instanceof Error ? err.message : 'Check Firestore admin permissions.' });
+      toast({ variant: 'destructive', title: 'Could not update seller', description: err instanceof Error ? err.message : 'Check your administrator access and try again.' });
     } finally { setWorking(null); }
   }
 
@@ -75,7 +75,7 @@ export function SellerManagement() {
 
   if (error) return <LoadError retry={retry} />;
   return <section className="space-y-5">
-    <div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a68a64]">Marketplace access</p><h2 className="mt-2 text-2xl font-medium">Manage sellers</h2><p className="mt-2 text-sm text-muted-foreground">Search sellers, review access, manually adjust trial expiry dates, and suspend or reactivate storefronts. Changes are authorized by Firestore admin rules.</p></div>
+    <div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a68a64]">Marketplace access</p><h2 className="mt-2 text-2xl font-medium">Manage sellers</h2><p className="mt-2 text-sm text-muted-foreground">Search sellers, review access, manually adjust trial expiry dates, and suspend or reactivate storefronts. Only administrators can manage seller access.</p></div>
     <div className="flex flex-wrap gap-3"><Input className="min-w-[200px] max-w-sm flex-1 rounded-xl bg-white" aria-label="Search sellers" placeholder="Search name, email, UID…" value={search} onChange={e => setSearch(e.target.value)} /><select aria-label="Filter seller access" className="h-10 rounded-xl border bg-white px-3 text-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="suspended">Suspended</option><option value="expired">Expired</option><option value="pending">Pending</option></select></div>
     {isLoading ? <p className="text-sm text-muted-foreground">Loading seller accounts…</p> : !visible.length ? <p className="rounded-2xl border bg-white p-8 text-sm text-muted-foreground">No sellers match these filters.</p> : <div className="space-y-3">
       {visible.map(seller => {
