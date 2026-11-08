@@ -286,3 +286,25 @@ test('fulfillment and cancellation preserve stock and prevent repeated release',
   assert.match(ui, /sendOrderAction\(user, order.id/);
   assert.doesNotMatch(ui, /updateDoc\(doc\(db,'seller_orders'/);
 });
+
+
+test('a single seller listing supports separately priced weight and unit variants', () => {
+  const editor = fs.readFileSync('src/components/seller-product-editor.tsx', 'utf8');
+  const save = fs.readFileSync('src/app/seller/dashboard/page.tsx', 'utf8');
+  const detail = fs.readFileSync('src/app/product/[id]/page.tsx', 'utf8');
+  const card = fs.readFileSync('src/components/seller-product-card.tsx', 'utf8');
+  const checkout = fs.readFileSync('src/lib/server/atomic-checkout.ts', 'utf8');
+  assert.match(editor, /Weight, size & variant pricing/);
+  assert.match(editor, /Price for this size/);
+  assert.match(editor, /Add another size & price/);
+  assert.match(editor, /Price preview/);
+  assert.match(editor, /required=\{!draft.weightOptions.length\}/);
+  assert.match(save, /weights\.map\(w => w\.price \?\? basePrice/);
+  assert.match(save, /Duplicate sizes/);
+  assert.match(save, /weightOptions: weights/);
+  assert.match(detail, /selectedPrice = selectedWeight\?\.price \?\?/);
+  assert.match(detail, /price: selectedPrice/);
+  assert.match(card, /lowestPrice/);
+  assert.match(checkout, /const price = positiveNumber\(choice\?\.price, p\.price\)/);
+  assert.match(checkout, /if \(price !== line.expectedPrice\)/);
+});
