@@ -22,13 +22,15 @@ const CategoryList = dynamic(() => import('@/components/admin/category-list').th
 const CategoryDialog = dynamic(() => import('@/components/admin/category-dialog').then(m => m.CategoryDialog), { loading: () => <SectionSkeleton /> });
 const EnquirySettingsForm = dynamic(() => import('@/components/admin/enquiry-settings-form').then(m => m.EnquirySettingsForm), { loading: () => <SectionSkeleton /> });
 const SupportInbox = dynamic(() => import('@/components/admin/support-inbox').then(m => m.SupportInbox), { loading: () => <SectionSkeleton /> });
+const ReviewModeration = dynamic(() => import('@/components/admin/review-moderation').then(m => m.ReviewModeration), { loading: () => <SectionSkeleton /> });
 import { LayoutDashboard, Store, ClipboardList, Package, ImageIcon, Tags, Settings, LogOut, ArrowUpRight, ShieldCheck } from 'lucide-react';
 
-type Tab = 'support' | 'orders' | 'overview' | 'applications' | 'sellers' | 'catalog' | 'products' | 'banners' | 'categories' | 'settings';
+type Tab = 'reviews' | 'support' | 'orders' | 'overview' | 'applications' | 'sellers' | 'catalog' | 'products' | 'banners' | 'categories' | 'settings';
 const navigation: { id: Tab; label: string; icon: typeof Store; group: string }[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, group: 'Workspace' },
   { id: 'orders', label: 'Orders & fulfillment', icon: ClipboardList, group: 'Marketplace' },
   { id: 'support', label: 'Customer support', icon: ClipboardList, group: 'Marketplace' },
+  { id: 'reviews', label: 'Purchase reviews', icon: ClipboardList, group: 'Marketplace' },
   { id: 'applications', label: 'Seller applications', icon: ClipboardList, group: 'Marketplace' },
   { id: 'sellers', label: 'Seller management', icon: Store, group: 'Marketplace' },
   { id: 'catalog', label: 'Seller catalog', icon: Package, group: 'Marketplace' },
@@ -78,6 +80,7 @@ function AdminContent() {
         {tab === 'overview' && <AdminOverview navigate={next => setTab(next === 'sellers' ? 'applications' : next as Tab)} />}
         {tab === 'orders' && <OrderManagement mode="admin" />}
         {tab === 'support' && <SupportInbox />}
+        {tab === 'reviews' && <ReviewModeration />}
         {tab === 'applications' && <SellerApplications />}
         {tab === 'sellers' && <SellerManagement />}
         {tab === 'catalog' && <MarketplaceCatalog />}
