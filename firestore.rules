@@ -337,6 +337,15 @@ service cloud.firestore {
         (isSignedIn() && resource.data.sellerId == request.auth.uid);
       allow create, update, delete: if false;
     }
+    match /custom_quotes/{quoteId} {
+      allow get, list: if isAdmin() ||
+        (isSignedIn() && resource.data.buyerUid == request.auth.uid) ||
+        (isSignedIn() && resource.data.sellerId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+    match /quote_limits/{quotaId} {
+      allow read, write: if false;
+    }
     match /seller_bookings/{bookingId} {
       allow read, write: if false;
     }
