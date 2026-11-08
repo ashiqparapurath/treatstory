@@ -5,6 +5,11 @@ on:
     branches: [multi-vendor-foundation]
   pull_request:
 
+# Only the newest commit on each pull request needs a full verification run.
+# Earlier checks remain visible in GitHub's history but cannot block the head.
+concurrency:
+  group: treatstory-verify-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
