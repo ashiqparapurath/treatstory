@@ -31,7 +31,7 @@ export function SellerStorefrontProducts({ limitCount }: { limitCount?: number }
       toast({ title: 'Choose your size', description: 'Select a weight or size, then add it to your bag.' });
       return null;
     }
-    if (p.availability === 'unavailable' || (p.availability === 'available' && p.stockQuantity <= 0)) {
+    if (p.availability === 'unavailable' || (p.availability === 'available' && (p.stockQuantity ?? 0) <= 0)) {
       toast({ variant: 'destructive', title: 'Out of stock', description: 'Please explore other creations.' });
       return null;
     }
