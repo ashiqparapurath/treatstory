@@ -268,7 +268,7 @@ service cloud.firestore {
         'sellerId', 'name', 'description', 'price', 'category', 'imageUrls',
         'showPrice', 'availability', 'stockQuantity', 'preparationDays',
         'minimumOrderQuantity', 'weightValue', 'weightUnit', 'weightOptions', 'customizationOptions',
-        'careInstructions', 'ingredients', 'allergens', 'dietaryTags', 'shelfLifeDays', 'storageInstructions',
+        'advancePaymentRequired', 'careInstructions', 'ingredients', 'allergens', 'dietaryTags', 'shelfLifeDays', 'storageInstructions',
         'status', 'createdAt', 'updatedAt'
       ]) &&
       p.sellerId is string &&
@@ -287,6 +287,7 @@ service cloud.firestore {
       (!('weightUnit' in p) || p.weightUnit in ['g', 'kg', 'ml', 'l', 'pieces']) &&
       (!('weightOptions' in p) || validWeightOptions(p.weightOptions)) &&
       (('weightValue' in p) == ('weightUnit' in p)) &&
+      (!('advancePaymentRequired' in p) || p.advancePaymentRequired is bool) &&
       (!('careInstructions' in p) || (p.careInstructions is string && p.careInstructions.size() <= 500)) &&
       (!('customizationOptions' in p) || validCustomizationPrompts(p.customizationOptions)) &&
       (!('ingredients' in p) || (p.ingredients is string && p.ingredients.size() <= 1000)) &&

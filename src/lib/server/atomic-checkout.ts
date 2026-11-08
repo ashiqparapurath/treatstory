@@ -21,6 +21,7 @@ type Weight = { value: number; unit: string; price?: number; stockQuantity?: num
 type Listing = {
   name: string; sellerId: string; status: string; availability: string; price: number;
   showPrice: boolean; minimumOrderQuantity?: number; stockQuantity: number; preparationDays?: number;
+  advancePaymentRequired?: boolean;
   weightOptions?: Weight[];
 };
 type StockReservation = { productId: string; quantity: number; stockSource: 'product' | 'option' | 'none'; weight: Weight | null };
@@ -87,6 +88,7 @@ export async function placeAtomicCheckout(db: Firestore, uid: string, input: Che
       if (p.status !== 'published' || p.availability === 'unavailable' || p.showPrice !== true) {
         throw new ApiError(409, p.name + ' is no longer available to order.');
       }
+      if (p.advancePaymentRequired === true && input.advancePaymentAcknowledged !== true) throw new ApiError(409, p.name + ' requires advance payment. Refresh checkout and acknowledge the payment terms before ordering.');
       working.set(productIds[idx], { listing: { ...p, weightOptions: p.weightOptions?.map(w => ({ ...w })) }, refPath: snap.ref.path, reservations: [] });
     }
     const sellerIds = [...new Set([...working.values()].map(x => x.listing.sellerId))];
@@ -169,7 +171,8 @@ export async function placeAtomicCheckout(db: Firestore, uid: string, input: Che
         deliveryMode: input.deliveryMode, deliveryFee: fee,
         requestedDate: input.requestedDate, requestedSlot: input.requestedSlot,
         giftRecipient: input.giftRecipient, giftMessage: input.giftMessage,
-        status: 'pending', paymentMethod: 'cod', paymentStatus: 'pending',
+        status: 'pending', paymentMethod: p.advancePaymentRequired === true ? 'seller-arranged-advance' : 'cod', paymentStatus: 'pending',
+        advancePaymentRequired: p.advancePaymentRequired === true,
         acceptanceDeadline: Timestamp.fromMillis(now.toMillis() + Math.min(72, Math.max(1, seller.acceptanceHours || 24)) * 3600000),
         cancellationRequest: null,
         history: [{ at: now, by: uid, action: 'placed' }],
@@ -209,7 +212,7 @@ export async function placeAtomicCheckout(db: Firestore, uid: string, input: Che
       tx.create(sellerAlert, { title: 'You have a new order', orderId: order.refId, createdAt: now, read: false });
     }
     tx.create(checkoutRef, { buyerUid: uid, requestHash, orderIds: orders.map(x => x.refId),
-      total, currency: 'INR', paymentMethod: 'cod', status: 'placed', createdAt: now });
+      total, currency: 'INR', paymentMethod: orders.some(o => o.record.advancePaymentRequired) ? 'seller-arranged-advance' : 'cod', status: 'placed', createdAt: now });
     return { checkoutId: input.checkoutId, orderIds: orders.map(x => x.refId), total, repeated: false };
   }, { maxAttempts: 5 });
   return result;

@@ -57,6 +57,7 @@ export interface MarketplaceProduct {
   imageUrls: string[];
   showPrice: boolean;
   availability: 'available' | 'unavailable' | 'made-to-order';
+  advancePaymentRequired?: boolean;
   preparationDays?: number;
   minimumOrderQuantity?: number;
   weightValue?: number;

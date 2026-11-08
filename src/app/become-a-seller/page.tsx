@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Header } from '@/components/header';
-import { useFirestore, useUser } from '@/firebase';
+import { useAccountRole, useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,7 @@ const categories: { value: SellerCategory; label: string }[] = [
 
 export default function BecomeSellerPage() {
   const { user, isUserLoading } = useUser();
+  const { seller, isRoleLoading, roleError } = useAccountRole();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [businessName, setBusinessName] = useState('');
@@ -34,7 +35,7 @@ export default function BecomeSellerPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!firestore || !user || !user.displayName?.trim() || !user.email || submitting) return;
+    if (!firestore || !user || !user.displayName?.trim() || !user.email || submitting || seller || isRoleLoading || roleError) return;
     setSubmitting(true);
     try {
       await setDoc(doc(firestore, 'seller_applications', user.uid), {
@@ -68,7 +69,7 @@ export default function BecomeSellerPage() {
         <h1 className="mt-3 text-4xl font-medium tracking-tight sm:text-6xl">Become a seller<span className="text-[#a68a64]">.</span></h1>
         <p className="mt-4 max-w-xl text-sm leading-7 text-muted-foreground">Bring your home bakery, art or handmade business to our growing creative marketplace. Applications are reviewed before a seller account is activated.</p>
 
-        {isUserLoading ? <p className="mt-10 text-sm text-muted-foreground">Checking your account…</p> : !user ? <section className="mt-8 rounded-3xl border bg-white p-6 sm:p-9"><h2 className="text-xl font-semibold">Create your TreatStory profile first</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">A profile and sign-in are required before submitting a seller application. Your application will be linked to your account for approval and future seller access.</p><div className="mt-6 flex flex-wrap gap-3"><Link href="/register?next=%2Fbecome-a-seller" className="inline-flex min-h-11 items-center rounded-full bg-[#29251f] px-6 text-sm font-semibold text-white">Create profile</Link><Link href="/login?next=%2Fbecome-a-seller" className="inline-flex min-h-11 items-center rounded-full border px-6 text-sm font-semibold">Sign in</Link></div></section> : !user.displayName?.trim() ? <section className="mt-8 rounded-3xl border bg-white p-6"><h2 className="text-xl font-semibold">Complete your profile</h2><p className="mt-2 text-sm text-muted-foreground">Add your name in Account → Your profile before requesting a seller account.</p><Link href="/account?next=%2Fbecome-a-seller" className="mt-4 inline-flex rounded-full bg-[#29251f] px-6 py-3 text-sm font-semibold text-white">Complete profile</Link></section> : submitted ? (
+        {isUserLoading || (user && isRoleLoading) ? <p className="mt-10 text-sm text-muted-foreground">Checking your account…</p> : seller ? <section role="status" className="mt-8 rounded-2xl border bg-white p-6"><h2 className="text-xl font-semibold">You are already a seller. Thank you!</h2><Link href="/seller/dashboard" className="mt-4 inline-block underline">Open seller studio</Link></section> : roleError ? <p role="alert" className="mt-8">Could not verify your seller account. Please refresh to try again.</p> : !user ? <section className="mt-8 rounded-3xl border bg-white p-6 sm:p-9"><h2 className="text-xl font-semibold">Create your TreatStory profile first</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">A profile and sign-in are required before submitting a seller application. Your application will be linked to your account for approval and future seller access.</p><div className="mt-6 flex flex-wrap gap-3"><Link href="/register?next=%2Fbecome-a-seller" className="inline-flex min-h-11 items-center rounded-full bg-[#29251f] px-6 text-sm font-semibold text-white">Create profile</Link><Link href="/login?next=%2Fbecome-a-seller" className="inline-flex min-h-11 items-center rounded-full border px-6 text-sm font-semibold">Sign in</Link></div></section> : !user.displayName?.trim() ? <section className="mt-8 rounded-3xl border bg-white p-6"><h2 className="text-xl font-semibold">Complete your profile</h2><p className="mt-2 text-sm text-muted-foreground">Add your name in Account → Your profile before requesting a seller account.</p><Link href="/account?next=%2Fbecome-a-seller" className="mt-4 inline-flex rounded-full bg-[#29251f] px-6 py-3 text-sm font-semibold text-white">Complete profile</Link></section> : submitted ? (
           <div role="status" className="mt-10 rounded-3xl border bg-white p-8">
             <h2 className="text-2xl font-medium">Application received</h2>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">Your application is pending review. We'll contact your registered email after reviewing your request.</p>

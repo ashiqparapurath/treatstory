@@ -33,7 +33,7 @@ async function run() {
     price:200,showPrice:true,stockQuantity:1,minimumOrderQuantity:1,preparationDays:0,weightOptions:[],
   });
   const request=(buyer:string,checkoutId=randomUUID(),expectedPrice=200):CheckoutPayload=>({
-    checkoutId,lines:[{productId,quantity:1,expectedPrice,customizationNote:'Happy birthday',weight:null}],
+    advancePaymentAcknowledged: false, checkoutId,lines:[{productId,quantity:1,expectedPrice,customizationNote:'Happy birthday',weight:null}],
     customerName:'TreatStory Test Buyer', customerPhone:'9876543210',deliveryAddress:'A valid address with PIN 673001',
     customerNote:'',deliveryMode:'delivery',pincode:'673001',requestedDate:date,requestedSlot:'10-12',
     giftRecipient:'',giftMessage:'',
@@ -114,6 +114,17 @@ async function run() {
   assert.deepEqual(restocked.weightOptions.map((v: {stockQuantity: number}) => v.stockQuantity), [1, 1],
     'rejected orders restore only their respective size stocks');
 
+  // Advance requirements are authoritative, acknowledged, and snapshotted.
+  await sellerRef.update({ dailyOrderCapacity: 20 });
+  await productRef.update({ availability: 'made-to-order', advancePaymentRequired: true });
+  const advance = request('buyer-advance');
+  await assert.rejects(() => placeAtomicCheckout(db, 'buyer-advance', advance), /advance payment/i);
+  advance.advancePaymentAcknowledged = true;
+  const advanceResult = await placeAtomicCheckout(db, 'buyer-advance', advance);
+  const advanceOrder = (await db.collection('seller_orders').doc(advanceResult.orderIds[0]).get()).data()!;
+  assert.equal(advanceOrder.advancePaymentRequired, true);
+  assert.equal(advanceOrder.paymentMethod, 'seller-arranged-advance');
+  assert.equal(advanceOrder.paymentStatus, 'pending');
   console.log('PASS Firestore transactions: stock race, retry, capacity, price acceptance, cancellation restoration and simultaneous different-size pricing');
 }
 run().catch(e=>{ console.error(e);process.exitCode=1;});

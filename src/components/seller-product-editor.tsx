@@ -16,6 +16,7 @@ export type ProductDraft = {
   preparationDays: string; minimumOrderQuantity: string; weightValue: string; weightUnit: WeightUnit;
   weightOptions: WeightOptionDraft[]; customizationOptions: string; careInstructions: string;
   ingredients: string; allergens: string; dietaryTags: string; shelfLifeDays: string; storageInstructions: string;
+  advancePaymentRequired: boolean;
   showPrice: boolean; status: 'draft' | 'published';
 };
 export const emptyDraft: ProductDraft = {
@@ -23,19 +24,24 @@ export const emptyDraft: ProductDraft = {
   stockQuantity: '', preparationDays: '', minimumOrderQuantity: '1', weightValue: '', weightUnit: 'g',
   weightOptions: [], customizationOptions: '', careInstructions: '',
   ingredients: '', allergens: '', dietaryTags: '', shelfLifeDays: '', storageInstructions: '',
+  advancePaymentRequired: false,
   showPrice: true, status: 'draft'
 };
 const presets = ['Home bakery', 'Cakes', 'Cookies', 'Desserts', 'Art', 'Paintings', 'Handmade crafts', 'Gifts', 'Candles', 'Accessories'];
 const units: WeightUnit[] = ['g', 'kg', 'ml', 'l', 'pieces'];
 
-export function suggestProductDescription(d: Pick<ProductDraft, 'name' | 'category' | 'availability' | 'preparationDays' | 'careInstructions'>) {
-  const name = d.name.trim(), category = d.category.trim();
+export function suggestProductDescription(d: Pick<ProductDraft, 'name' | 'category' | 'availability' | 'preparationDays' | 'careInstructions'> & Partial<Pick<ProductDraft, 'ingredients' | 'weightOptions' | 'customizationOptions' | 'storageInstructions'>>) {
+  const name = d.name.trim();
   if (name.length < 2) return '';
-  const lead = `${name} is a thoughtfully made ${category ? category.toLowerCase() + ' creation' : 'creation'}, prepared with care by an independent TreatStory seller.`;
-  const made = d.availability === 'made-to-order' ? ' Made to order for your special moments.' : '';
-  const prep = Number(d.preparationDays) > 0 ? ` Please allow around ${Number(d.preparationDays)} day(s) for preparation.` : '';
-  const care = d.careInstructions.trim() ? ` Care notes: ${d.careInstructions.trim().slice(0, 180)}.` : '';
-  return `${lead}${made}${prep}${care} Contact the creator for specific requests before ordering.`;
+  const details = [name + '.'];
+  if (d.weightOptions?.length) details.push('Available sizes: ' + d.weightOptions.filter(w => w.value).map(w => `${w.value} ${w.unit}`).join(', ') + '.');
+  if (d.ingredients?.trim()) details.push('Ingredients: ' + d.ingredients.trim() + '.');
+  if (d.customizationOptions?.trim()) details.push('Personalization options: ' + d.customizationOptions.trim().split(/\n/).filter(Boolean).join(', ') + '.');
+  if (d.availability === 'made-to-order') details.push('Made to order.');
+  if (Number(d.preparationDays) > 0) details.push(`Preparation time: ${Number(d.preparationDays)} day(s).`);
+  if (d.careInstructions.trim()) details.push('Care: ' + d.careInstructions.trim() + '.');
+  if (d.storageInstructions?.trim()) details.push('Storage: ' + d.storageInstructions.trim() + '.');
+  return details.join(' ').slice(0, 2000);
 }
 
 export function SellerProductEditor({ open, editing, busy, enabled, draft, setDraft, categories, onClose, onSubmit, onUploadPhotos, uploading, uploadProgress }: {
@@ -125,6 +131,7 @@ export function SellerProductEditor({ open, editing, busy, enabled, draft, setDr
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Availability & personalization <ChevronDown className="h-4 w-4 transition group-open:rotate-180"/></summary>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <label className="space-y-1 text-xs font-medium">Availability<select className="h-10 w-full rounded-md border bg-white px-3" value={draft.availability} onChange={e=>set('availability',e.target.value as ProductDraft['availability'])}><option value="available">Available</option><option value="made-to-order">Made to order</option><option value="unavailable">Unavailable</option></select></label>
+              <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={draft.advancePaymentRequired} onChange={e => set('advancePaymentRequired', e.target.checked)} />Advance payment required before preparation</label><p className="text-xs text-muted-foreground sm:col-span-2">Arrange the advance directly with the buyer. TreatStory does not collect online payments.</p>
               <label className="space-y-1 text-xs font-medium">Preparation days<Input type="number" min={0} max={365} value={draft.preparationDays} onChange={e=>set('preparationDays',e.target.value)} /></label>
               <label className="space-y-1 text-xs font-medium">Stock quantity<Input type="number" min={0} max={1000000} value={draft.stockQuantity} onChange={e=>set('stockQuantity',e.target.value)} /></label>
               <label className="space-y-1 text-xs font-medium">Listing status<select className="h-10 w-full rounded-md border bg-white px-3" value={draft.status} onChange={e=>set('status',e.target.value as ProductDraft['status'])}><option value="draft">Draft</option><option value="published">Published</option></select></label>

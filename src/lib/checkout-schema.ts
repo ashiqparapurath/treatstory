@@ -14,6 +14,7 @@ export const checkoutLineSchema = z.object({
 }).strict();
 
 export const checkoutRequestSchema = z.object({
+  advancePaymentAcknowledged: z.boolean().default(false),
   checkoutId: z.string().uuid(),
   lines: z.array(checkoutLineSchema).min(1).max(10),
   customerName: z.string().trim().min(2).max(120),

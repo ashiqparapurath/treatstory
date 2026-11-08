@@ -50,3 +50,25 @@ Keep the following evidence with PR #2:
 - Known defects, rollback plan and final reviewer approval.
 
 Do not label the site production-ready until the P0 acceptance tests have been completed.
+
+## Checkout and mobile refinements (8 November 2026)
+
+- Checkout fixes the overescaped PIN regular expressions and uses the saved address's PIN automatically. The PIN remains necessary for seller delivery coverage checks. Buyers can expand “Change address” to edit the order's address and PIN without overwriting their saved default.
+- Sellers can enable `advancePaymentRequired` on a listing. Buyers see the requirement on product details and checkout and must acknowledge it. The server reads the current listing, rejects unacknowledged advance terms, and snapshots the requirement with `paymentMethod: seller-arranged-advance` on the order. Legacy products default to COD. Advances are arranged and verified directly by the seller; no online payment gateway, deposit amount calculation, or automatic payment verification is implemented.
+- Publish the matching Firestore rules with the app to allow the new optional boolean on seller products. The order schema remains server controlled.
+- The mobile header contains the brand only, with Home, Shop, Sell, Bag and Profile in a safe-area-aware bottom dock. Favourites are available from cards and the buyer profile, with the header shortcut removed.
+- Product descriptions initially show two lines, weight buttons omit prices while the selected price remains visible, reviews follow product content, and gallery controls use a translucent glass style.
+- Product-description suggestions use supplied product facts (sizes, ingredients, customization, preparation, care and storage) without inventing ingredients or quality claims. The homepage hero now uses a 138 KB WebP instead of the roughly 2 MB PNG, with responsive image sizing and mobile banner typography.
+
+### Reported console errors
+
+The supplied Vercel preview URL returns HTTP 302 for `/manifest.json` to `vercel.com/sso-api`. The manifest link now uses `crossOrigin="use-credentials"` so a signed-in protected preview can send its cookie. An unauthenticated protected preview still requires Vercel authentication; app CORS headers cannot change the Vercel login response. Validate the public production domain separately. No deployment-protection settings were changed.
+
+Firebase `auth/invalid-credential` is a separate email/password sign-in rejection. Login now trims email whitespace, gives a clear error and points buyers to the existing password-reset flow. No credentials were changed, and successful live Firebase sign-in was not verified.
+
+### Local verification
+
+- 18 regression tests pass, including saved-PIN checkout submission, address editing, and required advance acknowledgement.
+- TypeScript validation and the production Next.js build pass.
+- Firestore/Storage emulators load the rules and transactional tests pass, including stock races, retries, size prices, cancellation restoration, and rejecting an advance order until acknowledged, then snapshotting its terms without marking it paid.
+- Chromium checks at 360, 390, 768 and 1440 pixels pass for the homepage, brand-only mobile header, bottom dock and manifest credential attribute. Mobile products, empty checkout, seller entry and login have no horizontal overflow or uncaught page errors. Authenticated live buyer/seller and production payment flows remain unverified; no real orders were placed.

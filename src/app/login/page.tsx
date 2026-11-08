@@ -47,18 +47,18 @@ export default function LoginPage() {
     }
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email.trim(), password);
       toast({
         title: 'Login Successful',
         description: 'Welcome back to TreatStory.',
       });
       // The useEffect routes the signed-in user to their role-specific dashboard.
     } catch (error: any) {
-      console.error(error);
+      const code = error?.code as string | undefined;
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: error.message || 'An unexpected error occurred.',
+        description: ['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found'].includes(code || '') ? 'The email or password is incorrect. Check your details or use Forgot password to reset it.' : code === 'auth/too-many-requests' ? 'Too many sign-in attempts. Please try again later.' : 'Unable to sign in. Check your connection and try again.',
       });
     } finally {
       setIsLoading(false);

@@ -118,3 +118,7 @@ nav a[aria-current="page"] { color: hsl(var(--foreground)); text-decoration: und
   html { scrollbar-gutter: stable; }
 }
 .seller-workspace { overflow-x: clip; }
+
+@media (max-width: 767px) {
+  body { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+}

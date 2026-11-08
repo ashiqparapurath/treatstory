@@ -6,11 +6,11 @@ const ts = require('typescript');
 const React = require('react');
 const { create, act } = require('react-test-renderer');
 
-function load(file, mocks = {}) {
+function load(file, mocks = {}, globals = {}) {
   const output = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   const module = { exports: {} };
   vm.runInNewContext(output, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id === 'lucide-react' ? new Proxy({}, { get: () => () => null }) : require(id), console,
-    setTimeout: (...args) => { const timer = setTimeout(...args); timer.unref(); return timer; }, clearTimeout, URL, URLSearchParams }, { filename: file });
+    setTimeout: (...args) => { const timer = setTimeout(...args); timer.unref(); return timer; }, clearTimeout, URL, URLSearchParams, ...globals }, { filename: file });
   return module.exports;
 }
 function snapshot(id, data = {}) { return { docs: [{ id, data: () => data }] }; }
@@ -147,6 +147,7 @@ test('install icons have declared dimensions and opaque backgrounds', async () =
 test('seller product card cycles two separately supplied image URLs and opens a detail page', () => {
   const { SellerProductCard } = load('src/components/seller-product-card.tsx', {
     'next/link': 'a',
+    '@/components/favorite-toggle': { FavoriteToggle: () => null },
     '@/components/product-image': { ProductImage: props => React.createElement('img', props) },
     '@/hooks/use-product-gallery': { useProductGallery: length => {
       const [index, setIndex] = React.useState(0);
@@ -324,4 +325,52 @@ test('custom quotes enforce active seller access and product ownership at the se
   assert.match(route, /productSnap\.data\(\)\?\.status!=='published'/);
   assert.match(route, /data\.action==='quote'\|\|data\.action==='accept'/);
   assert.match(route, /tx\.get\(db\.collection\('sellers'\)\.doc\(q\.sellerId\)\)/);
+});
+
+test('checkout reuses the saved PIN, accepts six digits and expands address editing', async () => {
+  const input = props => React.createElement('input', props);
+  let notice;
+  let sent;
+  let requiresAdvance = false;
+  const { CreatorCheckout } = load('src/components/creator-checkout.tsx', {
+    '@/components/loading-states': { SectionSkeleton: () => null },
+    '@/components/default-delivery-address': { addressText: a => `${a.line1}, ${a.pincode}` },
+    'firebase/firestore': { doc: () => ({}), getDoc: async () => ({ data: () => ({name:'Cake',advancePaymentRequired:requiresAdvance}) }) },
+    '@/firebase': { useAccountData: () => ({ address: saved }), useFirestore: () => db, useUser: () => ({user, isUserLoading:false}) },
+    '@/context/cart-context': { useCart: () => ({ cartItems: items, removeFromCart() {}, updateLinePrice() {} }) },
+    '@/hooks/use-toast': { useToast: () => ({ toast: v => { notice = v; } }) },
+    '@/components/ui/button': { Button: props => React.createElement('button',props) },
+    '@/components/ui/input': { Input: input }, '@/components/ui/textarea': { Textarea: props => React.createElement('textarea',props) }, 'next/link':'a',
+  }, { sessionStorage: {getItem: () => '00000000-0000-4000-8000-000000000000', removeItem() {}}, fetch: async (_url, options) => { sent = JSON.parse(options.body); return {ok:true,json:async () => ({orderIds:['order-1']})}; } });
+  const saved = {recipient:'Buyer',phone:'9876543210',line1:'House 123 Main Street',pincode:'673001'};
+  const db = {}; const user = { getIdToken: async () => 'test-token' };
+  const items = [{id:'seller:cake',lineId:'cake',name:'Cake',price:100,quantity:1}];
+  let tree;
+  await act(async () => { tree = create(React.createElement(CreatorCheckout)); });
+  assert.equal(tree.root.findAllByType('textarea').filter(n => n.props.autoComplete === 'street-address').length, 0);
+  const change = tree.root.findAllByType('button').find(n => n.props.children === 'Change address');
+  act(() => change.props.onClick());
+  assert.equal(tree.root.findByProps({autoComplete:'street-address'}).props.value, 'House 123 Main Street, 673001');
+  const pin = tree.root.findAllByType('input').find(n => n.props.pattern === '[0-9]{6}');
+  assert.equal(pin.props.value, '673001');
+  act(() => pin.props.onChange({target:{value:'680 001'}}));
+  assert.equal(tree.root.findAllByType('input').find(n => n.props.pattern === '[0-9]{6}').props.value, '680001');
+  await act(async () => { await tree.root.findByType('form').props.onSubmit({preventDefault(){}}); });
+  // A valid PIN passes local validation and reaches checkout, rather than the PIN error.
+  assert.equal(sent.pincode, '680001');
+  assert.equal(sent.deliveryAddress, 'House 123 Main Street, 673001');
+  assert.equal(notice.title, 'Order confirmed');
+  act(() => tree.unmount());
+  requiresAdvance = true;
+  sent = undefined;
+  await act(async () => { tree = create(React.createElement(CreatorCheckout)); });
+  const place = tree.root.findAllByType('button').find(n => n.props.type === 'submit');
+  assert.equal(place.props.disabled, true, 'advance must be acknowledged before ordering');
+  const acknowledgement = tree.root.findAllByType('input').find(n => n.props.type === 'checkbox');
+  act(() => acknowledgement.props.onChange({target:{checked:true}}));
+  assert.equal(tree.root.findAllByType('button').find(n => n.props.type === 'submit').props.disabled, false);
+  await act(async () => { await tree.root.findByType('form').props.onSubmit({preventDefault(){}}); });
+  assert.equal(sent.advancePaymentAcknowledged, true);
+
+  act(() => tree.unmount());
 });

@@ -1,5 +1,7 @@
 "use client";
 
+import { FavoriteToggle } from '@/components/favorite-toggle';
+
 import type { Product } from '@/lib/products';
 import { Card, CardHeader } from '@/components/ui/card';
 import Link from 'next/link';
@@ -37,10 +39,10 @@ export function ProductCard({ product }: ProductCardProps) {
           <Link href={`/product/${encodeURIComponent(product.id)}`} aria-label={`View details for ${product.name}`} className="absolute inset-0 z-10" />
           {images.length > 1 && (
             <>
-              <Button variant="ghost" size="icon" aria-label="Previous image" className="absolute left-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 rounded-full bg-white/85 text-foreground shadow-sm hover:bg-white sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" onClick={e => {e.preventDefault();e.stopPropagation();gallery.move(-1);}}>
+              <Button variant="ghost" size="icon" aria-label="Previous image" className="absolute left-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 rounded-full border border-white/50 bg-white/30 backdrop-blur-xl text-foreground shadow-sm hover:bg-white/50 sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" onClick={e => {e.preventDefault();e.stopPropagation();gallery.move(-1);}}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Next image" className="absolute right-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 rounded-full bg-white/85 text-foreground shadow-sm hover:bg-white sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" onClick={e => {e.preventDefault();e.stopPropagation();gallery.move(1);}}>
+              <Button variant="ghost" size="icon" aria-label="Next image" className="absolute right-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 rounded-full border border-white/50 bg-white/30 backdrop-blur-xl text-foreground shadow-sm hover:bg-white/50 sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" onClick={e => {e.preventDefault();e.stopPropagation();gallery.move(1);}}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
               <div className="absolute top-3 left-1/2 flex -translate-x-1/2 gap-1.5">
@@ -48,10 +50,10 @@ export function ProductCard({ product }: ProductCardProps) {
               </div>
             </>
           )}
-          <span className="pointer-events-none absolute left-2.5 top-2.5 z-10 max-w-[calc(100%-20px)] truncate rounded-md bg-white/95 px-2.5 py-1 text-[10px] font-medium text-[#51463a] shadow-sm">{product.category}</span>
+      <div className="absolute right-2 top-2 z-20"><FavoriteToggle compact productId={product.id} title={product.name} imageUrl={images[0]} /></div>
           <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex flex-col gap-2.5 text-white sm:inset-x-4 sm:bottom-4">
             <h3 className="line-clamp-2 text-sm font-semibold leading-snug drop-shadow-sm sm:text-base">{product.name}</h3>
-            {product.description && <p className="hidden line-clamp-2 text-[11px] leading-snug text-white/85 sm:block sm:text-xs">{product.description}</p>}
+            {product.description && <p className="hidden text-[11px] leading-snug text-white/85 sm:line-clamp-2 sm:text-xs">{product.description}</p>}
             <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 text-white">{product.showPrice ? <p className="text-lg font-semibold tracking-tight sm:text-xl">{formatPrice(product.price)}</p> : <p className="text-xs font-medium">Price on request</p>}</div>
             <Button onClick={handleAddToCart} size="icon" aria-label={`Add ${product.name} to bag`} className="pointer-events-auto relative z-20 h-11 w-11 shrink-0 rounded-full bg-white text-[#29251f] shadow-sm transition-colors hover:bg-[#f4eee5]">
