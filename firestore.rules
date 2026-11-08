@@ -299,6 +299,18 @@ service cloud.firestore {
     }
     // Order creation is server-only. Direct client writes bypass transactional inventory checks.
 
+    match /favorites/{uid}/items/{productId} {
+      allow get, list, delete: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['productId','title','imageUrl','createdAt']) &&
+        request.resource.data.keys().hasAll(['productId','title','imageUrl','createdAt']) &&
+        request.resource.data.productId == productId &&
+        request.resource.data.title is string &&
+        request.resource.data.title.size() >= 1 && request.resource.data.title.size() <= 120 &&
+        request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 2000 &&
+        request.resource.data.createdAt == request.time;
+      allow update: if false;
+    }
     match /customer_addresses/{uid} {
       allow get: if isSignedIn() && request.auth.uid == uid;
       allow list, delete: if false;
