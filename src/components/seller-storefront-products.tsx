@@ -10,7 +10,7 @@ import { SellerProductCard } from '@/components/seller-product-card';
 import { Input } from '@/components/ui/input';
 import { Search, Store } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCart } from '@/context/cart-context';
+import { useCart, cartLineId } from '@/context/cart-context';
 import { useToast } from '@/hooks/use-toast';
 
 export function SellerStorefrontProducts({ limitCount }: { limitCount?: number }) {
@@ -25,9 +25,21 @@ export function SellerStorefrontProducts({ limitCount }: { limitCount?: number }
   const [visibleCount, setVisibleCount] = useState(24);
   useEffect(() => setVisibleCount(24), [deferredSearch]);
   const visible = useMemo(() => (data ?? []).filter(p => p.name.toLowerCase().includes(deferredSearch.toLowerCase()) || p.category.toLowerCase().includes(deferredSearch.toLowerCase())).slice(0, limitCount), [data, deferredSearch, limitCount]);
-  const addProduct = (p: MarketplaceProduct) => {
-    const item = { id: `seller:${p.id}`, sellerId: p.sellerId, name: p.name, description: p.description, category: p.category, categoryId: p.category, price: p.price, imageUrls: p.imageUrls, showPrice: p.showPrice, minimumOrderQuantity: p.minimumOrderQuantity };
-    for (let n = 0; n < Math.max(1, Math.min(99, p.minimumOrderQuantity ?? 1)); n++) addToCart(item);
+  const addProduct = (p: MarketplaceProduct): string | null => {
+    if (p.weightOptions?.length) {
+      router.push(`/product/seller:${encodeURIComponent(p.id)}`);
+      toast({ title: 'Choose your size', description: 'Select a weight or size, then add it to your bag.' });
+      return null;
+    }
+    if (p.availability === 'unavailable' || (p.availability === 'available' && p.stockQuantity <= 0)) {
+      toast({ variant: 'destructive', title: 'Out of stock', description: 'Please explore other creations.' });
+      return null;
+    }
+    const item = { id: `seller:${p.id}`, sellerId: p.sellerId, name: p.name, description: p.description,
+      category: p.category, categoryId: p.category, price: p.price, imageUrls: p.imageUrls,
+      showPrice: p.showPrice, minimumOrderQuantity: p.minimumOrderQuantity };
+    addToCart(item, Math.max(1, Math.min(99, p.minimumOrderQuantity ?? 1)));
+    return cartLineId(item);
   };
   if (error) return <LoadError retry={retry} />;
   if (isLoading) return <ProductGridSkeleton count={limitCount || 8} />;
@@ -38,8 +50,8 @@ export function SellerStorefrontProducts({ limitCount }: { limitCount?: number }
     {visible.length === 0 ? <p className="text-sm text-muted-foreground">No matching creator products.</p> : (
       <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
         {visible.slice(0, visibleCount).map(p => <SellerProductCard key={p.id} product={p}
-          addToBag={product => { addProduct(product); toast({ title: 'Added to your bag', description: product.name }); }}
-          buyNow={product => { addProduct(product); router.push(`/checkout?product=${encodeURIComponent(product.id)}`); }}
+          addToBag={product => { if (addProduct(product)) toast({ title: 'Added to your bag', description: product.name }); }}
+          buyNow={product => { const line = addProduct(product); if (line) router.push(`/checkout?product=${encodeURIComponent(product.id)}&line=${encodeURIComponent(line)}`); }}
         />)}
       </div>
     )}
