@@ -305,6 +305,9 @@ test('a single seller listing supports separately priced weight and unit variant
   assert.match(save, /String\(product\.price\)/);
   assert.match(save, /Duplicate sizes/);
   assert.match(save, /weightOptions: weights/);
+  const rules = fs.readFileSync('firestore.rules', 'utf8');
+  assert.match(rules, /w\.keys\(\)\.hasAll\(\['value','unit','price'\]\)/);
+  assert.match(rules, /w\.price is number && w\.price >= 0/);
   assert.match(detail, /selectedPrice = selectedWeight\?\.price \?\?/);
   assert.match(detail, /price: selectedPrice/);
   assert.match(card, /lowestPrice/);
