@@ -11,6 +11,7 @@ export type Product = {
   showPrice: boolean;
   minimumOrderQuantity?: number;
   customizationNote?: string; // Optional buyer request; final price is confirmed by the seller.
+  selectedWeight?: { value: number; unit: 'g'|'kg'|'ml'|'l'|'pieces' };
   createdAt?: any;
   updatedAt?: any;
 };
