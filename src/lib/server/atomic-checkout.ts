@@ -200,6 +200,14 @@ export async function placeAtomicCheckout(db: Firestore, uid: string, input: Che
         count: booking.current + (qtyBySeller.get(id) || 0), updatedAt: now });
     }
     for (const order of orders) tx.create(db.collection('seller_orders').doc(order.refId), order.record);
+    // Private in-app alerts are transactionally created for both parties.
+    for (const order of orders) {
+      const sellerId = order.record.sellerId as string;
+      const buyerAlert = db.collection('notifications').doc(uid).collection('items').doc();
+      const sellerAlert = db.collection('notifications').doc(sellerId).collection('items').doc();
+      tx.create(buyerAlert, { title: 'Your TreatStory order was placed', orderId: order.refId, createdAt: now, read: false });
+      tx.create(sellerAlert, { title: 'You have a new order', orderId: order.refId, createdAt: now, read: false });
+    }
     tx.create(checkoutRef, { buyerUid: uid, requestHash, orderIds: orders.map(x => x.refId),
       total, currency: 'INR', paymentMethod: 'cod', status: 'placed', createdAt: now });
     return { checkoutId: input.checkoutId, orderIds: orders.map(x => x.refId), total, repeated: false };
