@@ -34,12 +34,18 @@ export async function POST(request: NextRequest) {
       const result = await db.runTransaction(async tx=>{
         const sellerRef=db.collection('sellers').doc(data.sellerId);
         const limitRef=db.collection('quote_limits').doc(uid+'_'+new Date().toISOString().slice(0,10));
-        const [sellerSnap,limitSnap]=await Promise.all([tx.get(sellerRef),tx.get(limitRef)]);
-        if (!sellerSnap.exists || sellerSnap.data()?.status!=='active') throw new ApiError(409,'Seller not available for custom requests.');
+        const productRef=data.productId ? db.collection('marketplace_products').doc(data.productId) : null;
+        const [sellerSnap,limitSnap,productSnap]=await Promise.all([tx.get(sellerRef),tx.get(limitRef),productRef?tx.get(productRef):Promise.resolve(null)]);
+        const now=Timestamp.now();
+        if (!sellerSnap.exists || sellerSnap.data()?.status!=='active' ||
+            !sellerSnap.data()?.isOpen || !sellerSnap.data()?.accessEndsAt?.toMillis ||
+            sellerSnap.data()!.accessEndsAt.toMillis()<=now.toMillis())
+          throw new ApiError(409,'Seller is not accepting new custom requests.');
+        if (productRef && (!productSnap?.exists || productSnap.data()?.sellerId!==data.sellerId || productSnap.data()?.status!=='published'))
+          throw new ApiError(409,'The selected product is not available from this seller.');
         const count=limitSnap.data()?.count||0;
         if(count>=5)throw new ApiError(429,'Daily limit of five quote requests reached.');
         const ref=db.collection('custom_quotes').doc();
-        const now=Timestamp.now();
         tx.create(ref,{buyerUid:uid,sellerId:data.sellerId,productId:data.productId,occasion:data.occasion,
           description:data.description,budget:data.budget,requestedDate:data.requestedDate,
           referenceUrl:data.referenceUrl,status:'requested',quotedPrice:null,quotedNote:'',createdAt:now,updatedAt:now});
@@ -56,6 +62,13 @@ export async function POST(request: NextRequest) {
       if(!snap.exists)throw new ApiError(404,'Quote request not found.');
       const q=snap.data()!;
       const now=Timestamp.now();
+      // Seller access must remain valid for a new quote or an accepted quote.
+      const sellerSnap = data.action==='quote'||data.action==='accept'
+        ? await tx.get(db.collection('sellers').doc(q.sellerId)) : null;
+      if (sellerSnap && (!sellerSnap.exists || sellerSnap.data()?.status!=='active' ||
+          !sellerSnap.data()?.isOpen || !sellerSnap.data()?.accessEndsAt?.toMillis ||
+          sellerSnap.data()!.accessEndsAt.toMillis()<=now.toMillis()))
+        throw new ApiError(409,'This seller is not currently accepting custom orders.');
       if(data.action==='quote'){
         if(q.sellerId!==uid)throw new ApiError(403,'Only the seller may quote.');
         if(q.status!=='requested')throw new ApiError(409,'This quote is no longer open.');
