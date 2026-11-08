@@ -248,12 +248,28 @@ service cloud.firestore {
         (options.size() <= 7 || validWeightOption(options[7]));
     }
 
+    function validFoodLabels(labels) {
+      return labels is list && labels.size() <= 12 &&
+        (labels.size() <= 0 || (labels[0] is string && labels[0].size() > 0 && labels[0].size() <= 40)) &&
+        (labels.size() <= 1 || (labels[1] is string && labels[1].size() > 0 && labels[1].size() <= 40)) &&
+        (labels.size() <= 2 || (labels[2] is string && labels[2].size() > 0 && labels[2].size() <= 40)) &&
+        (labels.size() <= 3 || (labels[3] is string && labels[3].size() > 0 && labels[3].size() <= 40)) &&
+        (labels.size() <= 4 || (labels[4] is string && labels[4].size() > 0 && labels[4].size() <= 40)) &&
+        (labels.size() <= 5 || (labels[5] is string && labels[5].size() > 0 && labels[5].size() <= 40)) &&
+        (labels.size() <= 6 || (labels[6] is string && labels[6].size() > 0 && labels[6].size() <= 40)) &&
+        (labels.size() <= 7 || (labels[7] is string && labels[7].size() > 0 && labels[7].size() <= 40)) &&
+        (labels.size() <= 8 || (labels[8] is string && labels[8].size() > 0 && labels[8].size() <= 40)) &&
+        (labels.size() <= 9 || (labels[9] is string && labels[9].size() > 0 && labels[9].size() <= 40)) &&
+        (labels.size() <= 10 || (labels[10] is string && labels[10].size() > 0 && labels[10].size() <= 40)) &&
+        (labels.size() <= 11 || (labels[11] is string && labels[11].size() > 0 && labels[11].size() <= 40));
+    }
     function validMarketplaceProduct(p) {
       return p.keys().hasOnly([
         'sellerId', 'name', 'description', 'price', 'category', 'imageUrls',
         'showPrice', 'availability', 'stockQuantity', 'preparationDays',
         'minimumOrderQuantity', 'weightValue', 'weightUnit', 'weightOptions', 'customizationOptions',
-        'careInstructions', 'status', 'createdAt', 'updatedAt'
+        'careInstructions', 'ingredients', 'allergens', 'dietaryTags', 'shelfLifeDays', 'storageInstructions',
+        'status', 'createdAt', 'updatedAt'
       ]) &&
       p.sellerId is string &&
       p.name is string && p.name.size() >= 2 && p.name.size() <= 120 &&
@@ -273,6 +289,12 @@ service cloud.firestore {
       (('weightValue' in p) == ('weightUnit' in p)) &&
       (!('careInstructions' in p) || (p.careInstructions is string && p.careInstructions.size() <= 500)) &&
       (!('customizationOptions' in p) || validCustomizationPrompts(p.customizationOptions)) &&
+      (!('ingredients' in p) || (p.ingredients is string && p.ingredients.size() <= 1000)) &&
+      (!('storageInstructions' in p) || (p.storageInstructions is string && p.storageInstructions.size() <= 500)) &&
+      (!('shelfLifeDays' in p) || (p.shelfLifeDays is int && p.shelfLifeDays >= 0 && p.shelfLifeDays <= 365)) &&
+      (!('allergens' in p) || validFoodLabels(p.allergens)) &&
+      (!('dietaryTags' in p) || validFoodLabels(p.dietaryTags)) &&
+
       p.createdAt is timestamp && p.updatedAt is timestamp;
     }
 
