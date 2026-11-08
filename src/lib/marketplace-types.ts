@@ -29,6 +29,13 @@ export interface Seller {
   logoUrl?: string;
   coverUrl?: string;
   isOpen: boolean;
+  deliveryMethods?: Array<'delivery' | 'pickup'>;
+  deliveryPincodes?: string[];
+  deliveryFee?: number;
+  pickupAddress?: string;
+  deliverySlots?: string[];
+  dailyOrderCapacity?: number;
+  acceptanceHours?: number;
   status: SellerStatus;
   accessType: SellerAccessType;
   accessStartsAt: unknown;
