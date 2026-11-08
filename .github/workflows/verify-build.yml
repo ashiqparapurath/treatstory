@@ -32,7 +32,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Validate rules and execute real atomic-checkout Firestore emulator tests
-        run: npx --yes firebase-tools@14 emulators:exec --only firestore,storage --project demo-treatstory --config firebase.json 'npx --no-install tsx tests/atomic-checkout-emulator.ts'
+        run: npx --yes firebase-tools@14 emulators:exec --only firestore,storage --project demo-treatstory --config firebase.json 'npx --no-install tsx tests/atomic-checkout-emulator.ts && npx --no-install tsx tests/seller-product-rules.ts'
       - name: TypeScript validation
         run: npm run typecheck
       - name: Production build

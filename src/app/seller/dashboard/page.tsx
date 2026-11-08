@@ -53,6 +53,7 @@ function SellerContent() {
   const setSection = (next: Section) => router.push(`/seller/dashboard?section=${next}`, { scroll: false });
   const [editing, setEditing] = useState<MarketplaceProduct | null>(null);
   const [draft, setDraft] = useState<ProductDraft>(emptyDraft);
+  const [saveError, setSaveError] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
@@ -136,6 +137,7 @@ function SellerContent() {
       weightOptions: (product.weightOptions?.length ? product.weightOptions : product.weightValue && product.weightUnit ? [{ value: product.weightValue, unit: product.weightUnit }] : []).map(w => ({ value: String(w.value), unit: w.unit, price: 'price' in w && typeof w.price === 'number' ? String(w.price) : String(product.price), stockQuantity: 'stockQuantity' in w && typeof w.stockQuantity === 'number' ? String(w.stockQuantity) : '' })),
       showPrice: product.showPrice, status: product.status === 'published' ? 'published' : 'draft'
     } : emptyDraft);
+    setSaveError('');
     setFormOpen(true);
   }
 
@@ -218,13 +220,17 @@ function SellerContent() {
       return toast({variant:'destructive',title:'Check food information',description:'Use up to 12 allergen/dietary labels, and a shelf life between 0 and 365 days.'});
     }
 
+    const preparationDays = draft.preparationDays.trim() === '' ? 0 : Number(draft.preparationDays);
+    if (!Number.isInteger(preparationDays) || preparationDays < 0 || preparationDays > 365)
+      return toast({ variant: 'destructive', title: 'Preparation days must be a whole number between 0 and 365' });
+    setSaveError('');
     setBusy(true);
     try {
       const data = {
         sellerId: user.uid, name: draft.name.trim(), description: draft.description.trim(), category: draft.category.trim(),
         price, imageUrls, showPrice: draft.showPrice, availability: draft.availability,
         stockQuantity: sharedStock,
-        preparationDays: draft.preparationDays ? Number(draft.preparationDays) : 0,
+        preparationDays,
         minimumOrderQuantity: minQty,
         customizationOptions: options,
         advancePaymentRequired: draft.advancePaymentRequired,
@@ -241,7 +247,17 @@ function SellerContent() {
       setCountVersion(v => v + 1);
       toast({ title: editing ? 'Product updated' : 'Product created' });
       setFormOpen(false);
-    } catch { toast({ variant: 'destructive', title: 'Could not save product', description: 'Check your account access and field values.' }); }
+    } catch (error) {
+      const code = (error as {code?: string})?.code || 'unknown';
+      console.error('TreatStory product save failed', { code, operation: editing ? 'update' : 'create', sizes: weights.length, allergens: allergens.length, dietaryLabels: dietaryTags.length });
+      const message = code === 'permission-denied'
+        ? 'Your changes could not be saved. Your seller access or product permissions may need updating. Please contact support. (permission-denied)'
+        : code === 'unavailable' ? 'Saving is temporarily unavailable. Check your connection and try again. Your changes are still here.'
+        : code === 'invalid-argument' ? 'A product field could not be saved. Review the details and try again. (invalid-argument)'
+        : 'Could not save your changes. Please try again or contact support.';
+      setSaveError(message);
+      toast({ variant: 'destructive', title: 'Could not save product', description: message });
+    }
     finally { setBusy(false); }
   }
 
@@ -336,7 +352,7 @@ function SellerContent() {
         </div></div><label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={storeDraft.isOpen} onChange={e => setStoreDraft(s => ({ ...s, isOpen: e.target.checked }))} />Accepting enquiries</label><Button type="submit" disabled={!active || busy} className="rounded-full">Save changes</Button></form>}
       </main>
     </div>
-    {formOpen && <SellerProductEditor open={formOpen} editing={!!editing} busy={busy} enabled={active} draft={draft} setDraft={setDraft} categories={[...new Set((products ?? []).map(p => p.category))]} onClose={() => { if (!uploadingPhotos && !busy) { setFormOpen(false); setUploadProgress(''); } }} onSubmit={saveProduct} onUploadPhotos={uploadProductPhotos} uploading={uploadingPhotos} uploadProgress={uploadProgress} />}
+    {formOpen && <SellerProductEditor saveError={saveError} open={formOpen} editing={!!editing} busy={busy} enabled={active} draft={draft} setDraft={setDraft} categories={[...new Set((products ?? []).map(p => p.category))]} onClose={() => { if (!uploadingPhotos && !busy) { setFormOpen(false); setUploadProgress(''); } }} onSubmit={saveProduct} onUploadPhotos={uploadProductPhotos} uploading={uploadingPhotos} uploadProgress={uploadProgress} />}
   </div>;
 }
 

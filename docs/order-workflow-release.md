@@ -100,3 +100,15 @@ For a deployed 503, inspect the response body and the server logs for `POST /api
 - 22 passing regression tests cover saved PINs with modal address callbacks, advance acknowledgement, missing secure-service configuration, escaped key newlines, authoritative quote-name snapshots, and authenticated/rate-limited reference uploads.
 - Production build and TypeScript validation pass.
 - Browser fixture checks with mocked account/network data pass for the dock order, named selections, uploading and attaching a reference, preserved form values on 503 followed by successful retry, and checkout/profile popup save/cancel behaviour at 390/1440px. No live authenticated quote or photo was created.
+
+## Existing-product save repair
+
+A seller-authorized emulator reproduction confirmed that editing an existing listing with eight sizes, twelve allergen labels, twelve dietary labels and six personalization prompts failed under the previous rules with the 1,000-expression limit. This is a rules evaluation failure, not a price calculation or image-upload failure. The screenshot's generic toast alone cannot establish that the deployed failure has the same cause.
+
+Product updates now validate changed list fields while retaining the stored values of unchanged lists. Price-only variant edits validate the new price without repeatedly validating unchanged size, unit and stock metadata. Owner checks, active/unexpired seller access, allowed field names, timestamps and changed-field validation remain enforced. New listings retain full validation; creating a new listing at all maximum variant/food limits remains a known rules-budget limitation outside this edit repair.
+
+The seller editor keeps failed changes open, displays a persistent plain-language error, and logs the error code/operation and field counts without dumping product/contact details. Preparation days are checked as a whole number before submission.
+
+`tests/seller-product-rules.ts` uses the real client SDK with seller identity against the emulator, rather than administrator writes for assertions. A detailed existing listing is seeded administratively as a migration fixture; the actual updates use the seller's credentials. Tests cover base fields, all eight variant prices, advance requirements, food labels/personalization, and rejection of missing/negative/null prices, malformed/oversized labels, unknown variant fields, changed ownership/creation time and expired access. CI now runs this alongside the existing atomic-order emulator suite. The old rules reject the seeded listing's edit; the revised rules pass the edit tests.
+
+Publish the matching `firestore.rules` to the same project used by the deployed app, and deploy the editor change. A PR push does not publish database rules. No live rules or application deployment was performed in this session.

@@ -228,24 +228,27 @@ service cloud.firestore {
         (prompts.size() <= 5 || (prompts[5] is string && prompts[5].size() >= 1 && prompts[5].size() <= 80));
     }
 
-    function validWeightOption(w) {
-      return w is map && w.keys().hasOnly(['value','unit','price','stockQuantity']) &&
+    function validWeightOption(w, previous) {
+      // Price-only edits inherit unchanged, previously stored variant metadata.
+      return (previous.keys().hasAll(['value','unit','price']) &&
+        w.diff(previous).affectedKeys().hasOnly(['price']) &&
+        w.price is number && w.price >= 0 && w.price <= 10000000) || (w is map && w.keys().hasOnly(['value','unit','price','stockQuantity']) &&
         w.keys().hasAll(['value','unit','price']) &&
         w.value is number && w.value > 0 && w.value <= 100000 &&
         w.unit in ['g','kg','ml','l','pieces'] &&
         w.price is number && w.price >= 0 && w.price <= 10000000 &&
-        (!('stockQuantity' in w) || (w.stockQuantity is int && w.stockQuantity >= 0 && w.stockQuantity <= 1000000));
+        (!('stockQuantity' in w) || (w.stockQuantity is int && w.stockQuantity >= 0 && w.stockQuantity <= 1000000)));
     }
-    function validWeightOptions(options) {
+    function validWeightOptions(options, previous) {
       return options is list && options.size() <= 8 &&
-        (options.size() <= 0 || validWeightOption(options[0])) &&
-        (options.size() <= 1 || validWeightOption(options[1])) &&
-        (options.size() <= 2 || validWeightOption(options[2])) &&
-        (options.size() <= 3 || validWeightOption(options[3])) &&
-        (options.size() <= 4 || validWeightOption(options[4])) &&
-        (options.size() <= 5 || validWeightOption(options[5])) &&
-        (options.size() <= 6 || validWeightOption(options[6])) &&
-        (options.size() <= 7 || validWeightOption(options[7]));
+        (options.size() <= 0 || validWeightOption(options[0], previous.size() > 0 ? previous[0] : {})) &&
+        (options.size() <= 1 || validWeightOption(options[1], previous.size() > 1 ? previous[1] : {})) &&
+        (options.size() <= 2 || validWeightOption(options[2], previous.size() > 2 ? previous[2] : {})) &&
+        (options.size() <= 3 || validWeightOption(options[3], previous.size() > 3 ? previous[3] : {})) &&
+        (options.size() <= 4 || validWeightOption(options[4], previous.size() > 4 ? previous[4] : {})) &&
+        (options.size() <= 5 || validWeightOption(options[5], previous.size() > 5 ? previous[5] : {})) &&
+        (options.size() <= 6 || validWeightOption(options[6], previous.size() > 6 ? previous[6] : {})) &&
+        (options.size() <= 7 || validWeightOption(options[7], previous.size() > 7 ? previous[7] : {}));
     }
 
     function validFoodLabels(labels) {
@@ -263,7 +266,7 @@ service cloud.firestore {
         (labels.size() <= 10 || (labels[10] is string && labels[10].size() > 0 && labels[10].size() <= 40)) &&
         (labels.size() <= 11 || (labels[11] is string && labels[11].size() > 0 && labels[11].size() <= 40));
     }
-    function validMarketplaceProduct(p) {
+    function validMarketplaceProduct(p, changed, previousWeights) {
       return p.keys().hasOnly([
         'sellerId', 'name', 'description', 'price', 'category', 'imageUrls',
         'showPrice', 'availability', 'stockQuantity', 'preparationDays',
@@ -285,16 +288,16 @@ service cloud.firestore {
       (!('minimumOrderQuantity' in p) || (p.minimumOrderQuantity is int && p.minimumOrderQuantity >= 1 && p.minimumOrderQuantity <= 99)) &&
       (!('weightValue' in p) || (p.weightValue is number && p.weightValue > 0 && p.weightValue <= 100000)) &&
       (!('weightUnit' in p) || p.weightUnit in ['g', 'kg', 'ml', 'l', 'pieces']) &&
-      (!('weightOptions' in p) || validWeightOptions(p.weightOptions)) &&
+      (!changed.hasAny(['weightOptions']) || !('weightOptions' in p) || validWeightOptions(p.weightOptions, previousWeights)) &&
       (('weightValue' in p) == ('weightUnit' in p)) &&
       (!('advancePaymentRequired' in p) || p.advancePaymentRequired is bool) &&
       (!('careInstructions' in p) || (p.careInstructions is string && p.careInstructions.size() <= 500)) &&
-      (!('customizationOptions' in p) || validCustomizationPrompts(p.customizationOptions)) &&
+      (!changed.hasAny(['customizationOptions']) || !('customizationOptions' in p) || validCustomizationPrompts(p.customizationOptions)) &&
       (!('ingredients' in p) || (p.ingredients is string && p.ingredients.size() <= 1000)) &&
       (!('storageInstructions' in p) || (p.storageInstructions is string && p.storageInstructions.size() <= 500)) &&
       (!('shelfLifeDays' in p) || (p.shelfLifeDays is int && p.shelfLifeDays >= 0 && p.shelfLifeDays <= 365)) &&
-      (!('allergens' in p) || validFoodLabels(p.allergens)) &&
-      (!('dietaryTags' in p) || validFoodLabels(p.dietaryTags)) &&
+      (!changed.hasAny(['allergens']) || !('allergens' in p) || validFoodLabels(p.allergens)) &&
+      (!changed.hasAny(['dietaryTags']) || !('dietaryTags' in p) || validFoodLabels(p.dietaryTags)) &&
 
       p.createdAt is timestamp && p.updatedAt is timestamp;
     }
@@ -307,14 +310,14 @@ service cloud.firestore {
         resource.data.status == 'published';
       allow create: if sellerActive(request.resource.data.sellerId) &&
         request.resource.data.sellerId == request.auth.uid &&
-        validMarketplaceProduct(request.resource.data) &&
+        validMarketplaceProduct(request.resource.data, request.resource.data.keys().toSet(), []) &&
         request.resource.data.createdAt == request.time &&
         request.resource.data.updatedAt == request.time;
       allow update: if sellerActive(resource.data.sellerId) &&
         resource.data.sellerId == request.auth.uid &&
         request.resource.data.sellerId == resource.data.sellerId &&
         request.resource.data.createdAt == resource.data.createdAt &&
-        validMarketplaceProduct(request.resource.data) &&
+        validMarketplaceProduct(request.resource.data, request.resource.data.diff(resource.data).affectedKeys(), resource.data.get('weightOptions', [])) &&
         request.resource.data.updatedAt == request.time;
       allow delete: if sellerActive(resource.data.sellerId) &&
         resource.data.sellerId == request.auth.uid;

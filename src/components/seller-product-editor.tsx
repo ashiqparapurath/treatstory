@@ -44,7 +44,8 @@ export function suggestProductDescription(d: Pick<ProductDraft, 'name' | 'catego
   return details.join(' ').slice(0, 2000);
 }
 
-export function SellerProductEditor({ open, editing, busy, enabled, draft, setDraft, categories, onClose, onSubmit, onUploadPhotos, uploading, uploadProgress }: {
+export function SellerProductEditor({ open, editing, busy, enabled, draft, setDraft, categories, onClose, onSubmit, onUploadPhotos, uploading, uploadProgress, saveError }: {
+  saveError?: string;
   open: boolean;
   editing: boolean;
   busy: boolean;
@@ -80,6 +81,7 @@ export function SellerProductEditor({ open, editing, busy, enabled, draft, setDr
       </div>
       <form id="sellerProductForm" onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4 sm:space-y-5 sm:px-7 sm:py-6">
+          {saveError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{saveError}</p>}
           <section className="space-y-3 rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6">
             <h3 className="text-sm font-semibold">Essential details</h3>
             <div className="grid gap-3 sm:grid-cols-2">
