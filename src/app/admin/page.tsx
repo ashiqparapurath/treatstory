@@ -21,12 +21,14 @@ const BannerDialog = dynamic(() => import('@/components/admin/banner-dialog').th
 const CategoryList = dynamic(() => import('@/components/admin/category-list').then(m => m.CategoryList), { loading: () => <SectionSkeleton /> });
 const CategoryDialog = dynamic(() => import('@/components/admin/category-dialog').then(m => m.CategoryDialog), { loading: () => <SectionSkeleton /> });
 const EnquirySettingsForm = dynamic(() => import('@/components/admin/enquiry-settings-form').then(m => m.EnquirySettingsForm), { loading: () => <SectionSkeleton /> });
+const SupportInbox = dynamic(() => import('@/components/admin/support-inbox').then(m => m.SupportInbox), { loading: () => <SectionSkeleton /> });
 import { LayoutDashboard, Store, ClipboardList, Package, ImageIcon, Tags, Settings, LogOut, ArrowUpRight, ShieldCheck } from 'lucide-react';
 
-type Tab = 'orders' | 'overview' | 'applications' | 'sellers' | 'catalog' | 'products' | 'banners' | 'categories' | 'settings';
+type Tab = 'support' | 'orders' | 'overview' | 'applications' | 'sellers' | 'catalog' | 'products' | 'banners' | 'categories' | 'settings';
 const navigation: { id: Tab; label: string; icon: typeof Store; group: string }[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, group: 'Workspace' },
   { id: 'orders', label: 'Orders & fulfillment', icon: ClipboardList, group: 'Marketplace' },
+  { id: 'support', label: 'Customer support', icon: ClipboardList, group: 'Marketplace' },
   { id: 'applications', label: 'Seller applications', icon: ClipboardList, group: 'Marketplace' },
   { id: 'sellers', label: 'Seller management', icon: Store, group: 'Marketplace' },
   { id: 'catalog', label: 'Seller catalog', icon: Package, group: 'Marketplace' },
@@ -75,6 +77,7 @@ function AdminContent() {
         <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a68a64]">Marketplace operations</p><h1 className="mt-2 text-2xl font-medium tracking-tight sm:text-4xl">{navigation.find(item => item.id === tab)?.label}</h1><p className="mt-2 hidden text-sm text-muted-foreground sm:block">Manage creators, storefront content and platform operations.</p></div><div className="flex w-full flex-wrap gap-2 sm:w-auto"><Link href="/" className="inline-flex h-10 items-center gap-2 rounded-full border bg-white px-4 text-xs font-medium">View marketplace <ArrowUpRight className="h-4 w-4" /></Link>{tab === 'products' && <ProductDialog isOpen={productOpen} onOpenChange={setProductOpen}><Button onClick={() => setProductOpen(true)}>Add product</Button></ProductDialog>}{tab === 'banners' && <BannerDialog isOpen={bannerOpen} onOpenChange={setBannerOpen}><Button onClick={() => setBannerOpen(true)}>Add banner</Button></BannerDialog>}{tab === 'categories' && <CategoryDialog isOpen={categoryOpen} onOpenChange={setCategoryOpen}><Button onClick={() => setCategoryOpen(true)}>Add category</Button></CategoryDialog>}</div></div>
         {tab === 'overview' && <AdminOverview navigate={next => setTab(next === 'sellers' ? 'applications' : next as Tab)} />}
         {tab === 'orders' && <OrderManagement mode="admin" />}
+        {tab === 'support' && <SupportInbox />}
         {tab === 'applications' && <SellerApplications />}
         {tab === 'sellers' && <SellerManagement />}
         {tab === 'catalog' && <MarketplaceCatalog />}
