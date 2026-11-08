@@ -230,10 +230,10 @@ service cloud.firestore {
 
     function validWeightOption(w) {
       return w is map && w.keys().hasOnly(['value','unit','price','stockQuantity']) &&
-        w.keys().hasAll(['value','unit']) &&
+        w.keys().hasAll(['value','unit','price']) &&
         w.value is number && w.value > 0 && w.value <= 100000 &&
         w.unit in ['g','kg','ml','l','pieces'] &&
-        (!('price' in w) || (w.price is number && w.price >= 0 && w.price <= 10000000)) &&
+        w.price is number && w.price >= 0 && w.price <= 10000000 &&
         (!('stockQuantity' in w) || (w.stockQuantity is int && w.stockQuantity >= 0 && w.stockQuantity <= 1000000));
     }
     function validWeightOptions(options) {
