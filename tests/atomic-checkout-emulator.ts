@@ -81,6 +81,39 @@ async function run() {
   await applyOrderAction(db,sellerId,variant.orderIds[0],'rejected','Unable to prepare');
   const vRestored=(await db.collection('marketplace_products').doc(variantId).get()).data()!;
   assert.equal(vRestored.weightOptions[0].stockQuantity,1);
-  console.log('PASS Firestore transactions: stock race, retry, capacity, price acceptance, cancellation restoration and size pricing');
+  // One listing, multiple weight/unit choices with truly independent
+  // prices and inventory. A single grouped checkout can include both sizes.
+  await sellerRef.update({ dailyOrderCapacity: 3 });
+  const cakeId = 'test-multi-price-cake-' + randomUUID();
+  const cakeRef = db.collection('marketplace_products').doc(cakeId);
+  await cakeRef.set({
+    sellerId, name: 'Cake with two sizes', status: 'published', availability: 'available',
+    price: 450, showPrice: true, stockQuantity: 0, minimumOrderQuantity: 1, preparationDays: 0,
+    weightOptions: [
+      { value: 500, unit: 'g', price: 450, stockQuantity: 1 },
+      { value: 1, unit: 'kg', price: 800, stockQuantity: 1 },
+    ],
+  });
+  const twoSizes = request('buyer-e');
+  twoSizes.lines = [
+    { productId: cakeId, quantity: 1, expectedPrice: 450, customizationNote: 'Small', weight: { value: 500, unit: 'g' } },
+    { productId: cakeId, quantity: 1, expectedPrice: 800, customizationNote: 'Large', weight: { value: 1, unit: 'kg' } },
+  ];
+  const grouped = await placeAtomicCheckout(db, 'buyer-e', twoSizes);
+  assert.equal(grouped.orderIds.length, 2, 'each size receives its own seller order');
+  assert.equal(grouped.total, 1300, '500 g + 1 kg have separate prices and one delivery fee');
+  const afterGrouped = (await cakeRef.get()).data()!;
+  assert.deepEqual(afterGrouped.weightOptions.map((v: {stockQuantity: number}) => v.stockQuantity), [0, 0],
+    'both size stocks are reserved independently');
+  assert.equal(afterGrouped.stockQuantity, 0, 'shared stock is not deducted when size stock is configured');
+  const groupedRepeat = await placeAtomicCheckout(db, 'buyer-e', twoSizes);
+  assert.equal(groupedRepeat.repeated, true);
+  await applyOrderAction(db, sellerId, grouped.orderIds[0], 'rejected', 'Not ready');
+  await applyOrderAction(db, sellerId, grouped.orderIds[1], 'rejected', 'Not ready');
+  const restocked = (await cakeRef.get()).data()!;
+  assert.deepEqual(restocked.weightOptions.map((v: {stockQuantity: number}) => v.stockQuantity), [1, 1],
+    'rejected orders restore only their respective size stocks');
+
+  console.log('PASS Firestore transactions: stock race, retry, capacity, price acceptance, cancellation restoration and simultaneous different-size pricing');
 }
 run().catch(e=>{ console.error(e);process.exitCode=1;});
