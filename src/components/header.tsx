@@ -22,6 +22,7 @@ import { useRouter, usePathname } from 'next/navigation';
 const navItems = [
   { href: '/', label: 'Home' },
   { href: '/products', label: 'Shop all' },
+  { href: '/favorites', label: 'Favourites' },
   { href: '/new-arrivals', label: 'New arrivals' },
   { href: '/about', label: 'Our story' },
 ];
