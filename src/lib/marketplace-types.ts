@@ -62,6 +62,11 @@ export interface MarketplaceProduct {
   weightValue?: number;
   weightUnit?: 'g' | 'kg' | 'ml' | 'l' | 'pieces';
   careInstructions?: string;
+  ingredients?: string;
+  allergens?: string[];
+  dietaryTags?: string[];
+  shelfLifeDays?: number;
+  storageInstructions?: string;
   weightOptions?: Array<{value:number;unit:'g'|'kg'|'ml'|'l'|'pieces';price?:number;stockQuantity?:number}>;
   customizationOptions?: string[];
   stockQuantity?: number;
