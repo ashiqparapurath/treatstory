@@ -117,6 +117,9 @@ function SellerContent() {
       weightUnit: product.weightUnit || 'g',
       customizationOptions: (product.customizationOptions ?? []).join('\n'),
       careInstructions: product.careInstructions ?? '',
+      ingredients: product.ingredients ?? '', allergens: (product.allergens??[]).join(', '),
+      dietaryTags: (product.dietaryTags??[]).join(', '), shelfLifeDays: product.shelfLifeDays == null ? '' : String(product.shelfLifeDays),
+      storageInstructions: product.storageInstructions ?? '',
       weightOptions: (product.weightOptions?.length ? product.weightOptions : product.weightValue && product.weightUnit ? [{ value: product.weightValue, unit: product.weightUnit }] : []).map(w => ({ value: String(w.value), unit: w.unit, price: 'price' in w && typeof w.price === 'number' ? String(w.price) : '', stockQuantity: 'stockQuantity' in w && typeof w.stockQuantity === 'number' ? String(w.stockQuantity) : '' })),
       showPrice: product.showPrice, status: product.status === 'published' ? 'published' : 'draft'
     } : emptyDraft);
@@ -173,6 +176,15 @@ function SellerContent() {
       ('price' in w && (!Number.isFinite(w.price) || (w.price ?? -1) < 0 || (w.price ?? 10000001) > 10000000)) ||
       ('stockQuantity' in w && (!Number.isInteger(w.stockQuantity) || (w.stockQuantity ?? -1) < 0 || (w.stockQuantity ?? 1000001) > 1000000)))) return toast({ variant: 'destructive', title: 'Check size options, prices and stock (maximum 8 sizes)' });
     if (draft.category.trim().length < 2) return toast({ variant: 'destructive', title: 'Enter a product category' });
+    const allergens = draft.allergens.split(',').map(s=>s.trim()).filter(Boolean);
+    const dietaryTags = draft.dietaryTags.split(',').map(s=>s.trim()).filter(Boolean);
+    const shelfLifeDays = draft.shelfLifeDays.trim()==='' ? null : Number(draft.shelfLifeDays);
+    if (allergens.length>12 || dietaryTags.length>12 || [...allergens,...dietaryTags].some(s=>s.length>40) ||
+      draft.ingredients.length>1000 || draft.storageInstructions.length>500 ||
+      (shelfLifeDays!==null && (!Number.isInteger(shelfLifeDays)||shelfLifeDays<0||shelfLifeDays>365))) {
+      return toast({variant:'destructive',title:'Check food information',description:'Use up to 12 allergen/dietary labels, and a shelf life between 0 and 365 days.'});
+    }
+
     setBusy(true);
     try {
       const data = {
@@ -183,6 +195,9 @@ function SellerContent() {
         minimumOrderQuantity: minQty,
         customizationOptions: options,
         careInstructions: draft.careInstructions.trim(),
+        ingredients: draft.ingredients.trim(), allergens, dietaryTags,
+        ...(shelfLifeDays!==null ? {shelfLifeDays} : (editing ? {shelfLifeDays: deleteField()} : {})),
+        storageInstructions: draft.storageInstructions.trim(),
         weightOptions: weights,
         ...(editing ? { weightValue: deleteField(), weightUnit: deleteField() } : {}),
         status: draft.status, updatedAt: serverTimestamp()
