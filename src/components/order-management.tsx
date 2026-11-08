@@ -2,11 +2,13 @@
 import { SectionSkeleton } from '@/components/loading-states';
 
 import { useEffect, useMemo, useState } from 'react';
-import { collection, query, where, orderBy, limit, startAfter, onSnapshot, getDocs, updateDoc, doc, serverTimestamp, type QueryDocumentSnapshot, type DocumentData } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, startAfter, onSnapshot, getDocs, type QueryDocumentSnapshot, type DocumentData } from 'firebase/firestore';
 import { useAccountData, useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { sendOrderAction, type OrderAction } from '@/lib/order-api';
+import { Textarea } from '@/components/ui/textarea';
 import { Package, Search, Clock3, CheckCircle2, Banknote, Phone, MapPin, ClipboardCopy, ArrowRight, ShoppingBag, X, AlertTriangle, CalendarDays, ListFilter, TrendingUp, ChevronRight } from 'lucide-react';
 
 export type OrderRecord = {
@@ -14,6 +16,12 @@ export type OrderRecord = {
   quantity: number; unitPrice: number; subtotal: number; paymentMethod?: 'cod';
   status: 'pending' | 'accepted' | 'preparing' | 'ready' | 'out-for-delivery' | 'completed' | 'rejected' | 'cancelled';
   customerName: string; customerPhone: string; deliveryAddress: string; customerNote: string;
+  deliveryMode?: 'delivery' | 'pickup'; deliveryFee?: number; requestedDate?: string; requestedSlot?: string;
+  giftRecipient?: string; giftMessage?: string; paymentStatus?: 'pending' | 'collected';
+  acceptanceDeadline?: { toDate?: () => Date }; selectedWeight?: { value: number; unit: string } | null;
+  cancellationRequest?: { reason: string; requestedAt?: { toDate?: () => Date } } | null;
+  inventoryReleaseReview?: boolean;
+  history?: Array<{ at?: { toDate?: () => Date }; by: string; action: string; note?: string }>;
   createdAt?: { toDate?: () => Date };
   updatedAt?: { toDate?: () => Date };
 };
@@ -111,6 +119,8 @@ export function OrderManagement({ mode }: { mode: 'seller' | 'admin' | 'customer
   const [working, setWorking] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{ id: string; status: Status } | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [requestReason, setRequestReason] = useState('');
   const [sort, setSort] = useState<'newest'|'oldest'|'value'>('newest');
   const [period, setPeriod] = useState<'all'|'today'|'week'|'month'>('all');
   const orders = useMemo(() => all.filter(o => (filter === 'all' || (filter === 'active' ? !['completed','rejected','cancelled'].includes(o.status) : o.status === filter)) && (period === 'all' || (() => { const stamp = o.createdAt?.toDate?.()?.getTime() ?? 0; const now = Date.now(); const start = period === 'today' ? new Date().setHours(0, 0, 0, 0) : now - (period === 'week' ? 7 : 30) * 86400000; return stamp >= start; })()) && [o.productName,o.id,o.customerName,o.customerPhone].join(' ').toLowerCase().includes(search.trim().toLowerCase())).sort((a,b) => sort === 'value' ? b.subtotal-a.subtotal : sort === 'oldest' ? (a.createdAt?.toDate?.()?.getTime() ?? 0)-(b.createdAt?.toDate?.()?.getTime() ?? 0) : (b.createdAt?.toDate?.()?.getTime() ?? 0)-(a.createdAt?.toDate?.()?.getTime() ?? 0)), [all,filter,search,sort,period]);
@@ -122,19 +132,33 @@ export function OrderManagement({ mode }: { mode: 'seller' | 'admin' | 'customer
   const completed = all.filter(o => o.status === 'completed').reduce((sum,o) => sum + o.subtotal, 0);
   async function transition(order: OrderRecord, status: Status) {
     if (!db || working || !next[order.status]?.includes(status)) return;
-    if (['rejected','cancelled'].includes(status)) { setConfirm({ id:order.id,status }); return; }
+    if (['rejected','cancelled'].includes(status)) { setCancelReason(''); setConfirm({ id:order.id,status }); return; }
     await apply(order,status);
   }
-  async function apply(order: OrderRecord, status: Status) {
-    if (!db || working || !next[order.status]?.includes(status)) return;
+  async function apply(order: OrderRecord, status: Status, reason = '') {
+    if (!user || working || !next[order.status]?.includes(status)) return;
     setWorking(order.id); setConfirm(null);
     try {
-      await updateDoc(doc(db,'seller_orders',order.id), { status, updatedAt:serverTimestamp() });
+      await sendOrderAction(user, order.id, status, reason);
       toast({ title: 'Order updated', description: `Order #${order.id.slice(0,8)} is now ${labels[status].toLowerCase()}.` });
     } catch (err) {
       toast({ variant:'destructive', title:'Could not update order', description: err instanceof Error ? err.message : 'Please try again.' });
     } finally { setWorking(null); }
   }
+  async function extraAction(order: OrderRecord, action: OrderAction, reason = '') {
+    if (!user || working) return;
+    setWorking(order.id);
+    try {
+      await sendOrderAction(user, order.id, action, reason);
+      if (action === 'request-cancellation') setRequestReason('');
+      toast({ title: 'Request updated', description: action === 'request-cancellation'
+        ? 'Your request is with the seller for review.' : 'Order record updated successfully.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Unable to update order',
+        description: error instanceof Error ? error.message : 'Please retry.' });
+    } finally { setWorking(null); }
+  }
+
   function exportVisible() {
     const safe = (value: string | number) => {
       const input = String(value ?? '');
@@ -171,8 +195,14 @@ export function OrderManagement({ mode }: { mode: 'seller' | 'admin' | 'customer
       <div className="rounded-2xl border bg-white p-5"><div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Fulfillment progress</h3><span className={`rounded-full border px-3 py-1 text-[11px] font-medium ${badge[detail.status]}`}>{labels[detail.status]}</span></div>{steps.includes(detail.status) ? <div className="mt-6 grid grid-cols-6 gap-1">{steps.map((s,i) => <div key={s}><div className={`h-1.5 rounded-full ${i<=steps.indexOf(detail.status)?'bg-[#9a7c56]':'bg-[#eee8df]'}`} /><p className={`mt-2 text-[9px] leading-3 sm:text-[10px] ${i<=steps.indexOf(detail.status)?'font-semibold text-[#6d5336]':'text-muted-foreground'}`}>{s==='pending'?'New':s==='preparing'?'Preparing':s==='ready'?'Ready':s==='out-for-delivery'?'On its way':labels[s]}</p></div>)}</div> : <p className="mt-4 text-sm text-muted-foreground">This order is closed and no longer in the active fulfillment workflow.</p>}<p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><CalendarDays className="h-4 w-4" />Placed {date(detail.createdAt)} · Last update {date(detail.updatedAt)}</p></div>
       <div className="grid gap-4 sm:grid-cols-2"><div className="rounded-2xl border bg-white p-5"><h3 className="text-xs font-semibold uppercase tracking-widest text-[#a68a64]">Customer</h3><p className="mt-4 font-semibold">{detail.customerName}</p><p className="mt-1 break-all text-sm">{detail.customerPhone}</p><div className="mt-4 flex flex-wrap gap-2"><a href={`tel:${detail.customerPhone.replace(/[^+\d]/g,'')}`} className="inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs"><Phone className="h-3.5 w-3.5" />Call</a><button onClick={() => void copy(detail.customerPhone).then(() => toast({title:'Phone copied'})).catch(() => toast({variant:'destructive',title:'Unable to copy'}))} className="inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs"><ClipboardCopy className="h-3.5 w-3.5" />Copy phone</button></div></div><div className="rounded-2xl border bg-white p-5"><h3 className="text-xs font-semibold uppercase tracking-widest text-[#a68a64]">Delivery address</h3><p className="mt-4 whitespace-pre-wrap break-words text-sm leading-6">{detail.deliveryAddress}</p><button onClick={() => void copy(detail.deliveryAddress).then(() => toast({title:'Address copied'})).catch(() => toast({variant:'destructive',title:'Unable to copy'}))} className="mt-4 inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs"><ClipboardCopy className="h-3.5 w-3.5" />Copy address</button></div></div>
       <div className="rounded-2xl border bg-white p-5"><h3 className="text-xs font-semibold uppercase tracking-widest text-[#a68a64]">Order items & payment</h3><div className="mt-4 flex justify-between gap-3 text-sm"><span>{detail.productName} × {detail.quantity}</span><span className="shrink-0 font-semibold">{money(detail.subtotal)}</span></div><div className="mt-4 flex justify-between border-t pt-4 text-sm"><span>Payment method</span><span className="font-medium">{detail.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Offline payment'}</span></div><p className="mt-3 text-xs text-muted-foreground">Payment has not been verified by TreatStory.</p>{detail.customerNote && <div className="mt-5 rounded-xl bg-[#f7f5f1] p-4"><p className="text-xs font-semibold">Customer instructions</p><p className="mt-2 whitespace-pre-wrap text-sm">{detail.customerNote}</p></div>}{mode==='admin' && <p className="mt-4 break-all text-xs text-muted-foreground">Seller UID: {detail.sellerId}</p>}</div>
+      {(detail.requestedDate || detail.deliveryMode) && <div className="rounded-2xl border bg-white p-5 text-sm"><h3 className="font-semibold">Delivery & booking</h3><p className="mt-2">{detail.deliveryMode === 'pickup' ? 'Pickup from creator' : 'Seller delivery'}{detail.requestedDate ? ` · ${detail.requestedDate}` : ''}{detail.requestedSlot ? ` · ${detail.requestedSlot}` : ''}</p><p className="mt-2">Shipping fee: {money(detail.deliveryFee || 0)} · Total: {money(detail.subtotal + (detail.deliveryFee || 0))}</p>{detail.selectedWeight && <p className="mt-2">Selected size: {detail.selectedWeight.value} {detail.selectedWeight.unit}</p>}{detail.giftRecipient && <p className="mt-2">Gift recipient: {detail.giftRecipient}</p>}{detail.giftMessage && <p className="mt-2 whitespace-pre-wrap">Gift note: {detail.giftMessage}</p>}{detail.acceptanceDeadline && detail.status === 'pending' && <p className="mt-2 text-amber-800">Awaiting acceptance · seller reply expected by {date(detail.acceptanceDeadline)}</p>}</div>}
+      {mode === 'customer' && ['pending','accepted','preparing','ready'].includes(detail.status) && <div className="rounded-2xl border bg-white p-5"><h3 className="font-semibold">Request cancellation</h3>{detail.cancellationRequest ? <p className="mt-2 text-sm text-amber-800">Your cancellation request is awaiting the seller's decision.</p> : <div className="mt-3 space-y-3"><Textarea maxLength={300} value={requestReason} onChange={e => setRequestReason(e.target.value)} placeholder="Tell the seller why you need to cancel (at least 5 characters)." rows={2}/><Button variant="outline" disabled={working!==null || requestReason.trim().length<5} onClick={() => void extraAction(detail,'request-cancellation',requestReason.trim())}>Send cancellation request</Button></div>}</div>}
+      {mode !== 'customer' && detail.cancellationRequest && <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5"><h3 className="font-semibold">Cancellation requested</h3><p className="mt-2 whitespace-pre-wrap text-sm">{detail.cancellationRequest.reason}</p><div className="mt-3 flex flex-wrap gap-2"><Button disabled={working!==null} onClick={() => void extraAction(detail,'cancelled',detail.cancellationRequest!.reason)}>Approve and cancel</Button><Button variant="outline" disabled={working!==null} onClick={() => void extraAction(detail,'decline-cancellation')}>Decline request</Button></div></div>}
+      {detail.status==='completed' && <div className="rounded-2xl border bg-white p-5 text-sm"><h3 className="font-semibold">Cash-on-delivery collection</h3><p className="mt-2">Payment: {detail.paymentStatus==='collected' ? 'Recorded as collected' : 'Not yet recorded as collected'}</p>{mode!=='customer' && detail.paymentStatus!=='collected' && <Button className="mt-3" disabled={working!==null} onClick={() => void extraAction(detail,'cod-collected')}>Record COD collected</Button>}</div>}
+      {!!detail.history?.length && <div className="rounded-2xl border bg-white p-5"><h3 className="font-semibold">Order activity</h3><ol className="mt-3 space-y-2">{detail.history.slice().reverse().map((item,i)=><li key={i} className="border-l-2 border-[#c5b093] pl-3 text-xs"><span className="font-semibold capitalize">{item.action.replaceAll('-', ' ')}</span> · {date(item.at)}{item.note && <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{item.note}</p>}</li>)}</ol></div>}
+      {detail.inventoryReleaseReview && mode!=='customer' && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">Inventory could not be fully restored automatically after the variant changed. Please reconcile stock manually.</p>}
       {mode !== 'customer' && next[detail.status].length>0 && <div className="flex flex-wrap gap-2">{next[detail.status].map(s => <Button key={s} disabled={working!==null} onClick={() => transition(detail,s)} variant={['rejected','cancelled'].includes(s)?'outline':'default'} className="h-11 rounded-full capitalize">{['rejected','cancelled'].includes(s)?s:(primary[detail.status]||labels[s])}</Button>)}</div>}
     </div></div></div>}
-    {confirm && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"><div role="alertdialog" aria-modal="true" className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl"><AlertTriangle className="h-6 w-6 text-red-600" /><h3 className="mt-4 text-xl font-semibold">{confirm.status === 'rejected' ? 'Reject this order?' : 'Cancel this order?'}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">This will change the order status and notify other dashboards through the live order feed. This action cannot be reversed by the seller.</p><div className="mt-6 flex justify-end gap-2"><Button variant="outline" onClick={() => setConfirm(null)}>Keep order</Button><Button disabled={working!==null} onClick={() => { const o=all.find(v=>v.id===confirm.id); if(o) void apply(o,confirm.status); }} className="bg-red-700 hover:bg-red-800">{working?'Updating…':'Confirm'}</Button></div></div></div>}
+    {confirm && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"><div role="alertdialog" aria-modal="true" className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl"><AlertTriangle className="h-6 w-6 text-red-600" /><h3 className="mt-4 text-xl font-semibold">{confirm.status === 'rejected' ? 'Reject this order?' : 'Cancel this order?'}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">This will change the order status and notify other dashboards through the live order feed. This action cannot be reversed by the seller.</p><Textarea className="mt-3" maxLength={300} value={cancelReason} onChange={e=>setCancelReason(e.target.value)} placeholder="Reason for rejection or cancellation (required for cancellation)" rows={2}/><div className="mt-6 flex justify-end gap-2"><Button variant="outline" onClick={() => setConfirm(null)}>Keep order</Button><Button disabled={working!==null} onClick={() => { const o=all.find(v=>v.id===confirm.id); if(o) void apply(o,confirm.status,cancelReason.trim()); }} className="bg-red-700 hover:bg-red-800">{working?'Updating…':'Confirm'}</Button></div></div></div>}
   </section>;
 }
