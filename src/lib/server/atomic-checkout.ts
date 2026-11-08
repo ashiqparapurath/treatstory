@@ -122,6 +122,7 @@ export async function placeAtomicCheckout(db: Firestore, uid: string, input: Che
     const orders: Array<{ refId: string; record: Record<string, unknown> }> = [];
     let itemSubtotal = 0;
     const qtyBySeller = new Map<string, number>();
+    const sellersWithDeliveryFee = new Set<string>();
     for (const [idx, line] of input.lines.entries()) {
       const work = working.get(line.productId)!;
       const p = work.listing;
@@ -151,7 +152,10 @@ export async function placeAtomicCheckout(db: Firestore, uid: string, input: Che
       work.reservations.push({ productId: line.productId, quantity: line.quantity, stockSource: source, weight: choice ? { value: choice.value, unit: choice.unit } : null });
       qtyBySeller.set(p.sellerId, (qtyBySeller.get(p.sellerId) || 0) + 1);
       const seller = storeById.get(p.sellerId)!;
-      const fee = input.deliveryMode === 'delivery' ? positiveNumber(seller.deliveryFee) : 0;
+      // One delivery charge per seller per grouped checkout, not per product line.
+      const fee = input.deliveryMode === 'delivery' && !sellersWithDeliveryFee.has(p.sellerId)
+        ? positiveNumber(seller.deliveryFee) : 0;
+      sellersWithDeliveryFee.add(p.sellerId);
       const amount = price * line.quantity;
       itemSubtotal += amount;
       const id = uid + '_' + input.checkoutId + '_' + idx;
