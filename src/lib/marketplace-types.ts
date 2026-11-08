@@ -55,7 +55,7 @@ export interface MarketplaceProduct {
   weightValue?: number;
   weightUnit?: 'g' | 'kg' | 'ml' | 'l' | 'pieces';
   careInstructions?: string;
-  weightOptions?: Array<{value:number;unit:'g'|'kg'|'ml'|'l'|'pieces'}>;
+  weightOptions?: Array<{value:number;unit:'g'|'kg'|'ml'|'l'|'pieces';price?:number;stockQuantity?:number}>;
   customizationOptions?: string[];
   stockQuantity?: number;
 }
