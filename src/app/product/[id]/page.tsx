@@ -9,6 +9,7 @@ import { useCart, cartLineId } from '@/context/cart-context';
 import { useToast } from '@/hooks/use-toast';
 import { ProductImage } from '@/components/product-image';
 import { FavoriteToggle } from '@/components/favorite-toggle';
+import { ProductReviews } from '@/components/product-reviews';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -140,6 +141,7 @@ export default function ProductDetailPage() {
       </div>
       {weightChoices.length > 0 && <section className="rounded-2xl border border-[#e8e0d5] bg-white p-5"><h2 className="text-sm font-semibold">Choose weight / size</h2><p className="mt-1 text-xs text-muted-foreground">Different sizes may have different prices and available stock.</p><div role="group" aria-label="Select weight or size" className="mt-4 flex flex-wrap gap-2">{weightChoices.map((option,n) => <button type="button" key={n} onClick={() => setWeightIndex(n)} aria-pressed={weightIndex===n} className={`min-h-11 rounded-full border px-4 text-sm font-semibold transition ${weightIndex===n ? 'border-[#29251f] bg-[#29251f] text-white' : 'border-[#e1d7c8] bg-white text-[#6d6256]'}`}>{option.value} {option.unit}{option.price !== undefined ? ` · ${formatPrice(option.price)}` : ''}{option.stockQuantity === 0 ? ' · Sold out' : ''}</button>)}</div></section>}
       {creator && (creator.customizationOptions?.length || 0) > 0 && <div className="space-y-4 rounded-2xl border border-[#e8e0d5] bg-white p-5"><div><h2 className="font-medium">Make it yours</h2><p className="mt-1 text-xs text-muted-foreground">Optional personalization requests. The creator will confirm feasibility; prices are not automatically changed.</p></div>{creator.customizationOptions?.map((field,i) => <label key={i} className="block space-y-1.5 text-xs font-medium">{field}<Input maxLength={120} value={answers[field] || ''} placeholder="Your preference" onChange={e => setAnswers(v => ({...v,[field]:e.target.value}))} /></label>)}</div>}
+      {creator && <ProductReviews productId={creator.id} />}
       {creator && <label className="block space-y-2 text-sm font-medium">Notes for the creator (optional)<Textarea maxLength={500} rows={3} placeholder="Special requests, colours, gifting instructions…" value={requestNote} onChange={e=>setRequestNote(e.target.value)} className="bg-white"/></label>}
       <div className="grid grid-cols-[auto_1fr] gap-3"><Button type="button" disabled={!available} onClick={() => void addCurrent()} variant="outline" className="h-12 rounded-full border-[#29251f] bg-white px-5" aria-label={`Add ${product.name} to bag`}><ShoppingBag className="mr-2 h-4 w-4" />Add to bag</Button><Button type="button" disabled={!available} onClick={buyNow} className="h-12 rounded-full bg-[#29251f] text-white hover:bg-[#51463a]">{available ? creator ? 'Buy now' : 'View bag' : 'Unavailable'}</Button></div>
       <div className="flex justify-start"><FavoriteToggle productId={creator ? 'seller:' + product.id : product.id} title={product.name} imageUrl={photos[0]}/></div>
