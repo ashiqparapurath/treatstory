@@ -160,8 +160,12 @@ function SellerContent() {
   async function saveProduct(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!db || !user || !active || busy || uploadingPhotos) return;
-    const price = Number(draft.price);
-    if (!Number.isFinite(price) || price < 0) return toast({ variant: 'destructive', title: 'Enter a valid price' });
+    // Size-specific prices are stored on the same listing. Its base price
+    // is the lowest effective variant price for catalog previews.
+    const baseEntered = draft.price.trim() !== '';
+    const basePrice = baseEntered ? Number(draft.price) : null;
+    if (baseEntered && (!Number.isFinite(basePrice) || basePrice! < 0 || basePrice! > 10000000))
+      return toast({ variant: 'destructive', title: 'Enter a valid base price' });
     const imageUrls = draft.imageUrls.split(/\n|,/).map(v => v.trim()).filter(Boolean);
     if (imageUrls.some(url => !/^https:\/\//i.test(url))) return toast({ variant: 'destructive', title: 'Image links must use HTTPS' });
     if (imageUrls.length > 10) return toast({ variant: 'destructive', title: 'Add up to 10 product photos' });
@@ -174,7 +178,21 @@ function SellerContent() {
       ...(w.stockQuantity.trim() !== '' ? { stockQuantity: Number(w.stockQuantity) } : {}) }));
     if (weights.length > 8 || weights.some(w => !Number.isFinite(w.value) || w.value <= 0 || w.value > 100000 || !['g','kg','ml','l','pieces'].includes(w.unit) ||
       ('price' in w && (!Number.isFinite(w.price) || (w.price ?? -1) < 0 || (w.price ?? 10000001) > 10000000)) ||
-      ('stockQuantity' in w && (!Number.isInteger(w.stockQuantity) || (w.stockQuantity ?? -1) < 0 || (w.stockQuantity ?? 1000001) > 1000000)))) return toast({ variant: 'destructive', title: 'Check size options, prices and stock (maximum 8 sizes)' });
+      ('stockQuantity' in w && (!Number.isInteger(w.stockQuantity) || (w.stockQuantity ?? -1) < 0 || (w.stockQuantity ?? 1000001) > 1000000))))
+      return toast({ variant: 'destructive', title: 'Check size options, prices and stock (maximum 8 sizes)' });
+    if (new Set(weights.map(w => `${w.value}:${w.unit}`)).size !== weights.length)
+      return toast({ variant: 'destructive', title: 'Duplicate sizes', description: 'Each weight and unit combination must be unique.' });
+    if (basePrice === null && (!weights.length || weights.some(w => w.price === undefined)))
+      return toast({ variant: 'destructive', title: 'Enter the selling prices', description: 'Set a base price or a price for every size.' });
+    const price = weights.length
+      ? Math.min(...weights.map(w => w.price ?? basePrice ?? 0))
+      : basePrice!;
+    const sharedStock = draft.stockQuantity.trim() === '' ? 0 : Number(draft.stockQuantity);
+    if (!Number.isInteger(sharedStock) || sharedStock < 0 || sharedStock > 1000000)
+      return toast({ variant: 'destructive', title: 'Stock must be a whole number between 0 and 1,000,000' });
+    if (draft.availability === 'available' && weights.length > 0 &&
+        weights.some(w => w.stockQuantity === undefined) && sharedStock === 0)
+      return toast({ variant: 'destructive', title: 'Set the stock for each size', description: 'Enter size-specific stock, or a shared stock quantity. Made-to-order items do not need stock.' });
     if (draft.category.trim().length < 2) return toast({ variant: 'destructive', title: 'Enter a product category' });
     const allergens = draft.allergens.split(',').map(s=>s.trim()).filter(Boolean);
     const dietaryTags = draft.dietaryTags.split(',').map(s=>s.trim()).filter(Boolean);
@@ -190,7 +208,7 @@ function SellerContent() {
       const data = {
         sellerId: user.uid, name: draft.name.trim(), description: draft.description.trim(), category: draft.category.trim(),
         price, imageUrls, showPrice: draft.showPrice, availability: draft.availability,
-        stockQuantity: draft.stockQuantity ? Number(draft.stockQuantity) : 0,
+        stockQuantity: sharedStock,
         preparationDays: draft.preparationDays ? Number(draft.preparationDays) : 0,
         minimumOrderQuantity: minQty,
         customizationOptions: options,
