@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Menu, ShoppingBag, ArrowUpRight, UserRound, LogOut } from 'lucide-react';
+import { Menu, ShoppingBag, ArrowUpRight, UserRound, LogOut, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -110,6 +110,7 @@ export function Header() {
                   </Link>
                 ))}
               </nav>
+              {user && <Link href="/notifications" aria-label="Notifications" title="Notifications" className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-muted"><Bell className="h-[19px] w-[19px]"/></Link>}
               <Link href={user ? "/dashboard" : "/login"} aria-label={user ? "Open dashboard" : "Sign in"} title={user ? "Open dashboard" : "Sign in"} className="inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-muted"><UserRound className="h-[19px] w-[19px]" /></Link>
               <Link href="/cart" aria-label={`Shopping bag, ${cartCount} items`} title="Shopping bag" className="relative inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-muted">
                 <ShoppingBag className="h-[19px] w-[19px]" />
