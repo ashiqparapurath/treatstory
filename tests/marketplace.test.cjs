@@ -170,10 +170,12 @@ test('seller product card cycles two separately supplied image URLs and opens a 
   act(() => tree.unmount());
 });
 
-test('Firestore model contains guarded product options and out-for-delivery transition', () => {
+test('Firestore model guards variants and server transitions support out-for-delivery', () => {
   const rules = fs.readFileSync('firestore.rules', 'utf8');
   assert.match(rules, /'weightValue'.*'weightUnit'.*'customizationOptions'/);
-  assert.match(rules, /'out-for-delivery'/);
+  assert.match(fs.readFileSync('src/lib/server/order-actions.ts', 'utf8'), /'out-for-delivery'/);
+  assert.match(rules, /match \/seller_orders\/\{orderId\}/);
+  assert.match(rules, /allow create, update, delete: if false;/);
   assert.match(rules, /minimumOrderQuantity/);
   const indexes = JSON.parse(fs.readFileSync('firestore.indexes.json', 'utf8')).indexes;
   assert.ok(indexes.some(i => i.collectionGroup === 'seller_orders' &&
@@ -250,4 +252,37 @@ test('Next.js 15 uses compatible Cloudinary SDK for optimized images with legacy
   assert.match(home, /<OptimizedImage src=\{banner\.imageUrl\}/);
   const banners = fs.readFileSync('src/components/admin/banner-list.tsx', 'utf8');
   assert.match(banners, /<OptimizedImage src=\{banner\.imageUrl\}/);
+});
+
+
+test('checkout groups items atomically and rejects client bypasses', () => {
+  const checkout = fs.readFileSync('src/lib/server/atomic-checkout.ts', 'utf8');
+  const api = fs.readFileSync('src/app/api/checkout/route.ts', 'utf8');
+  const rules = fs.readFileSync('firestore.rules', 'utf8');
+  assert.match(api, /verifiedUser\(request\)/);
+  assert.match(api, /checkoutRequestSchema.safeParse\(body\)/);
+  assert.match(checkout, /db.runTransaction\(async tx/);
+  assert.match(checkout, /requestHash/);
+  assert.match(checkout, /stockQuantity/);
+  assert.match(checkout, /pendingPrices/);
+  assert.match(checkout, /seller_bookings/);
+  assert.match(checkout, /tx.create\(checkoutRef/);
+  assert.match(checkout, /tx.create\(db.collection\('seller_orders'\)/);
+  assert.match(rules, /match \/checkout_orders\/\{checkoutId\} \{\s*allow read, write: if false;/);
+  assert.match(rules, /match \/seller_orders\/\{orderId\} \{[\s\S]*?allow create, update, delete: if false;/);
+});
+
+test('fulfillment and cancellation preserve stock and prevent repeated release', () => {
+  const actions = fs.readFileSync('src/lib/server/order-actions.ts', 'utf8');
+  const route = fs.readFileSync('src/app/api/orders/action/route.ts', 'utf8');
+  assert.match(route, /verifiedUser\(request\)/);
+  assert.match(actions, /db.runTransaction\(async/);
+  assert.match(actions, /!order.stockReleasedAt/);
+  assert.match(actions, /!order.bookingReleasedAt/);
+  assert.match(actions, /request-cancellation/);
+  assert.match(actions, /cod-collected/);
+  assert.match(actions, /inventoryReleaseReview/);
+  const ui = fs.readFileSync('src/components/order-management.tsx', 'utf8');
+  assert.match(ui, /sendOrderAction\(user, order.id/);
+  assert.doesNotMatch(ui, /updateDoc\(doc\(db,'seller_orders'/);
 });
