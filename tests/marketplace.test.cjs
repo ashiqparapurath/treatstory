@@ -314,3 +314,14 @@ test('a single seller listing supports separately priced weight and unit variant
   assert.match(checkout, /const price = positiveNumber\(choice\?\.price, p\.price\)/);
   assert.match(checkout, /if \(price !== line.expectedPrice\)/);
 });
+
+
+test('custom quotes enforce active seller access and product ownership at the server', () => {
+  const route = fs.readFileSync('src/app/api/quotes/route.ts', 'utf8');
+  assert.match(route, /sellerSnap\.data\(\)\?\.accessEndsAt\?\.toMillis/);
+  assert.match(route, /sellerSnap\.data\(\)\?\.isOpen/);
+  assert.match(route, /productSnap\.data\(\)\?\.sellerId!==data\.sellerId/);
+  assert.match(route, /productSnap\.data\(\)\?\.status!=='published'/);
+  assert.match(route, /data\.action==='quote'\|\|data\.action==='accept'/);
+  assert.match(route, /tx\.get\(db\.collection\('sellers'\)\.doc\(q\.sellerId\)\)/);
+});
