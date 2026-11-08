@@ -132,7 +132,7 @@ function SellerContent() {
       ingredients: product.ingredients ?? '', allergens: (product.allergens??[]).join(', '),
       dietaryTags: (product.dietaryTags??[]).join(', '), shelfLifeDays: product.shelfLifeDays == null ? '' : String(product.shelfLifeDays),
       storageInstructions: product.storageInstructions ?? '',
-      weightOptions: (product.weightOptions?.length ? product.weightOptions : product.weightValue && product.weightUnit ? [{ value: product.weightValue, unit: product.weightUnit }] : []).map(w => ({ value: String(w.value), unit: w.unit, price: 'price' in w && typeof w.price === 'number' ? String(w.price) : '', stockQuantity: 'stockQuantity' in w && typeof w.stockQuantity === 'number' ? String(w.stockQuantity) : '' })),
+      weightOptions: (product.weightOptions?.length ? product.weightOptions : product.weightValue && product.weightUnit ? [{ value: product.weightValue, unit: product.weightUnit }] : []).map(w => ({ value: String(w.value), unit: w.unit, price: 'price' in w && typeof w.price === 'number' ? String(w.price) : String(product.price), stockQuantity: 'stockQuantity' in w && typeof w.stockQuantity === 'number' ? String(w.stockQuantity) : '' })),
       showPrice: product.showPrice, status: product.status === 'published' ? 'published' : 'draft'
     } : emptyDraft);
     setFormOpen(true);
@@ -194,10 +194,12 @@ function SellerContent() {
       return toast({ variant: 'destructive', title: 'Check size options, prices and stock (maximum 8 sizes)' });
     if (new Set(weights.map(w => `${w.value}:${w.unit}`)).size !== weights.length)
       return toast({ variant: 'destructive', title: 'Duplicate sizes', description: 'Each weight and unit combination must be unique.' });
-    if (basePrice === null && (!weights.length || weights.some(w => w.price === undefined)))
-      return toast({ variant: 'destructive', title: 'Enter the selling prices', description: 'Set a base price or a price for every size.' });
+    if (weights.length && weights.some(w => w.price === undefined))
+      return toast({ variant: 'destructive', title: 'Price required for every size', description: 'Enter an individual selling price for each weight or unit.' });
+    if (!weights.length && basePrice === null)
+      return toast({ variant: 'destructive', title: 'Enter a selling price' });
     const price = weights.length
-      ? Math.min(...weights.map(w => w.price ?? basePrice ?? 0))
+      ? Math.min(...weights.map(w => w.price!))
       : basePrice!;
     const sharedStock = draft.stockQuantity.trim() === '' ? 0 : Number(draft.stockQuantity);
     if (!Number.isInteger(sharedStock) || sharedStock < 0 || sharedStock > 1000000)
