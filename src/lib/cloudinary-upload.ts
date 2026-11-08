@@ -2,10 +2,11 @@
 
 import type { User } from 'firebase/auth';
 
-export type ImageKind = 'banner' | 'product';
+export type ImageKind = 'banner' | 'product' | 'reference';
 
 /** Uploads only after the server verifies the Firebase ID token and role. */
 export async function uploadTreatStoryPhoto(user: User, file: File, kind: ImageKind): Promise<string> {
+  if (!['image/jpeg','image/png','image/webp'].includes(file.type) || !file.size || file.size > 2_000_000) throw new Error('Choose a JPG, PNG or WebP photo up to 2 MB.');
   const authToken = await user.getIdToken();
   const form = new FormData();
   form.append('kind', kind);

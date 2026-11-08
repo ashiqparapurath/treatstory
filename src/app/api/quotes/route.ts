@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         const count=limitSnap.data()?.count||0;
         if(count>=5)throw new ApiError(429,'Daily limit of five quote requests reached.');
         const ref=db.collection('custom_quotes').doc();
-        tx.create(ref,{buyerUid:uid,sellerId:data.sellerId,productId:data.productId,occasion:data.occasion,
+        tx.create(ref,{buyerUid:uid,sellerId:data.sellerId,productId:data.productId,sellerName:sellerSnap.data()?.businessName || 'Creator',productName:productSnap?.data()?.name || '',occasion:data.occasion,
           description:data.description,budget:data.budget,requestedDate:data.requestedDate,
           referenceUrl:data.referenceUrl,status:'requested',quotedPrice:null,quotedNote:'',createdAt:now,updatedAt:now});
         tx.set(limitRef,{buyerUid:uid,count:count+1,updatedAt:now});

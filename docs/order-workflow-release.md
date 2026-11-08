@@ -79,3 +79,24 @@ Firebase `auth/invalid-credential` is a separate email/password sign-in rejectio
 - Match the profile's My favourites tab to neighbouring tabs with the same outline icon family, 16-pixel icon size, spacing, type size and background treatment.
 - Remove infrastructure/provider names from account security copy, image-upload instructions, and visible access/save errors. Upload failures return plain user guidance while server logs retain technical diagnostics.
 - Validation: 18 regression tests, TypeScript validation and the production build pass. Chromium confirms the dock touches the viewport bottom at 360/390 pixels before and after scrolling, with no horizontal overflow.
+
+## Custom quote and address update
+
+- Mobile dock order is Home, Shop, Cart, Profile, Sell, placing Cart in the centre and Sell beside Profile at the right corner.
+- Quote requests select creator and product names. The server snapshots those names from authoritative records. Internal IDs remain in request payloads and database relations, not visible form fields.
+- Signed-in buyers can upload a reference JPG/PNG/WebP for quotes, preview/remove it, or supply an existing HTTPS link. Reference uploads keep signature/MIME/size verification and have a server-controlled quota of ten attempts per buyer per UTC day; listing/banner role checks remain intact. Reference upload quotas use a server-only `custom_quote_upload_limits` collection, denied to browser clients by default.
+- The advance-payment checkbox is now in a visible Payment requirements section while creating/editing a product, and enabled products are labelled in the seller dashboard. The existing server acknowledgement and buyer checkout notice remain in force.
+- Checkout and profile address editors use modal dialogs. Checkout Save applies the new contact/address/PIN only to that order; Cancel discards changes. Profile Save updates the default address.
+- Image limits remain 2 MB for products/reference images and 1 MB for banners. CDN format/quality optimization reduces delivered bytes, but does not guarantee mathematically lossless output and cannot bypass the hosting request-body limit before upload. Original images are retained; display previews use optimized delivery.
+
+### Investigating a quote HTTP 503
+
+The quote route calls the authenticated server backend. Missing or invalid server credentials previously produced the same generic 503 as every unexpected exception. Initialization now emits `details.code: SERVICE_NOT_CONFIGURED` and a provider-neutral message; detailed configuration diagnostics are logged server-side without credential values. Double-escaped private-key newlines are normalized before initialization. Quote forms preserve all entered details on 503 and allow an explicit retry; requests are not automatically replayed.
+
+For a deployed 503, inspect the response body and the server logs for `POST /api/quotes`. A `SERVICE_NOT_CONFIGURED` response requires setting the server-only `FIREBASE_SERVICE_ACCOUNT_JSON` to a valid complete service-account JSON for the same project as `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, then redeploying. The account needs the permissions used by the existing transactional checkout/quote backend. Never put the JSON in a `NEXT_PUBLIC_` variable, a browser form, or source control. For other 503 responses, inspect the recorded unexpected exception; do not assume missing configuration from status alone. This session has no Vercel configuration/log connection and has not confirmed or changed live deployment credentials.
+
+### Validation for this update
+
+- 22 passing regression tests cover saved PINs with modal address callbacks, advance acknowledgement, missing secure-service configuration, escaped key newlines, authoritative quote-name snapshots, and authenticated/rate-limited reference uploads.
+- Production build and TypeScript validation pass.
+- Browser fixture checks with mocked account/network data pass for the dock order, named selections, uploading and attaching a reference, preserved form values on 503 followed by successful retry, and checkout/profile popup save/cancel behaviour at 390/1440px. No live authenticated quote or photo was created.

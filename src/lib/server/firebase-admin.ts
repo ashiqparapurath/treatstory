@@ -10,15 +10,27 @@ import type { NextRequest } from 'next/server';
 export function getServerFirebase() {
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!projectId || !raw) throw new Error('Firebase service account is not configured for secure marketplace orders.');
-  let key: { project_id?: string; client_email?: string; private_key?: string };
-  try { key = JSON.parse(raw); } catch { throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON.'); }
-  if (key.project_id !== projectId || !key.client_email || !key.private_key) {
-    throw new Error('Firebase service account does not match the configured project.');
+  if (!projectId || !raw) {
+    console.error('Secure marketplace configuration missing', { projectIdConfigured: !!projectId, serviceAccountConfigured: !!raw });
+    throw new ApiError(503, 'Secure requests are not available yet. Please contact support.', { code: 'SERVICE_NOT_CONFIGURED' });
   }
-  const app = getApps().find(a => a.name === 'treatstory-orders') ||
-    initializeApp({ credential: cert({ projectId, clientEmail: key.client_email, privateKey: key.private_key }), projectId }, 'treatstory-orders');
-  return { auth: getAuth(app), db: getFirestore(app) };
+  let key: { project_id?: string; client_email?: string; private_key?: string };
+  try { key = JSON.parse(raw); } catch {
+    console.error('FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON.');
+    throw new ApiError(503, 'Secure requests are not available yet. Please contact support.', { code: 'SERVICE_NOT_CONFIGURED' });
+  }
+  if (!key || key.project_id !== projectId || typeof key.client_email !== 'string' || typeof key.private_key !== 'string' || !key.client_email || !key.private_key) {
+    console.error('Firebase service account does not match the configured project.');
+    throw new ApiError(503, 'Secure requests are not available yet. Please contact support.', { code: 'SERVICE_NOT_CONFIGURED' });
+  }
+  try {
+    const app = getApps().find(a => a.name === 'treatstory-orders') ||
+      initializeApp({ credential: cert({ projectId, clientEmail: key.client_email, privateKey: key.private_key.replace(/\\n/g, '\n') }), projectId }, 'treatstory-orders');
+    return { auth: getAuth(app), db: getFirestore(app) };
+  } catch {
+    console.error('Secure marketplace service account could not be initialized. Check its email and private key.');
+    throw new ApiError(503, 'Secure requests are not available yet. Please contact support.', { code: 'SERVICE_NOT_CONFIGURED' });
+  }
 }
 
 export async function verifiedUser(request: NextRequest) {

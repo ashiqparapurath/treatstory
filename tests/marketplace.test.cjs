@@ -327,12 +327,14 @@ test('custom quotes enforce active seller access and product ownership at the se
   assert.match(route, /tx\.get\(db\.collection\('sellers'\)\.doc\(q\.sellerId\)\)/);
 });
 
-test('checkout reuses the saved PIN, accepts six digits and expands address editing', async () => {
+test('checkout reuses the saved PIN and accepts address changes from a popup', async () => {
   const input = props => React.createElement('input', props);
   let notice;
   let sent;
   let requiresAdvance = false;
+  const AddressDialog = props => props.open ? React.createElement('div', {role:'dialog'}, React.createElement('button', {onClick: () => {props.onSave({...props.value,pincode:'680001'});props.onOpenChange(false);}}, 'Use this address')) : null;
   const { CreatorCheckout } = load('src/components/creator-checkout.tsx', {
+    '@/components/checkout-address-dialog': { CheckoutAddressDialog: AddressDialog },
     '@/components/loading-states': { SectionSkeleton: () => null },
     '@/components/default-delivery-address': { addressText: a => `${a.line1}, ${a.pincode}` },
     'firebase/firestore': { doc: () => ({}), getDoc: async () => ({ data: () => ({name:'Cake',advancePaymentRequired:requiresAdvance}) }) },
@@ -350,11 +352,9 @@ test('checkout reuses the saved PIN, accepts six digits and expands address edit
   assert.equal(tree.root.findAllByType('textarea').filter(n => n.props.autoComplete === 'street-address').length, 0);
   const change = tree.root.findAllByType('button').find(n => n.props.children === 'Change address');
   act(() => change.props.onClick());
-  assert.equal(tree.root.findByProps({autoComplete:'street-address'}).props.value, 'House 123 Main Street, 673001');
-  const pin = tree.root.findAllByType('input').find(n => n.props.pattern === '[0-9]{6}');
-  assert.equal(pin.props.value, '673001');
-  act(() => pin.props.onChange({target:{value:'680 001'}}));
-  assert.equal(tree.root.findAllByType('input').find(n => n.props.pattern === '[0-9]{6}').props.value, '680001');
+  assert.equal(tree.root.findByProps({role:'dialog'}).props.role, 'dialog');
+  act(() => tree.root.findAllByType('button').find(n => n.props.children === 'Use this address').props.onClick());
+  assert.equal(tree.root.findAllByProps({role:'dialog'}).length, 0);
   await act(async () => { await tree.root.findByType('form').props.onSubmit({preventDefault(){}}); });
   // A valid PIN passes local validation and reaches checkout, rather than the PIN error.
   assert.equal(sent.pincode, '680001');
@@ -373,4 +373,74 @@ test('checkout reuses the saved PIN, accepts six digits and expands address edit
   assert.equal(sent.advancePaymentAcknowledged, true);
 
   act(() => tree.unmount());
+});
+
+test('missing secure-service configuration returns a distinct setup error without leaking provider details', async () => {
+  const { getServerFirebase, safeResponse } = load('src/lib/server/firebase-admin.ts', {
+    'firebase-admin/app': {}, 'firebase-admin/auth': {}, 'firebase-admin/firestore': {},
+  }, { process: {env:{}}, Response, console: {error() {}} });
+  let error;
+  try { getServerFirebase(); } catch (e) { error = e; }
+  const response = safeResponse(error);
+  assert.equal(response.status, 503);
+  const body = await response.json();
+  assert.equal(body.details.code, 'SERVICE_NOT_CONFIGURED');
+  assert.doesNotMatch(body.error, /Firebase|Cloudinary|private.key|service.account/i);
+});
+
+test('quote creation snapshots authoritative seller and product names with the reference photo', async () => {
+  let created;
+  const now = Date.now();
+  const docs = {
+    'sellers/seller-12345': {status:'active',isOpen:true,businessName:'Little Bakery',accessEndsAt:{toMillis:()=>now+86400000}},
+    'marketplace_products/cake-1': {sellerId:'seller-12345',status:'published',name:'Chocolate Cake'},
+  };
+  const db = { collection: name => ({doc: id => ({path:`${name}/${id || 'new-id'}`,id:id || 'new-id',collection: child=>({doc:()=>({path:`${name}/${id}/${child}/alert`})})})}),
+    runTransaction: async fn => fn({get:async ref=>({exists:!!docs[ref.path],data:()=>docs[ref.path]}),create:(ref,data)=>{if(ref.path==='custom_quotes/new-id')created=data;},set(){}}) };
+  const { POST } = load('src/app/api/quotes/route.ts', {
+    'firebase-admin/firestore': {Timestamp:{now:()=>({toMillis:()=>now}),fromMillis:v=>v}},
+    '@/lib/server/firebase-admin': {verifiedUser:async()=>({uid:'buyer',db}),ApiError:class extends Error{},safeResponse:e=>{throw e;}},
+  }, {Response});
+  const response = await POST({headers:new Headers(),json:async()=>({action:'create',sellerId:'seller-12345',productId:'cake-1',occasion:'Birthday',description:'Chocolate cake with flowers',budget:1000,requestedDate:new Date(now+86400000).toISOString().slice(0,10),referenceUrl:'https://res.cloudinary.com/test/image/upload/example.jpg'})});
+  assert.equal(response.status,200);
+  assert.equal(created.sellerName,'Little Bakery');
+  assert.equal(created.productName,'Chocolate Cake');
+  assert.equal(created.referenceUrl,'https://res.cloudinary.com/test/image/upload/example.jpg');
+});
+
+test('reference photo uploads authenticate buyers, keep file checks and enforce a daily quota', async () => {
+  let count = 0, upstreamCalls = 0, authenticated = true;
+  const {POST} = load('src/app/api/cloudinary/upload/route.ts', {
+    'firebase-admin/app': {getApps:()=>[{name:'treatstory-image-upload'}]},
+    'firebase-admin/auth': {getAuth:()=>({verifyIdToken:async()=>{if(!authenticated)throw Error('invalid');return {uid:'buyer'};}})},
+    'next/server': {NextResponse:{json:(data,options)=>Response.json(data,options)}},
+    '@/lib/server/firebase-admin': {getServerFirebase:()=>({db:{collection:()=>({doc:()=>({})}),runTransaction:async fn=>fn({get:async()=>({data:()=>({count})}),set:(_ref,data)=>{count=data.count;}})}}),ApiError:class extends Error {constructor(status,message){super(message);this.status=status;}},safeResponse:error=>Response.json({error:error.message},{status:error.status})},
+  }, {process:{env:{NEXT_PUBLIC_FIREBASE_PROJECT_ID:'test',CLOUDINARY_CLOUD_NAME:'test',CLOUDINARY_API_KEY:'test',CLOUDINARY_API_SECRET:'test'}},Blob,FormData,Buffer,Response,
+    fetch:async(_url,options)=>{upstreamCalls++;assert.equal(options.body.get('folder'),'treatstory/references/buyer');return {ok:true,json:async()=>({secure_url:'https://res.cloudinary.com/test/image/upload/photo.png',public_id:'photo'})};}});
+  const png = new Blob([new Uint8Array([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])],{type:'image/png'});
+  const request = file => ({headers:new Headers({authorization:'Bearer test'}),formData:async()=>new Map([['kind','reference'],['file',file]])});
+  let response = await POST(request(png));
+  assert.equal(response.status,200);assert.equal(count,1);assert.equal(upstreamCalls,1);
+  count=10;
+  response=await POST(request(png));
+  assert.equal(response.status,429);assert.equal(upstreamCalls,1);
+  authenticated=false;
+  response=await POST(request(png));
+  assert.equal(response.status,401);assert.equal(upstreamCalls,1);
+  authenticated=true;
+  response=await POST(request(new Blob(['not an image'],{type:'image/png'})));
+  assert.equal(response.status,400);assert.equal(upstreamCalls,1);
+});
+
+test('server credentials normalize escaped key newlines and reject invalid project configuration', () => {
+  let usedKey;
+  const env={NEXT_PUBLIC_FIREBASE_PROJECT_ID:'test-project',FIREBASE_SERVICE_ACCOUNT_JSON:JSON.stringify({project_id:'test-project',client_email:'server@example.test',private_key:'line1\\nline2'})};
+  const server=load('src/lib/server/firebase-admin.ts',{
+    'firebase-admin/app':{getApps:()=>[],cert:value=>{usedKey=value;return value;},initializeApp:()=>({})},
+    'firebase-admin/auth':{getAuth:()=>({})},'firebase-admin/firestore':{getFirestore:()=>({})},
+  },{process:{env},Response,console:{error(){}}});
+  server.getServerFirebase();
+  assert.equal(usedKey.privateKey,'line1\nline2');
+  env.FIREBASE_SERVICE_ACCOUNT_JSON='null';
+  assert.throws(()=>server.getServerFirebase(),e=>e.status===503&&e.details.code==='SERVICE_NOT_CONFIGURED');
 });

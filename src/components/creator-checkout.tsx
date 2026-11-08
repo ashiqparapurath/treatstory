@@ -3,6 +3,7 @@
 import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState, type FormEvent } from 'react';
 import { SectionSkeleton } from '@/components/loading-states';
+import { CheckoutAddressDialog } from '@/components/checkout-address-dialog';
 import { addressText } from '@/components/default-delivery-address';
 import { useAccountData, useFirestore, useUser } from '@/firebase';
 import { useCart } from '@/context/cart-context';
@@ -52,7 +53,9 @@ export function CreatorCheckout({ variant = 'card', onlyProductId, onlyLineId, i
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!db || !user || busy || !items.length || priceChanges.length || termsLoading || termsError || (advanceProducts.length > 0 && !advanceAccepted)) return;
+    if (name.trim().length < 2 || phone.trim().length < 5 || address.trim().length < 10) { setEditingAddress(true); return; }
     if (!/^\d{6}$/.test(pincode) && fulfillment === 'delivery') {
+      setEditingAddress(true);
       toast({ variant: 'destructive', title: 'Enter a valid six-digit delivery PIN code' });
       return;
     }
@@ -118,20 +121,15 @@ export function CreatorCheckout({ variant = 'card', onlyProductId, onlyLineId, i
   if (!items.length && !result.length) return null;
   return <section className={variant === 'page' ? 'space-y-4 rounded-2xl border border-[#e8e0d5] bg-white p-5 shadow-[0_14px_45px_rgba(51,39,24,0.04)] sm:p-8 lg:p-10' : 'mt-7 space-y-6 rounded-3xl border border-[#e8e0d5] bg-[#faf8f4] p-5 sm:p-7'}>
     <div className="border-b border-[#e8e0d5] pb-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a68a64]">Step 02 · Secure checkout</p><h3 className="mt-2 text-2xl font-medium tracking-tight">Delivery & payment</h3><p className="mt-2 text-xs leading-5 text-muted-foreground">Order handmade favourites from independent creators. Your seller confirms the order before fulfillment.</p></div>
+    <CheckoutAddressDialog open={editingAddress} onOpenChange={setEditingAddress} value={{name, phone, address, pincode}} onSave={v => {setName(v.name);setPhone(v.phone);setAddress(v.address);setPincode(v.pincode);}} />
     {result.length > 0 && <div role="status" aria-live="polite" className="rounded-3xl border border-[#e1d7c8] bg-[#f8f5ee] p-6 text-center sm:p-9"><CheckCircle2 className="mx-auto h-12 w-12 text-[#668657]"/><p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#a68a64]">Order received</p><h2 className="mt-2 text-2xl font-semibold sm:text-3xl">Thank you for ordering!</h2><p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#71685e]">We've received your TreatStory order request. Your seller will review and confirm preparation and delivery details. No payment was collected online.</p><div className="mx-auto mt-5 max-w-lg space-y-2 rounded-2xl border bg-white p-4 text-left"><p className="mb-2 text-xs font-semibold text-[#796b58]">Your order {result.length === 1 ? 'ID' : 'IDs'}</p>{result.map(id => <div key={id} className="flex items-center justify-between gap-2 rounded-lg bg-[#f7f5f1] px-3 py-2"><code className="min-w-0 break-all text-xs font-semibold text-[#29251f]">{id}</code><button type="button" aria-label={`Copy order ID ${id}`} className="shrink-0 rounded-full border p-2" onClick={() => { if (navigator.clipboard) void navigator.clipboard.writeText(id); }}><ClipboardCopy className="h-4 w-4"/></button></div>)}</div><Link href="/orders" className="mt-5 inline-flex min-h-11 items-center rounded-full bg-[#29251f] px-6 text-sm font-semibold text-white">Track your orders</Link></div>}
     {isUserLoading ? <SectionSkeleton /> : !user ? <div className="rounded-2xl bg-white p-5"><p className="text-sm">Sign in to continue to checkout.</p><Link href={`/login?next=${encodeURIComponent(onlyProductId ? `/checkout?product=${encodeURIComponent(onlyProductId)}` : "/checkout")}`} className="editorial-button mt-4">Sign in</Link></div> : items.length > 0 && <form onSubmit={submit} className="space-y-4 sm:space-y-6">
       <div className="space-y-4"><p className="flex items-center gap-2 text-sm font-semibold"><MapPin className="h-4 w-4 text-[#a68a64]" />Contact & delivery details</p>
-      {savedAddress && !editingAddress && <div className="flex items-start justify-between gap-3 rounded-xl border bg-[#faf8f4] p-3 text-xs"><div className="min-w-0"><p className="font-semibold">{name} · {phone}</p><p className="mt-1 line-clamp-2 text-muted-foreground">{address}</p></div><Button type="button" variant="outline" size="sm" onClick={() => setEditingAddress(true)}>Change address</Button></div>}
-      {(!savedAddress || editingAddress) && <div className="space-y-3"><div className="grid gap-4 sm:grid-cols-2"><label className="block space-y-1.5 text-xs font-medium">Full name<Input required minLength={2} maxLength={120} autoComplete="name" placeholder="Name for your order" value={name} onChange={e => setName(e.target.value)} className="mt-1 bg-white" /></label>
-      <label className="block space-y-1.5 text-xs font-medium">Mobile number<Input required minLength={5} maxLength={40} autoComplete="tel" placeholder="Phone number" value={phone} onChange={e => setPhone(e.target.value)} className="mt-1 bg-white" /></label></div>
-      <label className="block space-y-1.5 text-xs font-medium">Delivery address<Textarea required minLength={10} maxLength={1000} autoComplete="street-address" placeholder="House / building, street, locality, city, PIN code" value={address} onChange={e => setAddress(e.target.value)} className="mt-1 min-h-16 bg-white" /></label>{savedAddress && <Button type="button" variant="outline" size="sm" onClick={() => setEditingAddress(false)}>Done</Button>}</div>}
+      <div className="flex items-start justify-between gap-3 rounded-xl border bg-[#faf8f4] p-3 text-xs"><div className="min-w-0"><p className="font-semibold">{name ? `${name} · ${phone}` : 'Add your delivery details'}</p><p className="mt-1 line-clamp-2 text-muted-foreground">{address || 'Choose an address for this order.'}</p>{pincode && <p className="mt-1 text-muted-foreground">PIN {pincode}</p>}</div><Button type="button" variant="outline" size="sm" onClick={() => setEditingAddress(true)}>{address ? 'Change address' : 'Add address'}</Button></div>
       <div className="grid gap-4 rounded-2xl border bg-white p-4 sm:grid-cols-2">
         <label className="space-y-2 text-xs font-medium">Fulfillment method
           <select className="h-11 w-full rounded-lg border bg-white px-3 text-sm" value={fulfillment} onChange={e => setFulfillment(e.target.value as typeof fulfillment)}><option value="delivery">Seller delivery</option><option value="pickup">Pickup from creator</option></select>
         </label>
-        {fulfillment === 'delivery' && (!savedAddress || editingAddress || !pincode) && <label className="space-y-2 text-xs font-medium">Delivery PIN code
-          <Input required pattern="[0-9]{6}" inputMode="numeric" maxLength={6} value={pincode} onChange={e => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Kerala PIN code" />
-        </label>}
         <label className="space-y-2 text-xs font-medium">Requested date
           <Input required type="date" min={new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10)} max={new Date(Date.now() + 330 * 60000 + 90 * 86400000).toISOString().slice(0, 10)} value={requestedDate} onChange={e => setRequestedDate(e.target.value)} />
         </label>

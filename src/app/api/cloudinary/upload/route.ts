@@ -1,3 +1,4 @@
+import { getServerFirebase, ApiError, safeResponse } from '@/lib/server/firebase-admin';
 import { randomUUID } from 'node:crypto';
 import { getApp, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
   try { form = await request.formData(); }
   catch { return json({ error: 'Could not read the selected image.' }, 400); }
   const kind = form.get('kind');
-  if (kind !== 'banner' && kind !== 'product') return json({ error: 'Invalid upload type.' }, 400);
+  if (kind !== 'banner' && kind !== 'product' && kind !== 'reference') return json({ error: 'Invalid upload type.' }, 400);
   const file = form.get('file');
   if (!(file instanceof Blob)) return json({ error: 'Choose an image to upload.' }, 400);
   const maxSize = kind === 'banner' ? MAX_BANNER_BYTES : MAX_PRODUCT_BYTES;
@@ -89,14 +90,14 @@ export async function POST(request: NextRequest) {
     return json({ error: `Choose a JPG, PNG or WebP image under ${kind === 'banner' ? '1' : '2'} MB.` }, 413);
 
   try {
-    let allowed = await canUpload(projectId, uid, idToken, kind);
+    let allowed = kind === 'reference' || await canUpload(projectId, uid, idToken, kind);
     if (!allowed && kind === 'product') allowed = await canUpload(projectId, uid, idToken, 'banner'); // Admins can manage legacy products.
     if (!allowed) return json({ error: kind === 'banner'
       ? 'Only verified TreatStory administrators can upload banners.'
       : 'Only active sellers and verified administrators can upload product photos.' }, 403);
   } catch (error) {
     console.error('Cloudinary upload role check failed', error);
-    return json({ error: 'Unable to verify your upload permissions. Check deployed Firestore rules.' }, 503);
+    return json({ error: 'Unable to verify your upload permissions. Please try again later.' }, 503);
   }
 
   // Inspect binary signatures, not only the MIME type supplied by the browser.
@@ -106,7 +107,19 @@ export async function POST(request: NextRequest) {
     return json({ error: 'The selected file is not a valid JPG, PNG or WebP image.' }, 400);
   }
 
-  const folder = kind === 'banner' ? `treatstory/banners/${uid}` : `treatstory/products/${uid}`;
+  if (kind === 'reference') {
+    try {
+      const { db } = getServerFirebase();
+      const ref = db.collection('custom_quote_upload_limits').doc(uid + '_' + new Date().toISOString().slice(0, 10));
+      await db.runTransaction(async tx => {
+        const snapshot = await tx.get(ref);
+        const count = snapshot.data()?.count || 0;
+        if (count >= 10) throw new ApiError(429, 'Daily reference photo limit reached. Please try again tomorrow.');
+        tx.set(ref, { buyerUid: uid, count: count + 1 });
+      });
+    } catch (error) { return safeResponse(error); }
+  }
+  const folder = kind === 'banner' ? `treatstory/banners/${uid}` : kind === 'reference' ? `treatstory/references/${uid}` : `treatstory/products/${uid}`;
   const upload = new FormData();
   upload.append('file', new Blob([bytes], { type: detected }), `photo.${detected.split('/')[1] === 'jpeg' ? 'jpg' : detected.split('/')[1]}`);
   upload.append('folder', folder);
