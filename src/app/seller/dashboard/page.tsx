@@ -110,7 +110,7 @@ function SellerContent() {
       weightUnit: product.weightUnit || 'g',
       customizationOptions: (product.customizationOptions ?? []).join('\n'),
       careInstructions: product.careInstructions ?? '',
-      weightOptions: (product.weightOptions?.length ? product.weightOptions : product.weightValue && product.weightUnit ? [{ value: product.weightValue, unit: product.weightUnit }] : []).map(w => ({ value: String(w.value), unit: w.unit })),
+      weightOptions: (product.weightOptions?.length ? product.weightOptions : product.weightValue && product.weightUnit ? [{ value: product.weightValue, unit: product.weightUnit }] : []).map(w => ({ value: String(w.value), unit: w.unit, price: 'price' in w && typeof w.price === 'number' ? String(w.price) : '', stockQuantity: 'stockQuantity' in w && typeof w.stockQuantity === 'number' ? String(w.stockQuantity) : '' })),
       showPrice: product.showPrice, status: product.status === 'published' ? 'published' : 'draft'
     } : emptyDraft);
     setFormOpen(true);
@@ -159,8 +159,12 @@ function SellerContent() {
     if (options.length > 6 || options.some(x => x.length > 80)) return toast({ variant: 'destructive', title: 'Add up to 6 short personalization prompts (80 characters each)' });
     const minQty = Number(draft.minimumOrderQuantity);
     if (!Number.isInteger(minQty) || minQty < 1 || minQty > 99) return toast({ variant: 'destructive', title: 'Minimum order quantity must be 1–99' });
-    const weights = draft.weightOptions.map(w => ({ value: Number(w.value), unit: w.unit }));
-    if (weights.length > 8 || weights.some(w => !Number.isFinite(w.value) || w.value <= 0 || w.value > 100000 || !['g','kg','ml','l','pieces'].includes(w.unit))) return toast({ variant: 'destructive', title: 'Weight options must contain valid values (maximum 8)' });
+    const weights = draft.weightOptions.map(w => ({ value: Number(w.value), unit: w.unit,
+      ...(w.price.trim() !== '' ? { price: Number(w.price) } : {}),
+      ...(w.stockQuantity.trim() !== '' ? { stockQuantity: Number(w.stockQuantity) } : {}) }));
+    if (weights.length > 8 || weights.some(w => !Number.isFinite(w.value) || w.value <= 0 || w.value > 100000 || !['g','kg','ml','l','pieces'].includes(w.unit) ||
+      ('price' in w && (!Number.isFinite(w.price) || w.price < 0 || w.price > 10000000)) ||
+      ('stockQuantity' in w && (!Number.isInteger(w.stockQuantity) || w.stockQuantity < 0 || w.stockQuantity > 1000000)))) return toast({ variant: 'destructive', title: 'Check size options, prices and stock (maximum 8 sizes)' });
     if (draft.category.trim().length < 2) return toast({ variant: 'destructive', title: 'Enter a product category' });
     setBusy(true);
     try {
