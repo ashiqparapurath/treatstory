@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { NextRequest } from 'next/server';
-import { Timestamp, FieldValue } from 'firebase-admin/firestore';
+import { Timestamp } from 'firebase-admin/firestore';
 import { verifiedUser, ApiError, safeResponse } from '@/lib/server/firebase-admin';
 
 export const runtime = 'nodejs';
@@ -11,7 +11,7 @@ const quoteSchema = z.discriminatedUnion('action', [
     productId: z.string().max(128).default(''),
     occasion: z.string().trim().min(2).max(120), description: z.string().trim().min(15).max(2000),
     budget: z.number().finite().min(0).max(10000000), requestedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    referenceUrl: z.string().url().max(2048).optional().default(''),
+    referenceUrl: z.union([z.literal(''), z.string().url().max(2048)]).default(''),
   }).strict(),
   z.object({ action: z.literal('quote'), id: z.string().min(1).max(128), price: z.number().positive().max(10000000),
     note: z.string().trim().min(2).max(800) }).strict(),
