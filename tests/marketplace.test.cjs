@@ -102,6 +102,7 @@ test('successful final purchase keeps checkout confirmation mounted', () => {
   const { default: Page } = load('src/app/checkout/page.tsx', {
     'next/link': 'a', 'next/navigation': { useSearchParams: () => new URLSearchParams('product=a') },
     '@/components/loading-states': { SectionSkeleton: () => null }, '@/components/header': { Header: () => null },
+    '@/hooks/use-scroll-to-top': { useScrollToTop() {} },
     '@/components/creator-checkout': { CreatorCheckout: CheckoutMock }, '@/context/cart-context': { useCart: () => cart },
   });
   let tree;
@@ -118,6 +119,7 @@ test('checkout tracks product query changes during client navigation', () => {
   const { default: Page } = load('src/app/checkout/page.tsx', {
     'next/link': 'a', 'next/navigation': { useSearchParams: () => new URLSearchParams(params) },
     '@/components/loading-states': { SectionSkeleton: () => null }, '@/components/header': { Header: () => null },
+    '@/hooks/use-scroll-to-top': { useScrollToTop() {} },
     '@/components/creator-checkout': { CreatorCheckout: CheckoutMock },
     '@/context/cart-context': { useCart: () => ({ hydrated: true, cartItems: ['a','b'].map(id => ({ id: `seller:${id}`, price: 10, quantity: 1, showPrice: true })) }) },
   });
@@ -332,6 +334,8 @@ test('checkout reuses the saved PIN and accepts address changes from a popup', a
   let notice;
   let sent;
   let requiresAdvance = false;
+  let directLine = null, directClears = 0;
+  const cartRemovals = [];
   const AddressDialog = props => props.open ? React.createElement('div', {role:'dialog'}, React.createElement('button', {onClick: () => {props.onSave({...props.value,pincode:'680001'});props.onOpenChange(false);}}, 'Use this address')) : null;
   const { CreatorCheckout } = load('src/components/creator-checkout.tsx', {
     '@/components/checkout-address-dialog': { CheckoutAddressDialog: AddressDialog },
@@ -339,13 +343,13 @@ test('checkout reuses the saved PIN and accepts address changes from a popup', a
     '@/components/default-delivery-address': { addressText: a => `${a.line1}, ${a.pincode}` },
     'firebase/firestore': { doc: () => ({}), getDoc: async () => ({ data: () => ({name:'Cake',advancePaymentRequired:requiresAdvance}) }) },
     '@/firebase': { useAccountData: () => ({ address: saved }), useFirestore: () => db, useUser: () => ({user, isUserLoading:false}) },
-    '@/context/cart-context': { useCart: () => ({ cartItems: items, removeFromCart() {}, updateLinePrice() {} }) },
+    '@/context/cart-context': { useCart: () => ({ cartItems: items, directItem: directLine, clearDirectCheckout() { directClears++; directLine = null; }, removeFromCart(key) {cartRemovals.push(key);}, updateLinePrice() {} }) },
     '@/hooks/use-toast': { useToast: () => ({ toast: v => { notice = v; } }) },
     '@/components/ui/button': { Button: props => React.createElement('button',props) },
     '@/components/ui/input': { Input: input }, '@/components/ui/textarea': { Textarea: props => React.createElement('textarea',props) }, 'next/link':'a',
   }, { sessionStorage: {getItem: () => '00000000-0000-4000-8000-000000000000', removeItem() {}}, fetch: async (_url, options) => { sent = JSON.parse(options.body); return {ok:true,json:async () => ({orderIds:['order-1']})}; } });
   const saved = {recipient:'Buyer',phone:'9876543210',line1:'House 123 Main Street',pincode:'673001'};
-  const db = {}; const user = { getIdToken: async () => 'test-token' };
+  const db = {}; let user = { getIdToken: async () => 'test-token' };
   const items = [{id:'seller:cake',lineId:'cake',name:'Cake',price:100,quantity:1}];
   let tree;
   await act(async () => { tree = create(React.createElement(CreatorCheckout)); });
@@ -377,6 +381,24 @@ test('checkout reuses the saved PIN and accepts address changes from a popup', a
   assert.equal(sent.advancePaymentAcknowledged, true);
 
   act(() => tree.unmount());
+  directLine = {...items[0], id:'seller:direct-cake', lineId:'direct-line'};
+  requiresAdvance = false;
+  user = null;
+  await act(async () => { tree = create(React.createElement(CreatorCheckout, {direct:true, onlyProductId:'direct-cake'})); });
+  const login = tree.root.findAllByType('a').find(a=>a.props.href.startsWith('/login?next='));
+  const returnTo = new URL(login.props.href, 'https://example.test').searchParams.get('next');
+  assert.match(returnTo, /buy=direct/);assert.match(returnTo, /product=direct-cake/);
+  act(()=>tree.unmount());
+  user = {getIdToken:async()=> 'test-token'};
+  const removedBefore = cartRemovals.length;
+  await act(async () => { tree = create(React.createElement(CreatorCheckout, {direct:true, onlyProductId:'direct-cake'})); });
+  act(()=>tree.root.findAllByType('input').find(n=>n.props.type==='radio').props.onChange());
+  await act(async()=>{await tree.root.findByType('form').props.onSubmit({preventDefault(){}});});
+  assert.equal(sent.lines[0].productId,'direct-cake');
+  assert.equal(directClears,1);assert.equal(cartRemovals.length,removedBefore,'direct confirmation must not remove an existing cart line');
+  assert.ok(JSON.stringify(tree.toJSON()).includes('Thank you for ordering!'));
+  act(()=>tree.unmount());
+
 });
 
 test('missing secure-service configuration returns a distinct setup error without leaking provider details', async () => {
@@ -447,4 +469,63 @@ test('server credentials normalize escaped key newlines and reject invalid proje
   assert.equal(usedKey.privateKey,'line1\nline2');
   env.FIREBASE_SERVICE_ACCOUNT_JSON='null';
   assert.throws(()=>server.getServerFirebase(),e=>e.status===503&&e.details.code==='SERVICE_NOT_CONFIGURED');
+});
+
+test('direct purchases are session drafts and never add to or increase the saved cart', () => {
+  function storage() { const values = new Map(); return {getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)}; }
+  const localStorage=storage(),sessionStorage=storage();
+  const {CartProvider,useCart}=load('src/context/cart-context.tsx',{}, {localStorage,sessionStorage});
+  let current;function Probe(){current=useCart();return null;}
+  let tree;act(()=>{tree=create(React.createElement(CartProvider,null,React.createElement(Probe)));});
+  const existing={id:'seller:existing',name:'Existing item',price:20,showPrice:true,description:'',category:'Cake',categoryId:'Cake',imageUrls:[]};
+  act(()=>current.addToCart(existing,3));
+  act(()=>current.startDirectCheckout(existing,1));
+  assert.equal(current.cartItems[0].quantity,3,'direct purchase of an existing cart line must not increase it');
+  const direct={...existing,id:'seller:direct',name:'Birthday cake',price:450,selectedWeight:{value:500,unit:'g'},customizationNote:'Happy birthday',minimumOrderQuantity:2};
+  sessionStorage.setItem('treatstory-pending-checkout','keep-cart-reference');
+  act(()=>current.startDirectCheckout(direct,2));
+  act(()=>current.startDirectCheckout(direct,2));
+  assert.equal(current.cartCount,3);assert.equal(current.cartItems.length,1);assert.equal(current.cartItems[0].id,'seller:existing');
+  assert.equal(current.directItem.quantity,2);assert.equal(current.directItem.selectedWeight.value,500);assert.equal(current.directItem.customizationNote,'Happy birthday');
+  assert.equal(JSON.parse(localStorage.getItem('treatstory-cart-v2')).some(i=>i.id==='seller:direct'),false);
+  assert.equal(sessionStorage.getItem('treatstory-pending-checkout'),'keep-cart-reference');
+  act(()=>current.updateDirectPrice(500));assert.equal(current.directItem.price,500);assert.equal(current.cartItems[0].price,20);
+  act(()=>tree.unmount());
+  act(()=>{tree=create(React.createElement(CartProvider,null,React.createElement(Probe)));});
+  assert.equal(current.directItem.price,500);assert.equal(current.cartCount,3);
+  act(()=>current.clearDirectCheckout());assert.equal(current.directItem,null);assert.equal(current.cartCount,3);assert.equal(sessionStorage.getItem('treatstory-direct-checkout-v1'),null);
+  act(()=>tree.unmount());
+});
+
+test('purchase destinations reset scroll instantly only when the destination changes', () => {
+  const calls=[];
+  const {useScrollToTop}=load('src/hooks/use-scroll-to-top.ts',{}, {window:{scrollTo:options=>calls.push(options)}});
+  function Probe({destination}){useScrollToTop(destination);return null;}
+  let tree;act(()=>{tree=create(React.createElement(Probe,{destination:'seller:cake'}));});
+  act(()=>tree.update(React.createElement(Probe,{destination:'seller:cake'})));
+  act(()=>tree.update(React.createElement(Probe,{destination:'buy=direct&product=cake'})));
+  assert.equal(calls.length,2);assert.equal(calls[1].top,0);assert.equal(calls[1].behavior,'instant');act(()=>tree.unmount());
+});
+
+test('direct checkout uses its draft, never falls back to cart, and keeps confirmation after clearing the draft', () => {
+  let params='buy=direct&product=direct';
+  let draft={id:'seller:direct',lineId:'direct',name:'Direct cake',price:450,quantity:1,showPrice:true};
+  const cart=[{id:'seller:cart',lineId:'cart',name:'Cart cookie',price:50,quantity:2,showPrice:true}];
+  function CheckoutMock(){return React.createElement('div',null,'Confirmed direct order');}
+  const {default:Page}=load('src/app/checkout/page.tsx',{
+    'next/link':'a','next/navigation':{useSearchParams:()=>new URLSearchParams(params)},
+    '@/hooks/use-scroll-to-top':{useScrollToTop(){}},'@/components/header':{Header:()=>null},
+    '@/components/loading-states':{SectionSkeleton:()=>null},'@/components/creator-checkout':{CreatorCheckout:CheckoutMock},
+    '@/context/cart-context':{useCart:()=>({cartItems:cart,directItem:draft,hydrated:true})},
+  });
+  let tree;act(()=>{tree=create(React.createElement(Page));});
+  assert.equal(tree.root.findByType(CheckoutMock).props.direct,true);
+  assert.ok(JSON.stringify(tree.toJSON()).includes('Direct cake'));assert.equal(JSON.stringify(tree.toJSON()).includes('Cart cookie'),false);
+  params='buy=direct&product=cart';act(()=>tree.update(React.createElement(Page)));
+  assert.ok(JSON.stringify(tree.toJSON()).includes('Your checkout is empty'),'stale direct link cannot silently order cart contents');
+  params='buy=direct&product=direct';act(()=>tree.update(React.createElement(Page)));
+  act(()=>{tree.root.findByType(CheckoutMock).props.onComplete();draft=null;tree.update(React.createElement(Page));});
+  assert.equal(tree.root.findAllByType(CheckoutMock).length,1);
+  assert.equal(JSON.stringify(tree.toJSON()).includes('Your checkout is empty'),false);
+  assert.equal(cart.length,1);act(()=>tree.unmount());
 });

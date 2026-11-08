@@ -17,6 +17,10 @@ export function cartLineId(product: Pick<Product, 'id'|'selectedWeight'|'customi
 
 interface CartContextType {
   cartItems: CartItem[];
+  directItem: CartItem | null;
+  startDirectCheckout: (product: Product, quantity?: number) => void;
+  clearDirectCheckout: () => void;
+  updateDirectPrice: (price: number) => void;
   addToCart: (product: Product, quantity?: number) => void;
   updateLinePrice: (lineId: string, price: number) => void;
   removeFromCart: (productId: string) => void;
@@ -30,9 +34,47 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [directItem, setDirectItem] = useState<CartItem | null>(null);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => { try { const saved = localStorage.getItem('treatstory-cart-v2') || localStorage.getItem('treatstory-cart-v1'); if (saved) { const parsed = JSON.parse(saved); if (Array.isArray(parsed)) setCartItems(parsed.filter((item: CartItem) => item && typeof item.id === 'string' && Number.isInteger(item.quantity) && item.quantity > 0).slice(0, 100).map((item: CartItem) => ({ ...item, lineId: item.lineId || cartLineId(item) }))); } } catch {} finally { setHydrated(true); } }, []);
   useEffect(() => { if (hydrated) { try { localStorage.setItem('treatstory-cart-v2', JSON.stringify(cartItems)); localStorage.removeItem('treatstory-cart-v1'); } catch {} } }, [cartItems, hydrated]);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('treatstory-direct-checkout-v1');
+      if (!raw) return;
+      const item = JSON.parse(raw) as CartItem;
+      if (item && typeof item.id === 'string' && item.id.startsWith('seller:') && typeof item.name === 'string' &&
+          typeof item.lineId === 'string' && typeof item.showPrice === 'boolean' && Number.isFinite(item.price) && item.price >= 0 &&
+          Number.isInteger(item.quantity) && item.quantity >= 1 && item.quantity <= 99) setDirectItem(item);
+      else sessionStorage.removeItem('treatstory-direct-checkout-v1');
+    } catch { /* A direct purchase can always be restarted from the product. */ }
+  }, []);
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      if (directItem) sessionStorage.setItem('treatstory-direct-checkout-v1', JSON.stringify(directItem));
+      else sessionStorage.removeItem('treatstory-direct-checkout-v1');
+    } catch { /* Keep the in-memory draft if session storage is unavailable. */ }
+  }, [directItem, hydrated]);
+  const startDirectCheckout = (product: Product, quantity = 1) => {
+    if (!product.id.startsWith('seller:') || !Number.isInteger(quantity) || quantity < 1) return;
+    const {imageUrls, ...rest} = product;
+    const item = {...rest, lineId: cartLineId(product), imageUrl: imageUrls?.[0] || '/img/product-placeholder.svg',
+      quantity: Math.min(99, Math.max(product.minimumOrderQuantity ?? 1, quantity))};
+    setDirectItem(item);
+    try {
+      sessionStorage.setItem('treatstory-direct-checkout-v1', JSON.stringify(item));
+      sessionStorage.removeItem('treatstory-direct-checkout-id');
+    } catch {}
+  };
+  const clearDirectCheckout = () => {
+    setDirectItem(null);
+    try { sessionStorage.removeItem('treatstory-direct-checkout-v1'); sessionStorage.removeItem('treatstory-direct-checkout-id'); } catch {}
+  };
+  const updateDirectPrice = (price: number) => {
+    if (Number.isFinite(price) && price >= 0) setDirectItem(item => item ? {...item, price} : null);
+  };
 
   const addToCart = (product: Product, quantity = 1) => {
     if (!Number.isInteger(quantity) || quantity < 1) return;
@@ -71,6 +113,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     <CartContext.Provider
       value={{
         cartItems,
+        directItem, startDirectCheckout, clearDirectCheckout, updateDirectPrice,
         hydrated,
         addToCart,
         updateLinePrice,

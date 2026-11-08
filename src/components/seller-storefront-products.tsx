@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 export function SellerStorefrontProducts({ limitCount }: { limitCount?: number }) {
   const db = useFirestore();
   const router = useRouter();
-  const { addToCart } = useCart();
+  const { addToCart, startDirectCheckout } = useCart();
   const { toast } = useToast();
   const ref = useMemoFirebase(() => db ? query(collection(db, 'marketplace_products'), where('status', '==', 'published'), ...(limitCount ? [limit(limitCount)] : [])) : null, [db, limitCount]);
   const { data, isLoading, error, retry } = usePublicCatalog<MarketplaceProduct>(ref);
@@ -25,10 +25,10 @@ export function SellerStorefrontProducts({ limitCount }: { limitCount?: number }
   const [visibleCount, setVisibleCount] = useState(24);
   useEffect(() => setVisibleCount(24), [deferredSearch]);
   const visible = useMemo(() => (data ?? []).filter(p => p.name.toLowerCase().includes(deferredSearch.toLowerCase()) || p.category.toLowerCase().includes(deferredSearch.toLowerCase())).slice(0, limitCount), [data, deferredSearch, limitCount]);
-  const addProduct = (p: MarketplaceProduct): string | null => {
+  const preparePurchase = (p: MarketplaceProduct, intent: 'cart' | 'direct'): string | null => {
     if (p.weightOptions?.length) {
-      router.push(`/product/seller:${encodeURIComponent(p.id)}`);
-      toast({ title: 'Choose your size', description: 'Select a weight or size, then add it to your bag.' });
+      router.push(`/product/seller:${encodeURIComponent(p.id)}`, {scroll:true});
+      toast({ title: 'Choose your size', description: 'Select a weight or size to continue.' });
       return null;
     }
     if (p.availability === 'unavailable' || (p.availability === 'available' && (p.stockQuantity ?? 0) <= 0)) {
@@ -38,7 +38,9 @@ export function SellerStorefrontProducts({ limitCount }: { limitCount?: number }
     const item = { id: `seller:${p.id}`, sellerId: p.sellerId, name: p.name, description: p.description,
       category: p.category, categoryId: p.category, price: p.price, imageUrls: p.imageUrls,
       showPrice: p.showPrice, minimumOrderQuantity: p.minimumOrderQuantity };
-    addToCart(item, Math.max(1, Math.min(99, p.minimumOrderQuantity ?? 1)));
+    const quantity = Math.max(1, Math.min(99, p.minimumOrderQuantity ?? 1));
+    if (intent === 'direct') startDirectCheckout(item, quantity);
+    else addToCart(item, quantity);
     return cartLineId(item);
   };
   if (error) return <LoadError retry={retry} />;
@@ -50,8 +52,8 @@ export function SellerStorefrontProducts({ limitCount }: { limitCount?: number }
     {visible.length === 0 ? <p className="text-sm text-muted-foreground">No matching creator products.</p> : (
       <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
         {visible.slice(0, visibleCount).map(p => <SellerProductCard key={p.id} product={p}
-          addToBag={product => { if (addProduct(product)) toast({ title: 'Added to your bag', description: product.name }); }}
-          buyNow={product => { const line = addProduct(product); if (line) router.push(`/checkout?product=${encodeURIComponent(product.id)}&line=${encodeURIComponent(line)}`); }}
+          addToBag={product => { if (preparePurchase(product, 'cart')) toast({ title: 'Added to your bag', description: product.name }); }}
+          buyNow={product => { const line = preparePurchase(product, 'direct'); if (line) router.push(`/checkout?buy=direct&product=${encodeURIComponent(product.id)}`, {scroll:true}); }}
         />)}
       </div>
     )}

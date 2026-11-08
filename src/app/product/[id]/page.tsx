@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { doc, getDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useCart, cartLineId } from '@/context/cart-context';
 import { useToast } from '@/hooks/use-toast';
+import { MobileBuyBar } from '@/components/mobile-buy-bar';
+import { useScrollToTop } from '@/hooks/use-scroll-to-top';
 import { ProductImage } from '@/components/product-image';
 import { FavoriteToggle } from '@/components/favorite-toggle';
 import { ProductReviews } from '@/components/product-reviews';
@@ -29,11 +31,13 @@ export default function ProductDetailPage() {
   // Decode at most twice to handle both regular and legacy encoded links.
   let routeId = params?.id || '';
   for (let n = 0; n < 2; n++) { try { const decoded = decodeURIComponent(routeId); if (decoded === routeId) break; routeId = decoded; } catch { break; } }
+  useScrollToTop(routeId);
+  const purchaseControls = useRef<HTMLDivElement>(null);
   const sellerListing = routeId.startsWith('seller:');
   const productId = sellerListing ? routeId.slice('seller:'.length) : routeId;
   const db = useFirestore();
   const router = useRouter();
-  const { addToCart } = useCart();
+  const { addToCart, startDirectCheckout } = useCart();
   const { toast } = useToast();
   const [product, setProduct] = useState<Listing | null>(null);
   const [resolvedSellerListing, setResolvedSellerListing] = useState(false);
@@ -97,25 +101,30 @@ export default function ProductDetailPage() {
     const fields = (creator?.customizationOptions ?? []).map(field => ({ field, value: answers[field]?.trim() || '' })).filter(item => item.value);
     return [selectedWeight ? `Selected weight / size: ${selectedWeight.value} ${selectedWeight.unit}` : '', ...fields.map(item => `${item.field}: ${item.value}`), requestNote.trim()].filter(Boolean).join('\n');
   }
-  function addCurrent(): string | null {
+  function currentItem(): Product | null {
     if (!product || !available) return null;
     const note = customNote();
-    if (note.length > 950) { toast({ variant: 'destructive', title: 'Customization notes are too long', description: 'Please shorten your preferences.' }); return null; }
-    const item: Product = { id: creator ? 'seller:' + product.id : product.id, sellerId: product.sellerId,
+    if (note.length > 750) { toast({ variant: 'destructive', title: 'Customization notes are too long', description: 'Please shorten your preferences.' }); return null; }
+    return { id: creator ? 'seller:' + product.id : product.id, sellerId: product.sellerId,
       name: product.name, description: product.description, category: product.category,
       categoryId: product.category, price: selectedPrice, imageUrls: photos, showPrice: product.showPrice,
       customizationNote: creator ? note : undefined, minimumOrderQuantity: creator ? minQty : 1,
       selectedWeight: creator && selectedWeight ? {value: selectedWeight.value, unit: selectedWeight.unit} : undefined };
+  }
+  function addCurrent(): string | null {
+    const item = currentItem();
+    if (!item) return null;
     addToCart(item, creator ? minQty : 1);
-    toast({ title: 'Added to your bag', description: creator && minQty > 1 ? `${minQty} units of ${product.name} added.` : product.name });
+    toast({ title: 'Added to your bag', description: creator && minQty > 1 ? `${minQty} units of ${item.name} added.` : item.name });
     return cartLineId(item);
   }
   function buyNow() {
-    if (!product || !available) return;
-    const lineId = addCurrent();
-    if (!lineId) return;
-    if (creator) router.push(`/checkout?product=${encodeURIComponent(product.id)}&line=${encodeURIComponent(lineId)}`);
-    else router.push('/cart');
+    const item = currentItem();
+    if (!item) return;
+    if (creator) {
+      startDirectCheckout(item, minQty);
+      router.push(`/checkout?buy=direct&product=${encodeURIComponent(creator.id)}`, {scroll:true});
+    } else { addCurrent(); router.push('/cart', {scroll:true}); }
   }
   return <div className="min-h-screen bg-[#f8f6f2] text-[#29251f]"><Header /><main className="section-shell pb-20 pt-6 sm:pt-12">
     <Link href="/products" className="inline-flex items-center gap-2 text-sm text-[#846b49] hover:underline"><ArrowLeft className="h-4 w-4" />Back to discoveries</Link>
@@ -145,12 +154,12 @@ export default function ProductDetailPage() {
       {creator?.availability === 'available' && !hasStock && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">This size does not have enough stock for the minimum order quantity ({minQty}). Choose another size or contact the seller.</p>}
       {creator && (creator.customizationOptions?.length || 0) > 0 && <div className="space-y-4 rounded-2xl border border-[#e8e0d5] bg-white p-5"><div><h2 className="font-medium">Make it yours</h2><p className="mt-1 text-xs text-muted-foreground">Optional personalization requests. The creator will confirm feasibility; prices are not automatically changed.</p></div>{creator.customizationOptions?.map((field,i) => <label key={i} className="block space-y-1.5 text-xs font-medium">{field}<Input maxLength={120} value={answers[field] || ''} placeholder="Your preference" onChange={e => setAnswers(v => ({...v,[field]:e.target.value}))} /></label>)}</div>}
       {creator && <label className="block space-y-2 text-sm font-medium">Notes for the creator (optional)<Textarea maxLength={500} rows={3} placeholder="Special requests, colours, gifting instructions…" value={requestNote} onChange={e=>setRequestNote(e.target.value)} className="bg-white"/></label>}
-      <div className="grid grid-cols-[auto_1fr] gap-3"><Button type="button" disabled={!available} onClick={() => void addCurrent()} variant="outline" className="h-12 rounded-full border-[#29251f] bg-white px-5" aria-label={`Add ${product.name} to bag`}><ShoppingBag className="mr-2 h-4 w-4" />Add to bag</Button><Button type="button" disabled={!available} onClick={buyNow} className="h-12 rounded-full bg-[#29251f] text-white hover:bg-[#51463a]">{available ? creator ? 'Buy now' : 'View bag' : 'Unavailable'}</Button></div>
+      <div ref={purchaseControls} id="purchase-actions" className="grid scroll-mt-24 grid-cols-[auto_1fr] gap-3"><Button type="button" disabled={!available} onClick={() => void addCurrent()} variant="outline" className="h-12 rounded-full border-[#29251f] bg-white px-5" aria-label={`Add ${product.name} to bag`}><ShoppingBag className="mr-2 h-4 w-4" />Add to bag</Button><Button type="button" disabled={!available} onClick={buyNow} className="h-12 rounded-full bg-[#29251f] text-white hover:bg-[#51463a]">{available ? creator ? 'Buy now' : 'View bag' : 'Unavailable'}</Button></div>
       <div className="flex justify-start"><FavoriteToggle productId={creator ? 'seller:' + product.id : product.id} title={product.name} imageUrl={photos[0]}/></div>
       {creator && <Link href={`/custom-orders?seller=${encodeURIComponent(creator.sellerId)}&product=${encodeURIComponent(creator.id)}`} className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#a68a64] bg-[#fffaf3] px-5 text-sm font-semibold text-[#6d5539] transition hover:bg-[#f6eddf]">Request a custom quote for this creation</Link>}
       {creator && whatsappNumber && <a href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hello! I'm interested in ${product.name} on TreatStory.${selectedWeight ? ` Preferred size: ${selectedWeight.value} ${selectedWeight.unit}.` : ''}`)}`} target="_blank" rel="noopener noreferrer" className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#17834a] bg-[#e9f8f0] px-5 text-sm font-semibold text-[#17683b] transition hover:bg-[#d8f0e5]"><MessageCircle className="h-5 w-5"/>Order via WhatsApp</a>}
       {creator && whatsappNumber && <p className="text-xs text-muted-foreground">WhatsApp requests are handled directly by the seller and won't appear in your website order history unless a website order is also placed.</p>}
       {creator && <p className="text-xs leading-5 text-muted-foreground">Your preferences are kept with your selected size and shared with the seller. Delivery and booking details are checked before confirming your order.</p>}
     </div>{creator && <div className="md:col-span-2"><ProductReviews productId={creator.id} /></div>}</div>}
-  </main></div>;
+  </main><MobileBuyBar target={purchaseControls} enabled={!!creator && available} resetKey={productId}><div className="min-w-0"><p className="truncate text-xs font-medium">{product?.name}</p><p className="mt-1 text-sm font-semibold">{selectedWeight ? `${selectedWeight.value} ${selectedWeight.unit} · ` : ''}{formatPrice(selectedPrice)}</p></div><Button type="button" disabled={!available} onClick={buyNow} className="h-12 shrink-0 rounded-full bg-[#29251f] px-6 text-white">Buy now</Button></MobileBuyBar></div>;
 }

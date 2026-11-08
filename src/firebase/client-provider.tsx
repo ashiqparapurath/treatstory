@@ -4,7 +4,7 @@ import React, { useState, useEffect, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { initializeFirestore, Firestore } from 'firebase/firestore';
 
 // This is a public configuration, but the values are securely populated
 // from environment variables at build time. Security is enforced by Firebase Security Rules.
@@ -30,7 +30,13 @@ function initializeClientFirebase() {
     return {
       firebaseApp: app,
       auth: getAuth(app),
-      firestore: getFirestore(app),
+      // Bounded long-polling requests are more tolerant of proxies/mobile stream interruptions.
+      // The browser still chooses HTTP/2 or HTTP/3; these settings do not disable QUIC.
+      firestore: initializeFirestore(app, {
+        experimentalForceLongPolling: true,
+        experimentalAutoDetectLongPolling: false,
+        experimentalLongPollingOptions: { timeoutSeconds: 25 },
+      }),
     };
   }
   // Return null if config is not fully available, preventing initialization errors.
