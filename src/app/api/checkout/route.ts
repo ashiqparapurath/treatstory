@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/server/request-body';
 import { after } from 'next/server';
 import { processMailQueue } from '@/lib/server/mail';
 import { type NextRequest } from 'next/server';
@@ -11,10 +12,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     const { uid, db, auth } = await verifiedUser(request);
-    if (Number(request.headers.get('content-length') || 0) > 25_000) {
-      throw new ApiError(413, 'This order request is too large.');
-    }
-    const body: unknown = await request.json().catch(() => { throw new ApiError(400, 'Invalid checkout request.'); });
+    const body: unknown = await readJsonBody(request,25000);
     const parsed = checkoutRequestSchema.safeParse(body);
     if (!parsed.success) throw new ApiError(400, 'Review the checkout fields and try again.');
     const result = await placeAtomicCheckout(db, uid, parsed.data);

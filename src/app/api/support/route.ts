@@ -1,3 +1,5 @@
+import {firestoreDocumentId} from '@/lib/document-id';
+import { readJsonBody } from '@/lib/server/request-body';
 import { queueNotification, queueMail, processMailQueue } from '@/lib/server/mail';
 import { after } from 'next/server';
 import { z } from 'zod';
@@ -13,13 +15,13 @@ const requestSchema = z.discriminatedUnion('action', [
     subject: z.string().trim().min(5).max(140),
     category: z.enum(['order','delivery','payment','seller','account','other']),
     message: z.string().trim().min(15).max(2000),
-    orderId: z.string().trim().max(160).default(''),
+    orderId: z.union([z.literal(''),firestoreDocumentId(160)]).default(''),
   }).strict(),
   z.object({ action: z.literal('reply'),
-    ticketId: z.string().min(1).max(160), message: z.string().trim().min(5).max(2000),
+    ticketId: firestoreDocumentId(160), message: z.string().trim().min(5).max(2000),
   }).strict(),
   z.object({ action: z.literal('close'),
-    ticketId: z.string().min(1).max(160),
+    ticketId: firestoreDocumentId(160),
   }).strict(),
 ]);
 
@@ -27,7 +29,7 @@ export async function POST(request: NextRequest) {
   try {
     const {uid,db,auth}=await verifiedUser(request);
     if(Number(request.headers.get('content-length')||0)>5000)throw new ApiError(413,'Support message is too large.');
-    const raw:unknown=await request.json().catch(()=>{throw new ApiError(400,'Invalid support request.');});
+    const raw:unknown=await readJsonBody(request,5000);
     const parsed=requestSchema.safeParse(raw);
     if(!parsed.success)throw new ApiError(400,'Review the support details.');
     const data=parsed.data;

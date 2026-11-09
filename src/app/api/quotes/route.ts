@@ -1,3 +1,5 @@
+import {firestoreDocumentId} from '@/lib/document-id';
+import { readJsonBody } from '@/lib/server/request-body';
 import { queueNotification, processMailQueue } from '@/lib/server/mail';
 import { after } from 'next/server';
 import { z } from 'zod';
@@ -9,22 +11,22 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const quoteSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('create'), sellerId: z.string().min(10).max(128),
-    productId: z.string().max(128).default(''),
+  z.object({ action: z.literal('create'), sellerId: firestoreDocumentId().min(10),
+    productId: z.union([z.literal(''),firestoreDocumentId()]).default(''),
     occasion: z.string().trim().min(2).max(120), description: z.string().trim().min(15).max(2000),
     budget: z.number().finite().min(0).max(10000000), requestedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     referenceUrl: z.union([z.literal(''), z.string().url().max(2048)]).default(''),
   }).strict(),
-  z.object({ action: z.literal('quote'), id: z.string().min(1).max(128), price: z.number().positive().max(10000000),
+  z.object({ action: z.literal('quote'), id: firestoreDocumentId(), price: z.number().positive().max(10000000),
     note: z.string().trim().min(2).max(800) }).strict(),
-  z.object({ action: z.enum(['decline','accept']), id: z.string().min(1).max(128) }).strict(),
+  z.object({ action: z.enum(['decline','accept']), id: firestoreDocumentId() }).strict(),
 ]);
 
 export async function POST(request: NextRequest) {
   try {
     const {uid,db,auth} = await verifiedUser(request);
     if (Number(request.headers.get('content-length') || 0)>10_000) throw new ApiError(413,'Quote request is too large.');
-    const raw:unknown = await request.json().catch(()=>{throw new ApiError(400,'Invalid request.');});
+    const raw:unknown = await readJsonBody(request,10000);
     const parsed = quoteSchema.safeParse(raw);
     if (!parsed.success) throw new ApiError(400,'Review the custom order fields.');
     const data = parsed.data;

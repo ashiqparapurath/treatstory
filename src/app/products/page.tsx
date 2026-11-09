@@ -1,5 +1,5 @@
 'use client';import { ProductGridSkeleton, LoadError } from '@/components/loading-states';
-import { usePublicCatalog } from '@/firebase/firestore/use-public-catalog';
+import { usePagedPublicCatalog } from '@/firebase/firestore/use-paged-public-catalog';
 
 import { Suspense } from 'react';
 import { Header } from '@/components/header';
@@ -12,13 +12,11 @@ import type { Product } from '@/lib/products';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function ProductsPageContent() {
-  const firestore = useFirestore();
-  const productsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
-  const { data: products, isLoading, error, retry } = usePublicCatalog<Product>(productsQuery);
+  const {data:products,isLoading,error,retry,hasMore,loadingMore,loadMore}=usePagedPublicCatalog<Product>('products');
 
   if (error) return <LoadError retry={retry} error={error} />;
   if (isLoading) return <ProductGridSkeleton count={8} />;
-  return <ProductGridContainer products={products || []} />;
+  return <><ProductGridContainer products={products||[]} hasMore={hasMore} loadingMore={loadingMore} loadMore={loadMore}/>{hasMore&&<button type="button" disabled={loadingMore} onClick={()=>void loadMore()} className="mt-6 rounded-full border px-5 py-3 text-sm">{loadingMore?'Loading…':'Show more products'}</button>}</>;
 }
 
 export default function ProductsPage() {

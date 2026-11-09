@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import {firestoreDocumentId} from '@/lib/document-id';
 
 export const weightSelectionSchema = z.object({
   value: z.number().positive().max(100000),
@@ -6,7 +7,7 @@ export const weightSelectionSchema = z.object({
 }).strict();
 
 export const checkoutLineSchema = z.object({
-  productId: z.string().min(1).max(128),
+  productId: firestoreDocumentId(),
   quantity: z.number().int().min(1).max(99),
   expectedPrice: z.number().finite().min(0).max(10000000),
   customizationNote: z.string().max(750).default(''),

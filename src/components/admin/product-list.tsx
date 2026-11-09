@@ -1,4 +1,6 @@
 'use client';
+import {usePagedCollection} from '@/firebase/firestore/use-paged-collection';
+import {LoadMoreRecords} from '@/components/load-more-records';
 import { errorToast } from '@/lib/user-notices';
 import { LoadError } from '@/components/loading-states';
 
@@ -41,7 +43,7 @@ export function ProductList() {
     return collection(firestore, 'products');
   }, [firestore]);
 
-  const { data: products, isLoading, error: loadError, retry: retryLoad } = useCollection<Product>(productsQuery);
+  const { data: products, isLoading, error: loadError, retry: retryLoad, hasMore, loadingMore, loadMore } = usePagedCollection<Product>(productsQuery);
 
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
@@ -92,7 +94,7 @@ export function ProductList() {
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-24 w-full" />
-      </div>
+      <LoadMoreRecords hasMore={hasMore} loadingMore={loadingMore} loadMore={loadMore}/></div>
     );
   }
 

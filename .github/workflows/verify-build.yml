@@ -20,10 +20,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Dependency vulnerability audit
+        run: npm audit --audit-level=high
       - name: Regression tests
         run: npm test
       - name: Set up Java for Firestore emulator
@@ -32,7 +34,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Validate rules and execute real atomic-checkout Firestore emulator tests
-        run: npx --yes firebase-tools@14 emulators:exec --only firestore,storage --project demo-treatstory --config firebase.json 'npx --no-install tsx tests/atomic-checkout-emulator.ts && npx --no-install tsx tests/seller-product-rules.ts && npx --no-install tsx tests/mail-emulator.ts'
+        run: npx --yes firebase-tools@14 emulators:exec --only firestore,storage --project demo-treatstory --config firebase.json 'npx --no-install tsx tests/atomic-checkout-emulator.ts && npx --no-install tsx tests/seller-product-rules.ts && npx --no-install tsx tests/seller-product-server.ts && npx --no-install tsx tests/mail-emulator.ts'
       - name: TypeScript validation
         run: npm run typecheck
       - name: Production build

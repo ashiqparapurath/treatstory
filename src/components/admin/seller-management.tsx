@@ -1,4 +1,6 @@
 'use client';
+import {usePagedCollection} from '@/firebase/firestore/use-paged-collection';
+import {LoadMoreRecords} from '@/components/load-more-records';
 import { requestSellerMail } from '@/lib/account-mail';
 
 import { useRef, useState } from 'react';
@@ -30,7 +32,7 @@ export function SellerManagement() {
   const {user}=useUser();
   const { toast } = useToast();
   const ref = useMemoFirebase(() => db ? collection(db, 'sellers') : null, [db]);
-  const { data: sellers, isLoading, error, retry } = useCollection<Seller>(ref);
+  const { data: sellers, isLoading, error, retry, hasMore, loadingMore, loadMore } = usePagedCollection<Seller>(ref);
   const requestInFlight = useRef(false);
   const [confirmation,setConfirmation] = useState<AccessChange|null>(null);
   const [confirmationError,setConfirmationError] = useState('');
@@ -126,5 +128,5 @@ export function SellerManagement() {
       <dl className="space-y-3 rounded-2xl border border-[#e5dacb] bg-white p-4 text-sm"><div className="flex justify-between gap-4"><dt className="text-muted-foreground">Seller</dt><dd className="break-words text-right font-semibold">{pendingSeller?.businessName}</dd></div><div className="flex justify-between gap-4"><dt className="text-muted-foreground">Access plan</dt><dd className="font-medium capitalize">{newPlan === 'trial'?'Trial':'Full access'}</dd></div><div className="flex justify-between gap-4"><dt className="text-muted-foreground">Current expiry</dt><dd className="text-right">{longDate(pendingSeller?.accessEndsAt)}</dd></div><div className="flex justify-between gap-4"><dt className="text-muted-foreground">{confirmation?.action==='expiry'||confirmation?.action==='extend'?'New expiry':'Expiry'}</dt><dd className="text-right font-semibold">{longDate(newExpiry)}</dd></div></dl>
       {confirmation?.action==='expiry'&&pendingSeller?.status==='suspended'&&<p className="text-xs text-amber-800">This store will remain suspended. Reactivate it separately when ready.</p>}
     </ConfirmActionDialog>
-  </section>;
+  <LoadMoreRecords hasMore={hasMore} loadingMore={loadingMore} loadMore={loadMore}/></section>;
 }

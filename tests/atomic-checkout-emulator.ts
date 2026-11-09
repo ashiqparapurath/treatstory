@@ -13,9 +13,9 @@ import { applyOrderAction } from '@/lib/server/order-actions';
 import type { CheckoutPayload } from '@/lib/checkout-schema';
 
 async function run() {
-  if (!process.env.FIRESTORE_EMULATOR_HOST) throw Error('Refusing to run transactional tests outside Firestore emulator.');
+  if (!/^(127\.0\.0\.1|localhost):\d+$/.test(process.env.FIRESTORE_EMULATOR_HOST||'')) throw Error('Refusing to run transactional tests outside loopback Firestore emulator.');
   const app = getApps().find(a=>a.name==='treatstory-checkout-test') ||
-    initializeApp({ projectId: 'demo-treatstory' }, 'treatstory-checkout-test');
+    initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-treatstory' }, 'treatstory-checkout-test');
   const db = getFirestore(app);
   const sellerId = 'test-seller-'+randomUUID();
   const productId = 'test-product-'+randomUUID();

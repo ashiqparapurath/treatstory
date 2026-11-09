@@ -1,0 +1,224 @@
+{
+  "environment": {
+    "cpuLimit": 2,
+    "memoryGiB": 8,
+    "project": "demo-treatstory-audit",
+    "providerDelivery": "stubbed",
+    "database": "emulator",
+    "clientTransport": "Firestore Lite REST (rules enforced); browser suite separately exercises live listeners"
+  },
+  "results": [
+    {
+      "concurrency": 100,
+      "durationSeconds": 81.143535805,
+      "summary": {
+        "count": 3805,
+        "p50": 19.11004800000228,
+        "p95": 8893.153679,
+        "p99": 36080.29427600001,
+        "unexpectedErrors": 0,
+        "expectedResponses": 0,
+        "logicalClientDocReads": 27103
+      },
+      "throughput": 46.89221343698877,
+      "operations": {
+        "page.home": {
+          "count": 351,
+          "p50": 11.999910000002274,
+          "p95": 436.3534169999998,
+          "p99": 438.10647100000006,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 0
+        },
+        "read.catalog": {
+          "count": 351,
+          "p50": 40.60886400000163,
+          "p95": 1110.4028719999997,
+          "p99": 1293.610169,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 8424
+        },
+        "read.product.variant": {
+          "count": 350,
+          "p50": 8.213902000003145,
+          "p95": 689.7841330000001,
+          "p99": 817.0833629999997,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 350
+        },
+        "read.categories.banners": {
+          "count": 350,
+          "p50": 22.367691000001287,
+          "p95": 1016.7701040000002,
+          "p99": 1279.8979210000007,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 5600
+        },
+        "read.search.filter": {
+          "count": 349,
+          "p50": 38.65062899999975,
+          "p95": 1025.8099169999996,
+          "p99": 1177.9715729999998,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 8376
+        },
+        "read.profile": {
+          "count": 349,
+          "p50": 6.722811999999976,
+          "p95": 655.7481680000001,
+          "p99": 940.4806280000003,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 349
+        },
+        "page.products": {
+          "count": 348,
+          "p50": 13.811716999996861,
+          "p95": 795.4489590000003,
+          "p99": 980.7376519999998,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 0
+        },
+        "admin.approval": {
+          "count": 44,
+          "p50": 5362.522348000002,
+          "p95": 6910.310256999997,
+          "p99": 9813.143242999999,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 0
+        },
+        "read.orders": {
+          "count": 253,
+          "p50": 28.826811000006273,
+          "p95": 101.93373199999769,
+          "p99": 129.15323999999964,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 3513
+        },
+        "auth.sign-in": {
+          "count": 252,
+          "p50": 2.240422999999282,
+          "p95": 10.545024999999441,
+          "p99": 27.12478199999896,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 0
+        },
+        "read.product": {
+          "count": 387,
+          "p50": 6.083286999999473,
+          "p95": 23.911783999999898,
+          "p99": 53.981737000001885,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 387
+        },
+        "seller.product.edit": {
+          "count": 104,
+          "p50": 3982.296132000003,
+          "p95": 7891.281258000003,
+          "p99": 10714.037722999994,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 104
+        },
+        "write.checkout": {
+          "count": 200,
+          "p50": 29259.310391,
+          "p95": 39826.473439,
+          "p99": 41391.881785,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 0
+        },
+        "auth.sign-up": {
+          "count": 117,
+          "p50": 2.0867679999937536,
+          "p95": 8.99775999999838,
+          "p99": 42.63875700000062,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 0
+        }
+      },
+      "resources": {
+        "samples": 80,
+        "peakServerRss": 479117312,
+        "peakCgroupMemoryBytes": 7242207232,
+        "peakEventLoopP95Ms": 172.097535,
+        "first": {
+          "at": 1794229594680,
+          "pid": 15672,
+          "counts": {
+            "mail": 147,
+            "upload": 0,
+            "blockedEgress": 0,
+            "transactions": 1251,
+            "transactionAttempts": 1251,
+            "reads": 5063,
+            "writes": 7199
+          },
+          "memory": {
+            "rss": 375963648,
+            "heapTotal": 123596800,
+            "heapUsed": 104611080,
+            "external": 11481359,
+            "arrayBuffers": 7351982
+          },
+          "cpu": {
+            "user": 28740264,
+            "system": 3200093
+          },
+          "eventLoop": {
+            "p95Ms": 22.577151,
+            "p99Ms": 185.991167
+          },
+          "cgroupMemoryBytes": 6772400128,
+          "cgroupCpu": "usage_usec 3102089526\nuser_usec 2710989535\nsystem_usec 391099990\nnice_usec 0\nnr_periods 93900\nnr_throttled 7523\nthrottled_usec 411328815\nnr_bursts 0\nburst_usec 0\n"
+        },
+        "last": {
+          "at": 1794229674090,
+          "pid": 15672,
+          "counts": {
+            "mail": 155,
+            "upload": 0,
+            "blockedEgress": 0,
+            "transactions": 1560,
+            "transactionAttempts": 1560,
+            "reads": 6364,
+            "writes": 9180
+          },
+          "memory": {
+            "rss": 479117312,
+            "heapTotal": 263057408,
+            "heapUsed": 156049512,
+            "external": 16066263,
+            "arrayBuffers": 11912414
+          },
+          "cpu": {
+            "user": 38180431,
+            "system": 4047666
+          },
+          "eventLoop": {
+            "p95Ms": 23.543807,
+            "p99Ms": 24.100863
+          },
+          "cgroupMemoryBytes": 7242207232,
+          "cgroupCpu": "usage_usec 3239204770\nuser_usec 2835920959\nsystem_usec 403283811\nnice_usec 0\nnr_periods 94692\nnr_throttled 7839\nthrottled_usec 426577215\nnr_bursts 0\nburst_usec 0\n"
+        }
+      },
+      "targets": {
+        "standardReadP95Ms": 975.7364049999996,
+        "unexpectedErrorRate": 0
+      }
+    }
+  ]
+}

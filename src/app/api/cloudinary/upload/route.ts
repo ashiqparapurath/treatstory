@@ -1,3 +1,4 @@
+import { readBodyBytes } from '@/lib/server/request-body';
 import { getServerFirebase, ApiError, safeResponse } from '@/lib/server/firebase-admin';
 import { randomUUID } from 'node:crypto';
 import { getApp, getApps, initializeApp } from 'firebase-admin/app';
@@ -79,8 +80,10 @@ export async function POST(request: NextRequest) {
   const contentLength = Number(request.headers.get('content-length') || 0);
   if (contentLength > MAX_PRODUCT_BYTES + 50_000) return json({ error: 'Image upload is too large.' }, 413);
   let form: FormData;
-  try { form = await request.formData(); }
-  catch { return json({ error: 'Could not read the selected image.' }, 400); }
+  try {
+    const bounded=await readBodyBytes(request,MAX_PRODUCT_BYTES+50_000);
+    form=await new Response(bounded as BodyInit,{headers:{'Content-Type':request.headers.get('content-type')||''}}).formData();
+  }catch(error){if(error instanceof ApiError)return safeResponse(error);return json({error:'Could not read the selected image.'},400);}
   const kind = form.get('kind');
   if (kind !== 'banner' && kind !== 'product' && kind !== 'reference') return json({ error: 'Invalid upload type.' }, 400);
   const file = form.get('file');
@@ -109,14 +112,14 @@ export async function POST(request: NextRequest) {
     return json({ error: 'The selected file is not a valid JPG, PNG or WebP image.' }, 400);
   }
 
-  if (kind === 'reference') {
+  {
     try {
       const { db } = getServerFirebase();
-      const ref = db.collection('custom_quote_upload_limits').doc(uid + '_' + new Date().toISOString().slice(0, 10));
+      const ref = db.collection(kind === 'reference' ? 'custom_quote_upload_limits' : 'image_upload_limits').doc(uid + '_' + new Date().toISOString().slice(0, 10));
       await db.runTransaction(async tx => {
         const snapshot = await tx.get(ref);
         const count = snapshot.data()?.count || 0;
-        if (count >= 10) throw new ApiError(429, 'Daily reference photo limit reached. Please try again tomorrow.');
+        if (count >= (kind === 'reference' ? 10 : 100)) throw new ApiError(429, 'Daily photo upload limit reached. Please try again tomorrow.');
         tx.set(ref, { buyerUid: uid, count: count + 1 });
       });
     } catch (error) { return safeResponse(error); }
@@ -133,7 +136,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: { Authorization: 'Basic ' + Buffer.from(`${apiKey}:${apiSecret}`).toString('base64') },
       body: upload,
-      cache: 'no-store',
+      cache: 'no-store',signal:AbortSignal.timeout(15_000),
     });
     const result = await response.json() as { secure_url?: string; public_id?: string; error?: { message?: string } };
     if (!response.ok || !result.secure_url || !result.public_id) {

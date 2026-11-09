@@ -15,8 +15,8 @@ function sharedModule(id) {
 function load(file, mocks = {}, globals = {}) {
   const output = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   const module = { exports: {} };
-  vm.runInNewContext(output, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id==='@/lib/account-mail'?accountMailMock : ['@/lib/user-notices', '@/lib/order-feedback','@/lib/server/mail'].includes(id) ? sharedModule(id) : id === 'lucide-react' ? new Proxy({}, { get: () => () => null }) : require(id), console,
-    setTimeout: (...args) => { const timer = setTimeout(...args); timer.unref(); return timer; }, clearTimeout, URL, URLSearchParams, ...globals }, { filename: file });
+  vm.runInNewContext(output, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id==='@/lib/server/request-body'?load('src/lib/server/request-body.ts',mocks):id==='@/lib/account-mail'?accountMailMock : ['@/lib/document-id','@/lib/user-notices', '@/lib/order-feedback','@/lib/server/mail'].includes(id) ? sharedModule(id) : id === 'lucide-react' ? new Proxy({}, { get: () => () => null }) : require(id), console,
+    setTimeout: (...args) => { const timer = setTimeout(...args); timer.unref(); return timer; }, clearTimeout, AbortSignal, TextDecoder, URL, URLSearchParams, ...globals }, { filename: file });
   return module.exports;
 }
 function snapshot(id, data = {}) { return { docs: [{ id, data: () => data }] }; }
@@ -243,24 +243,12 @@ test('Admin and seller photo forms save only Cloudinary image URLs to Firestore'
 
 
 
-test('Next.js 15 uses compatible Cloudinary SDK for optimized images with legacy fallback', () => {
-  const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-  const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
-  assert.equal(pkg.dependencies['next-cloudinary'], '6.19.3');
-  assert.equal(lock.packages['node_modules/next-cloudinary'].version, '6.19.3');
-
-  const image = fs.readFileSync('src/components/optimized-image.tsx', 'utf8');
-  assert.match(image, /import \{ CldImage \} from 'next-cloudinary'/);
-  assert.match(image, /NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME/);
-  assert.match(image, /https:\\\/\\\/res\\\.cloudinary/);
-  assert.match(image, /<CldImage/);
-  assert.match(image, /<Image/);
-  const product = fs.readFileSync('src/components/product-image.tsx', 'utf8');
-  assert.match(product, /OptimizedImage/);
-  const home = fs.readFileSync('src/app/page.tsx', 'utf8');
-  assert.match(home, /<OptimizedImage src=\{banner\.imageUrl\}/);
-  const banners = fs.readFileSync('src/components/admin/banner-list.tsx', 'utf8');
-  assert.match(banners, /<OptimizedImage src=\{banner\.imageUrl\}/);
+test('Cloudinary delivery transforms only unsigned Cloudinary assets', () => {
+  const {isCloudinaryImage,cloudinaryImageLoader}=load('src/lib/image-loader.ts');
+  const src='https://res.cloudinary.com/shop/image/upload/v1/cake.jpg';
+  assert.equal(isCloudinaryImage(src),true);
+  assert.match(cloudinaryImageLoader({src,width:640}),/f_auto,q_auto,c_limit,w_640/);
+  for(const url of ['https://evil.example/image/upload/x','https://res.cloudinary.com.evil.example/shop/image/upload/x','https://res.cloudinary.com/shop/image/upload/s--signature--/x','https://res.cloudinary.com/shop/image/upload/x?token=secret'])assert.equal(isCloudinaryImage(url),false);
 });
 
 
@@ -270,13 +258,13 @@ test('checkout groups items atomically and rejects client bypasses', () => {
   const rules = fs.readFileSync('firestore.rules', 'utf8');
   assert.match(api, /verifiedUser\(request\)/);
   assert.match(api, /checkoutRequestSchema.safeParse\(body\)/);
-  assert.match(checkout, /db.runTransaction\(async tx/);
+  assert.match(checkout, /db.runTransaction\(\s*async\s*\(?tx/);
   assert.match(checkout, /requestHash/);
   assert.match(checkout, /stockQuantity/);
   assert.match(checkout, /pendingPrices/);
   assert.match(checkout, /seller_bookings/);
-  assert.match(checkout, /tx.create\(checkoutRef/);
-  assert.match(checkout, /tx.create\(db.collection\('seller_orders'\)/);
+  assert.match(checkout, /tx.create\(\s*checkoutRef/);
+  assert.match(checkout, /tx.create\(\s*db.collection\(["']seller_orders["']\)/);
   assert.match(rules, /match \/checkout_orders\/\{checkoutId\} \{\s*allow read, write: if false;/);
   assert.match(rules, /match \/seller_orders\/\{orderId\} \{[\s\S]*?allow create, update, delete: if false;/);
 });
@@ -434,7 +422,7 @@ test('quote creation snapshots authoritative seller and product names with the r
     'firebase-admin/firestore': {Timestamp:{now:()=>({toMillis:()=>now}),fromMillis:v=>v}},
     '@/lib/server/firebase-admin': {verifiedUser:async()=>({uid:'buyer',db}),ApiError:class extends Error{},safeResponse:e=>{throw e;}},
   }, {Response});
-  const response = await POST({headers:new Headers(),json:async()=>({action:'create',sellerId:'seller-12345',productId:'cake-1',occasion:'Birthday',description:'Chocolate cake with flowers',budget:1000,requestedDate:new Date(now+86400000).toISOString().slice(0,10),referenceUrl:'https://res.cloudinary.com/test/image/upload/example.jpg'})});
+  const response = await POST(new Request('https://shop.example/api/quotes',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'create',sellerId:'seller-12345',productId:'cake-1',occasion:'Birthday',description:'Chocolate cake with flowers',budget:1000,requestedDate:new Date(now+86400000).toISOString().slice(0,10),referenceUrl:'https://res.cloudinary.com/test/image/upload/example.jpg'})}));
   assert.equal(response.status,200);
   assert.equal(created.sellerName,'Little Bakery');
   assert.equal(created.productName,'Chocolate Cake');
@@ -451,7 +439,7 @@ test('reference photo uploads authenticate buyers, keep file checks and enforce 
   }, {process:{env:{NEXT_PUBLIC_FIREBASE_PROJECT_ID:'test',CLOUDINARY_CLOUD_NAME:'test',CLOUDINARY_API_KEY:'test',CLOUDINARY_API_SECRET:'test'}},Blob,FormData,Buffer,Response,
     fetch:async(_url,options)=>{upstreamCalls++;assert.equal(options.body.get('folder'),'treatstory/references/buyer');return {ok:true,json:async()=>({secure_url:'https://res.cloudinary.com/test/image/upload/photo.png',public_id:'photo'})};}});
   const png = new Blob([new Uint8Array([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])],{type:'image/png'});
-  const request = file => ({headers:new Headers({authorization:'Bearer test'}),formData:async()=>new Map([['kind','reference'],['file',file]])});
+  const request = file => {const form=new FormData();form.set('kind','reference');form.set('file',file);return new Request('https://shop.example/api/cloudinary/upload',{method:'POST',headers:{authorization:'Bearer test'},body:form});};
   let response = await POST(request(png));
   assert.equal(response.status,200);assert.equal(count,1);assert.equal(upstreamCalls,1);
   count=10;
@@ -572,6 +560,8 @@ test('seller access confirmation opens without a write, awaits acknowledgment an
   const seller={id:'seller-a',businessName:'As Production',accessType:'trial',status:'active',accessEndsAt:Timestamp.fromDate(new Date('2026-11-15T23:59:59')),contactEmail:'seller@example.com'};
   const db={}; const Dialog=()=>null;
   const {SellerManagement}=load('src/components/admin/seller-management.tsx',{
+    '@/firebase/firestore/use-paged-collection':{usePagedCollection:()=>({data:[seller],isLoading:false,hasMore:false,loadingMore:false,loadMore:async()=>{}})},
+    '@/components/load-more-records':{LoadMoreRecords:()=>null},
     '@/firebase':{useUser:()=>({user:{uid:'admin'}}),useFirestore:()=>db,useMemoFirebase:fn=>fn(),useCollection:()=>({data:[seller],isLoading:false})},
     'firebase/firestore':{Timestamp,collection:()=>({}),doc:()=>({}),serverTimestamp:()=>0,updateDoc:()=>{writes++;return new Promise((resolve,reject)=>{resolveWrite=resolve;rejectWrite=reject;});}},
     '@/components/ui/button':{Button:'button'},'@/components/ui/input':{Input:'input'},'@/components/ui/label':{Label:'label'},
@@ -655,4 +645,38 @@ test('email deep links open an older authorized order and stay closed after dism
   act(()=>tree.root.findByProps({'aria-label':'Close order details'}).props.onClick());
   act(()=>receive(snapshot({...order,status:'accepted'})));assert.equal(tree.root.findAllByProps({role:'dialog'}).length,0);
   act(()=>tree.unmount());assert.equal(stopped,1);
+});
+
+test('private pagination bounds its live query, uses cursors and clears previous-account pages immediately', async () => {
+  let uid='account-a',result;const callbacks=[],observed=[];
+  const source={path:'private-records'};
+  const firestore={query:(source,...constraints)=>({...source,constraints}),documentId:()=> '__name__',orderBy:field=>({orderBy:field}),limit:size=>({limit:size}),startAfter:id=>({after:id}),onSnapshot:(query,next)=>{callbacks.push({query,next});return()=>{};},getDocs:async()=>({docs:[{id:'3',data:()=>({name:'old page'})},{id:'4',data:()=>({name:'old page'})}]})};
+  const provider={useUser:()=>({user:{uid}}),useMemoFirebase:(fn,deps)=>{const value=React.useMemo(fn,deps);if(value)value.__memo=true;return value;}};
+  const collection=load('src/firebase/firestore/use-collection.tsx',{'firebase/firestore':firestore});
+  const {usePagedCollection}=load('src/firebase/firestore/use-paged-collection.ts',{'firebase/firestore':firestore,'./use-collection':collection,'@/firebase/provider':provider});
+  function Probe(){result=usePagedCollection(source,2);observed.push({uid,ids:result.data?.map(row=>row.id)||[]});return null;}
+  let tree;act(()=>{tree=create(React.createElement(Probe));});
+  assert.ok(callbacks[0].query.constraints.some(c=>c.limit===2));
+  act(()=>callbacks[0].next({docs:[{id:'1',data:()=>({})},{id:'2',data:()=>({})}]}));
+  await act(async()=>{await result.loadMore();});assert.deepEqual(Array.from(result.data,row=>row.id),['1','2','3','4']);
+  uid='account-b';act(()=>tree.update(React.createElement(Probe)));
+  assert.equal(result.data,null);
+  act(()=>callbacks.at(-1).next({docs:[{id:'new-account',data:()=>({})}]}));
+  assert.deepEqual(Array.from(result.data,row=>row.id),['new-account']);
+  assert.ok(observed.filter(r=>r.uid==='account-b').every(r=>!r.ids.includes('3')&&!r.ids.includes('4')));
+  act(()=>tree.unmount());
+});
+
+ test('document IDs cannot select nested, reserved or control-character paths',()=>{
+  const{firestoreDocumentId}=sharedModule('@/lib/document-id');const schema=firestoreDocumentId();
+  for(const value of ['a/b','../x','.', '..','__reserved__','bad\u0000id',''])assert.equal(schema.safeParse(value).success,false);
+  for(const value of ['cake-123','seller_id','കേക്ക്'])assert.equal(schema.safeParse(value).success,true);
+ });
+
+test('catalog search tolerates missing imported metadata and excludes malformed names',()=>{
+ const{matchesProductSearch}=load('src/lib/catalog-search.ts');
+ assert.equal(matchesProductSearch({name:'Rare Cake 0999'},'0999'),true);
+ assert.equal(matchesProductSearch({name:'Cake',category:undefined},'0999'),false);
+ assert.equal(matchesProductSearch({name:{bad:true},category:'Cake'},'cake'),false);
+ assert.equal(matchesProductSearch({name:'Gift',description:'Chocolate'},'chocolate',true),true);
 });

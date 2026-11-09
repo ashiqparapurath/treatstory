@@ -118,7 +118,13 @@ export async function deliverMailJob(db:Firestore,auth:Auth,id:string) {
     return skipped?'skipped':review?'review':permanent?'failed':'retry';
   }
 }
+const activeQueueRuns=new WeakMap<Firestore,Promise<{configured:boolean;processed:number}>>();
 export async function processMailQueue(db:Firestore,auth:Auth,limit=10) {
+  const active=activeQueueRuns.get(db);if(active)return {configured:true,processed:0};
+  const run=drainMailQueue(db,auth,limit);activeQueueRuns.set(db,run);
+  try{return await run;}finally{if(activeQueueRuns.get(db)===run)activeQueueRuns.delete(db);}
+}
+async function drainMailQueue(db:Firestore,auth:Auth,limit:number) {
   try{mailConfig();}catch{return {configured:false,processed:0};}
   // One indexed inequality, no composite index needed. Sent/failed jobs have no nextAttemptAt.
   const jobs=await db.collection(collection).where('nextAttemptAt','<=',Timestamp.now()).orderBy('nextAttemptAt').limit(limit).get();

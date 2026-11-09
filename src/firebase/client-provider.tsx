@@ -3,8 +3,8 @@
 import React, { useState, useEffect, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { initializeFirestore, Firestore } from 'firebase/firestore';
+import { getAuth, connectAuthEmulator, Auth } from 'firebase/auth';
+import { initializeFirestore, connectFirestoreEmulator, Firestore } from 'firebase/firestore';
 
 // This is a public configuration, but the values are securely populated
 // from environment variables at build time. Security is enforced by Firebase Security Rules.
@@ -17,7 +17,9 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+let cachedServices:FirebaseServices|null=null;
 function initializeClientFirebase() {
+  if(cachedServices)return cachedServices;
   // This check is important because process.env variables are undefined at build time on the client.
   // Next.js replaces them with actual values if they are prefixed with NEXT_PUBLIC_.
   if (firebaseConfig.apiKey && firebaseConfig.projectId) {
@@ -27,7 +29,7 @@ function initializeClientFirebase() {
     } else {
       app = getApp();
     }
-    return {
+    const services={
       firebaseApp: app,
       auth: getAuth(app),
       // Bounded long-polling requests are more tolerant of proxies/mobile stream interruptions.
@@ -38,6 +40,12 @@ function initializeClientFirebase() {
         experimentalLongPollingOptions: { timeoutSeconds: 25 },
       }),
     };
+    if(process.env.NEXT_PUBLIC_FIREBASE_EMULATORS==='true'){
+      if(!firebaseConfig.projectId.startsWith('demo-')||!['localhost','127.0.0.1'].includes(window.location.hostname))throw new Error('Emulators require a demo project on localhost.');
+      connectAuthEmulator(services.auth,'http://127.0.0.1:9099',{disableWarnings:true});
+      connectFirestoreEmulator(services.firestore,'127.0.0.1',8080);
+    }
+    cachedServices=services;return services;
   }
   // Return null if config is not fully available, preventing initialization errors.
   return null;

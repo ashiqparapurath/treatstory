@@ -1,0 +1,128 @@
+{
+  "conditions": {
+    "mobile": {
+      "latencyMs": 150,
+      "downloadMbps": 1.6,
+      "uploadKbps": 750,
+      "cpuSlowdown": 4
+    },
+    "images": "local synthetic fixtures; no production CDN",
+    "origin": "http://127.0.0.1:9030"
+  },
+  "results": [
+    {
+      "mobile": false,
+      "run": 0,
+      "path": "/",
+      "usableMs": 1557,
+      "startedAt": "2026-11-09T13:19:33.998Z",
+      "lcpMs": 704,
+      "navigation": [
+        {
+          "ttfb": 22.699999999254942,
+          "domContentLoaded": 299.9000000022352
+        }
+      ],
+      "resources": 668588,
+      "errors": [
+        "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+      ],
+      "blockedExternalRequests": 2
+    },
+    {
+      "mobile": false,
+      "run": 0,
+      "path": "/products",
+      "usableMs": 563,
+      "startedAt": "2026-11-09T13:19:35.560Z",
+      "lcpMs": 184,
+      "navigation": [
+        {
+          "ttfb": 11.699999999254942,
+          "domContentLoaded": 126.89999999850988
+        }
+      ],
+      "resources": 559979,
+      "errors": [
+        "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+      ],
+      "blockedExternalRequests": 4
+    },
+    {
+      "mobile": false,
+      "run": 0,
+      "path": "/product/seller:audit-product-0001",
+      "usableMs": 525,
+      "startedAt": "2026-11-09T13:19:36.169Z",
+      "lcpMs": 224,
+      "navigation": [
+        {
+          "ttfb": 35.5,
+          "domContentLoaded": 198.19999999925494
+        }
+      ],
+      "resources": 573999,
+      "errors": [
+        "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+      ],
+      "blockedExternalRequests": 5
+    },
+    {
+      "mobile": true,
+      "run": 0,
+      "path": "/",
+      "usableMs": 5449,
+      "startedAt": "2026-11-09T13:19:37.142Z",
+      "lcpMs": 1804,
+      "navigation": [
+        {
+          "ttfb": 19.399999998509884,
+          "domContentLoaded": 1341
+        }
+      ],
+      "resources": 509377,
+      "errors": [
+        "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+      ],
+      "blockedExternalRequests": 2
+    },
+    {
+      "mobile": true,
+      "run": 0,
+      "path": "/products",
+      "usableMs": 5106,
+      "startedAt": "2026-11-09T13:19:42.680Z",
+      "lcpMs": 3032,
+      "navigation": [
+        {
+          "ttfb": 54.19999999925494,
+          "domContentLoaded": 1163.800000000745
+        }
+      ],
+      "resources": 546886,
+      "errors": [
+        "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+      ],
+      "blockedExternalRequests": 4
+    },
+    {
+      "mobile": true,
+      "run": 0,
+      "path": "/product/seller:audit-product-0001",
+      "usableMs": 7300,
+      "startedAt": "2026-11-09T13:19:48.271Z",
+      "lcpMs": 2904,
+      "navigation": [
+        {
+          "ttfb": 80.30000000074506,
+          "domContentLoaded": 1076.5999999977648
+        }
+      ],
+      "resources": 474779,
+      "errors": [
+        "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+      ],
+      "blockedExternalRequests": 5
+    }
+  ]
+}

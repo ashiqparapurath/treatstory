@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/server/request-body';
 import { after, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { ApiError, safeResponse, verifiedUser } from '@/lib/server/firebase-admin';
@@ -7,8 +8,8 @@ const schema=z.object({kind:z.enum(['application','access']),id:z.string().min(1
 export async function POST(request:NextRequest) {
   try {
     const {uid,db,auth}=await verifiedUser(request);
-    const raw=await request.text();if(raw.length>512)throw new ApiError(413,'Request too large.');
-    const parsed=schema.safeParse(JSON.parse(raw));if(!parsed.success)throw new ApiError(400,'Invalid seller update.');
+    const raw=await readJsonBody(request,512);
+    const parsed=schema.safeParse(raw);if(!parsed.success)throw new ApiError(400,'Invalid seller update.');
     const {kind,id}=parsed.data;
     await db.runTransaction(async tx=>{
       const target=db.collection(kind==='access'?'sellers':'seller_applications').doc(id);

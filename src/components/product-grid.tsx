@@ -1,4 +1,5 @@
 "use client";
+import {matchesProductSearch} from '@/lib/catalog-search';
 
 import { useState, useMemo, useEffect, useDeferredValue } from 'react';
 import type { Product } from '@/lib/products';
@@ -8,10 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
-interface ProductGridContainerProps { products: Product[]; }
-interface ProductGridProps { products: Product[]; categories: string[]; initialCategory: string | null; }
+interface ProductGridContainerProps { products: Product[]; hasMore?: boolean; loadingMore?: boolean; loadMore?: () => Promise<void>; }
+interface ProductGridProps extends ProductGridContainerProps { categories: string[]; initialCategory: string | null; }
 
-function ProductGrid({ products, categories, initialCategory }: ProductGridProps) {
+function ProductGrid({ products, categories, initialCategory, hasMore, loadingMore, loadMore }: ProductGridProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'All');
 
@@ -24,8 +25,12 @@ function ProductGrid({ products, categories, initialCategory }: ProductGridProps
     if (!products) return [];
     return products
       .filter((product) => selectedCategory === 'All' || product.category === selectedCategory)
-      .filter((product) => product.name.toLowerCase().includes(deferredSearch.toLowerCase()) || product.description.toLowerCase().includes(deferredSearch.toLowerCase()));
+      .filter((product) => matchesProductSearch(product,deferredSearch,true));
   }, [products, selectedCategory, deferredSearch]);
+
+  useEffect(() => {
+    if ((deferredSearch || selectedCategory !== 'All') && filteredProducts.length < visibleCount && hasMore && !loadingMore) void loadMore?.();
+  }, [deferredSearch, selectedCategory, filteredProducts.length, visibleCount, hasMore, loadingMore, loadMore]);
 
   return (
     <div>
@@ -68,7 +73,7 @@ function ProductGrid({ products, categories, initialCategory }: ProductGridProps
         </div>
       ) : (
         <div className="rounded-3xl border border-dashed border-[#ded4c7] bg-white/60 px-5 py-20 text-center">
-          <p className="eyebrow text-[#b28f62]">Nothing here just yet</p>
+          <p className="eyebrow text-[#b28f62]">{loadingMore ? 'Searching more products…' : 'Nothing here just yet'}</p>
           <h2 className="mt-3 text-2xl font-medium tracking-tight">No pieces found</h2>
           <p className="mt-2 text-sm text-muted-foreground">Try another search or choose a different category.</p>
         </div>
@@ -78,12 +83,12 @@ function ProductGrid({ products, categories, initialCategory }: ProductGridProps
   );
 }
 
-export function ProductGridContainer({ products }: ProductGridContainerProps) {
+export function ProductGridContainer({ products, ...paging }: ProductGridContainerProps) {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get('category');
   const categories = useMemo(() => {
     if (!products || products.length === 0) return ['All'];
-    return ['All', ...Array.from(new Set(products.map((p) => p.category)))];
+    return ['All', ...Array.from(new Set(products.map((p) => p.category).filter((value):value is string=>typeof value==='string')))];
   }, [products]);
-  return <ProductGrid products={products} categories={categories} initialCategory={initialCategory} />;
+  return <ProductGrid products={products} categories={categories} initialCategory={initialCategory} {...paging} />;
 }

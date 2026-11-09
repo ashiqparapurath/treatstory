@@ -1,4 +1,6 @@
 'use client';
+import {usePagedCollection} from '@/firebase/firestore/use-paged-collection';
+import {LoadMoreRecords} from '@/components/load-more-records';
 import { errorToast } from '@/lib/user-notices';
 import { LoadError } from '@/components/loading-states';
 
@@ -42,7 +44,7 @@ export function BannerList() {
     return collection(firestore, 'banners');
   }, [firestore]);
 
-  const { data: banners, isLoading, error: loadError, retry: retryLoad } = useCollection<Banner>(bannersQuery);
+  const { data: banners, isLoading, error: loadError, retry: retryLoad, hasMore, loadingMore, loadMore } = usePagedCollection<Banner>(bannersQuery);
 
   const [bannerToEdit, setBannerToEdit] = useState<Banner | null>(null);
   const [bannerToDelete, setBannerToDelete] = useState<Banner | null>(null);
@@ -100,7 +102,7 @@ export function BannerList() {
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-24 w-full" />
-      </div>
+      <LoadMoreRecords hasMore={hasMore} loadingMore={loadingMore} loadMore={loadMore}/></div>
     );
   }
 

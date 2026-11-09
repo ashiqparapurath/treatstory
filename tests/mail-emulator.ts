@@ -6,7 +6,7 @@ import type {Auth} from 'firebase-admin/auth';
 import {queueMail,deliverMailJob,mailId} from '@/lib/server/mail';
 import {enqueueAccountEmail} from '@/lib/server/account-email';
 async function run(){
-  if(!process.env.FIRESTORE_EMULATOR_HOST)throw Error('Refusing mail tests outside emulator');
+  if(!/^(127\.0\.0\.1|localhost):\d+$/.test(process.env.FIRESTORE_EMULATOR_HOST||''))throw Error('Refusing mail tests outside loopback emulator');
   const db=getFirestore(initializeApp({projectId:'demo-treatstory'},'mail-tests'));
   process.env.APPS_SCRIPT_MAIL_SECRET='fixture-secret-that-is-at-least-32-characters';process.env.APPS_SCRIPT_MAIL_URL='https://script.google.com/macros/s/fixture/exec';process.env.APP_URL='https://shop.example.com';
   let email='buyer@example.com',accountState='ok',generated=0;

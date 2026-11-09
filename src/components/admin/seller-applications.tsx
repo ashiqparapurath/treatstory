@@ -1,4 +1,6 @@
 'use client';
+import {usePagedCollection} from '@/firebase/firestore/use-paged-collection';
+import {LoadMoreRecords} from '@/components/load-more-records';
 import { requestSellerMail } from '@/lib/account-mail';
 import { errorToast } from '@/lib/user-notices';
 import { LoadError } from '@/components/loading-states';
@@ -17,7 +19,7 @@ export function SellerApplications() {
   const { user } = useUser();
   const { toast } = useToast();
   const applicationsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'seller_applications') : null, [firestore]);
-  const { data: applications, isLoading, error: loadError, retry: retryLoad } = useCollection<SellerApplication>(applicationsQuery);
+  const { data: applications, isLoading, error: loadError, retry: retryLoad, hasMore, loadingMore, loadMore } = usePagedCollection<SellerApplication>(applicationsQuery);
   const [durationDays, setDurationDays] = useState(30);
   const [working, setWorking] = useState<string | null>(null);
 
@@ -97,6 +99,7 @@ export function SellerApplications() {
             </article>
           ))}
         </div>}
+    <LoadMoreRecords hasMore={hasMore} loadingMore={loadingMore} loadMore={loadMore}/>
     </section>
   );
 }

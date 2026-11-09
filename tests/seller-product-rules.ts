@@ -7,16 +7,16 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 
 async function run(){
- if(!process.env.FIRESTORE_EMULATOR_HOST)throw Error('emulator required');
- const projectId='demo-treatstory';
+ if(!/^(127\.0\.0\.1|localhost):\d+$/.test(process.env.FIRESTORE_EMULATOR_HOST||''))throw Error('loopback emulator required');
+ const projectId=process.env.GCLOUD_PROJECT||'demo-treatstory';
  const db=adminFirestore(initializeAdmin({projectId},'product-save-admin'));
  const uid='test-product-seller-'+randomUUID();
  await db.doc('sellers/'+uid).set({ownerUid:uid,status:'active',isOpen:true,accessEndsAt:Timestamp.fromMillis(Date.now()+86400000)});
  const app=initializeApp({projectId,apiKey:'test-key'},'product-save-client');
  const client=getFirestore(app);
- const [host,port]=process.env.FIRESTORE_EMULATOR_HOST.split(':');
+ const [host,port]=process.env.FIRESTORE_EMULATOR_HOST!.split(':');
  connectFirestoreEmulator(client,host,Number(port),{mockUserToken:{sub:uid}});
- const product={sellerId:uid,name:'Test Cake',description:'Chocolate cake',category:'Cake',price:450,imageUrls:['https://example.com/cake.jpg'],showPrice:true,availability:'made-to-order',stockQuantity:0,preparationDays:0,minimumOrderQuantity:1,customizationOptions:[],advancePaymentRequired:false,careInstructions:'',ingredients:'',allergens:[],dietaryTags:[],storageInstructions:'',weightOptions:[],status:'published',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+ const product={sellerId:uid,name:'Test Cake',description:'Chocolate cake',category:'Cake',price:450,imageUrls:['https://res.cloudinary.com/test/image/upload/cake.jpg'],showPrice:true,availability:'made-to-order',stockQuantity:0,preparationDays:0,minimumOrderQuantity:1,customizationOptions:[],advancePaymentRequired:false,careInstructions:'',ingredients:'',allergens:[],dietaryTags:[],storageInstructions:'',weightOptions:[],status:'published',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
  for(const [id,data] of Object.entries({simple:product,advance:{...product,advancePaymentRequired:true},max:{...product,allergens:Array.from({length:12},(_,i)=>'allergen'+i),dietaryTags:Array.from({length:12},(_,i)=>'tag'+i),weightOptions:Array.from({length:8},(_,i)=>({value:i+1,unit:'g',price:450,stockQuantity:5})),customizationOptions:['A','B','C','D','E','F']}})){
   try{if(id==='max')await db.doc('marketplace_products/'+uid+'_'+id).set({...data,createdAt:Timestamp.now(),updatedAt:Timestamp.now()});else await setDoc(doc(client,'marketplace_products',uid+'_'+id),data); console.log(id==='max'?'Seeded existing detailed listing':'PASS create '+id);}catch(e){console.error('FAIL save',id,e);throw e;}
  }
@@ -38,6 +38,8 @@ async function run(){
  await assert.rejects(()=>updateDoc(target,{dietaryTags:['x'.repeat(41)],updatedAt:serverTimestamp()}),denied,'oversized labels must be rejected');
  await assert.rejects(()=>updateDoc(target,{weightOptions:[{value:1,unit:'kg',price:500,extra:true}],updatedAt:serverTimestamp()}),denied,'unknown variant fields must be rejected');
  await assert.rejects(()=>updateDoc(target,{sellerId:'someone-else',updatedAt:serverTimestamp()}),denied,'ownership cannot change');
+ await assert.rejects(()=>updateDoc(target,{imageUrls:[{url:'https://example.com'}],updatedAt:serverTimestamp()}),denied,'image objects must be rejected');
+ await assert.rejects(()=>updateDoc(target,{imageUrls:['javascript:alert(1)'],updatedAt:serverTimestamp()}),denied,'unsafe image protocols must be rejected');
  await db.doc('sellers/'+uid).update({accessEndsAt:Timestamp.fromMillis(Date.now()-1000)});
  await assert.rejects(()=>updateDoc(target,{price:550,updatedAt:serverTimestamp()}),denied,'expired seller access must be rejected');
  await db.doc('mail_outbox/private-test').set({uid,href:'https://example.com/?oobCode=private'});

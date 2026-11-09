@@ -39,7 +39,7 @@ const formSchema = z.object({
   buttonText: z.string().min(2, 'Button text must be at least 2 characters.'),
   buttonLink: z.string().min(1, 'Please select a category link.'),
   imageUrl: z.string().min(1, "An image is required."),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean(),
 });
 
 type BannerFormValues = z.infer<typeof formSchema>;

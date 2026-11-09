@@ -1,0 +1,61 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "role": "buyer",
+      "mobile": false,
+      "passed": true,
+      "scenarios": [
+        "sign-in",
+        "profile",
+        "variant price",
+        "add cart",
+        "quantity update",
+        "direct buy keeps cart unchanged",
+        "checkout scroll reset",
+        "saved address",
+        "COD checkout",
+        "authoritative 900 INR total",
+        "confirmation"
+      ]
+    },
+    {
+      "role": "buyer",
+      "mobile": true,
+      "passed": true,
+      "scenarios": [
+        "sign-in",
+        "profile",
+        "variant price",
+        "add cart",
+        "quantity update",
+        "direct buy keeps cart unchanged",
+        "checkout scroll reset",
+        "saved address",
+        "COD checkout",
+        "authoritative 900 INR total",
+        "confirmation"
+      ]
+    },
+    {
+      "role": "seller",
+      "mobile": false,
+      "passed": true,
+      "scenarios": [
+        "authorized dashboard",
+        "product editor",
+        "server product save"
+      ]
+    },
+    {
+      "role": "admin",
+      "mobile": false,
+      "passed": true,
+      "scenarios": [
+        "authorized admin dashboard",
+        "seller access controls"
+      ]
+    }
+  ],
+  "limitations": "Only loopback emulator data; no real mail, uploads or online payments."
+}

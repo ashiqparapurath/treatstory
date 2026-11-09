@@ -1,4 +1,6 @@
 'use client';
+import {usePagedCollection} from '@/firebase/firestore/use-paged-collection';
+import {LoadMoreRecords} from '@/components/load-more-records';
 import { errorToast } from '@/lib/user-notices';
 import { LoadError } from '@/components/loading-states';
 
@@ -40,7 +42,7 @@ export function CategoryList() {
     return collection(firestore, 'categories');
   }, [firestore]);
 
-  const { data: categories, isLoading, error: loadError, retry: retryLoad } = useCollection<Category>(categoriesQuery);
+  const { data: categories, isLoading, error: loadError, retry: retryLoad, hasMore, loadingMore, loadMore } = usePagedCollection<Category>(categoriesQuery);
 
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
@@ -84,7 +86,7 @@ export function CategoryList() {
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-12 w-full" />
-      </div>
+      <LoadMoreRecords hasMore={hasMore} loadingMore={loadingMore} loadMore={loadMore}/></div>
     );
   }
 

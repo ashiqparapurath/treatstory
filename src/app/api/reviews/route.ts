@@ -1,3 +1,5 @@
+import {firestoreDocumentId} from '@/lib/document-id';
+import { readJsonBody } from '@/lib/server/request-body';
 import { z } from 'zod';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { NextRequest } from 'next/server';
@@ -7,16 +9,16 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const schema=z.discriminatedUnion('action',[
-  z.object({action:z.literal('submit'),orderId:z.string().min(1).max(160),
+  z.object({action:z.literal('submit'),orderId:firestoreDocumentId(160),
     rating:z.number().int().min(1).max(5),comment:z.string().trim().min(10).max(1000)}).strict(),
-  z.object({action:z.enum(['publish','reject']),orderId:z.string().min(1).max(160)}).strict(),
+  z.object({action:z.enum(['publish','reject']),orderId:firestoreDocumentId(160)}).strict(),
 ]);
 
 export async function POST(request:NextRequest){
   try{
     const {uid,db}=await verifiedUser(request);
     if(Number(request.headers.get('content-length')||0)>3000)throw new ApiError(413,'Review is too large.');
-    const raw:unknown=await request.json().catch(()=>{throw new ApiError(400,'Invalid review request.');});
+    const raw:unknown=await readJsonBody(request,3000);
     const parsed=schema.safeParse(raw);
     if(!parsed.success)throw new ApiError(400,'Check your review and rating.');
     const data=parsed.data;

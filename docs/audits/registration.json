@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "scenarios": [
+    "signup through actual app",
+    "profile name persisted",
+    "account email endpoint queues durable intent"
+  ],
+  "accountEmailStatuses": [
+    200,
+    200
+  ],
+  "providerDelivery": "stubbed; actual email delivery not tested"
+}

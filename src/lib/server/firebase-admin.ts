@@ -50,6 +50,6 @@ export class ApiError extends Error {
 
 export function safeResponse(error: unknown) {
   if (error instanceof ApiError) return Response.json({ error: error.message, details: error.details }, { status: error.status, headers: { 'Cache-Control': 'no-store' } });
-  console.error('TreatStory API unexpected error:', error);
+  console.error('TreatStory API unexpected error', {code:typeof (error as {code?:unknown})?.code==='string'?(error as {code:string}).code:'INTERNAL_ERROR'});
   return Response.json({ error: 'Unable to complete your request. Please try again.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
 }

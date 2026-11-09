@@ -1,3 +1,5 @@
+import {firestoreDocumentId} from '@/lib/document-id';
+import { readJsonBody } from '@/lib/server/request-body';
 import { after } from 'next/server';
 import { processMailQueue } from '@/lib/server/mail';
 import { z } from 'zod';
@@ -9,7 +11,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const schema = z.object({
-  orderId: z.string().min(1).max(160),
+  orderId: firestoreDocumentId(160),
   action: z.enum(['accepted','rejected','preparing','ready','out-for-delivery','completed','cancelled',
     'request-cancellation','decline-cancellation','cod-collected']),
   reason: z.string().max(300).default(''),
@@ -20,7 +22,7 @@ export async function POST(request: NextRequest) {
     const { uid, db, auth } = await verifiedUser(request);
     if (Number(request.headers.get('content-length') || 0) > 4_096)
       throw new ApiError(413, 'Request is too large.');
-    const raw: unknown = await request.json().catch(() => { throw new ApiError(400, 'Invalid action request.'); });
+    const raw: unknown = await readJsonBody(request,4096);
     const parsed = schema.safeParse(raw);
     if (!parsed.success) throw new ApiError(400, 'Choose a valid action.');
     const result = await applyOrderAction(db, uid, parsed.data.orderId, parsed.data.action, parsed.data.reason);

@@ -1,5 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
-function load(file,mocks={},globals={}){const module={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{module,exports:module.exports,require:id=>id in mocks?mocks[id]:require(id),URL,Response,Buffer,console,AbortSignal,...globals});return module.exports;}
+function load(file,mocks={},globals={}){const module={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{module,exports:module.exports,require:id=>id in mocks?mocks[id]:id==='@/lib/server/request-body'?load('src/lib/server/request-body.ts',mocks):require(id),URL,Response,Buffer,TextDecoder,console,AbortSignal,...globals});return module.exports;}
 test('structured mail data sanitizes subject headers and restricts links to app or configured account handler',()=>{
   const {renderMail}=load('src/lib/server/mail.ts',{}, {process:{env:{NEXT_PUBLIC_FIREBASE_PROJECT_ID:'fixture'}}});
   const mail=renderMail({title:'Cake\nUpdate',message:'Fresh cake',href:'/orders',template:'order_received'},'https://shop.example.com');
@@ -46,7 +46,7 @@ function accountFixture(){
   const {POST,GET}=load('src/app/api/email/account/route.ts',{
     'next/server':{after(){}},'@/lib/server/firebase-admin':firebaseMock,'@/lib/server/mail':mailMock,'@/lib/server/account-email':queue,
   });
-  const request=(body,origin='https://treatstory.vercel.app')=>POST({url:'https://treatstory.vercel.app/api/email/account',headers:new Headers({origin}),text:async()=>JSON.stringify(body)});
+  const request=(body,origin='https://treatstory.vercel.app')=>POST(new Request('https://treatstory.vercel.app/api/email/account',{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify(body)}));
   return {request,health:GET,jobs,get queued(){return queued;},set existing(v){existing=v;},set authenticated(v){authenticated=v;},set known(v){known=v;},set limited(v){limited=v;},set disabled(v){disabled=v;}};
 }
 test('welcome and verification require a session and queue private intents before account lookup',async()=>{
@@ -72,7 +72,7 @@ test('seller email content and recipients come from authorized committed records
     'next/server':{after(){}},'@/lib/server/firebase-admin':{ApiError,verifiedUser:async()=>({uid:'caller',db,auth:{}}),safeResponse:e=>Response.json({error:e.message},{status:e.status||503})},
     '@/lib/server/mail':{mailId:()=> 'stable-key',queueMail:(...args)=>{queued++;last=args;},processMailQueue:async()=>{}},
   },{process:{env:{}}});
-  const request=body=>POST({text:async()=>JSON.stringify(body)});
+  const request=body=>POST(new Request('https://treatstory.vercel.app/api/email/seller',{method:'POST',body:JSON.stringify(body),headers:{'content-type':'application/json'}}));
   assert.equal((await request({kind:'application',id:'application-a'})).status,403);assert.equal(queued,0);
   owner='caller';assert.equal((await request({kind:'application',id:'application-a'})).status,200);assert.equal(last[2],'caller');assert.match(last[3].message,/Bakery/);assert.equal(queued,1);
   existing=true;assert.equal((await request({kind:'application',id:'application-a'})).status,200);assert.equal(queued,1,'same committed event cannot queue twice');

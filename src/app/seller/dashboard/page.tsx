@@ -1,5 +1,7 @@
 'use client';
-import { errorToast, getErrorNotice } from '@/lib/user-notices';
+import {usePagedCollection} from '@/firebase/firestore/use-paged-collection';
+import {LoadMoreRecords} from '@/components/load-more-records';
+import { errorToast, getErrorNotice, ActionError } from '@/lib/user-notices';
 import { ConfirmActionDialog } from '@/components/confirm-action-dialog';
 import { Suspense } from 'react';
 import { DashboardShellSkeleton, SectionSkeleton } from '@/components/loading-states';
@@ -117,7 +119,7 @@ function SellerContent() {
   }, [db, user?.uid, seller?.id, section, countVersion]);
 
   const productsQuery = useMemoFirebase(() => db && user && seller && section === 'products' ? query(collection(db, 'marketplace_products'), where('sellerId', '==', user.uid)) : null, [db, user?.uid, seller?.id, section]);
-  const { data: products, isLoading: productsLoading } = useCollection<MarketplaceProduct & { status?: string }>(productsQuery);
+  const { data: products, isLoading: productsLoading, hasMore, loadingMore, loadMore } = usePagedCollection<MarketplaceProduct & { status?: string }>(productsQuery);
   const active = !!seller && seller.status === 'active' && ((seller.accessEndsAt as { toMillis?: () => number } | null)?.toMillis?.() ?? 0) > Date.now();
   const visible = useMemo(() => (products ?? []).filter(p => (p.name + ' ' + p.category).toLowerCase().includes(search.toLowerCase())), [products, search]);
 
@@ -243,14 +245,15 @@ function SellerContent() {
         advancePaymentRequired: draft.advancePaymentRequired,
         careInstructions: draft.careInstructions.trim(),
         ingredients: draft.ingredients.trim(), allergens, dietaryTags,
-        ...(shelfLifeDays!==null ? {shelfLifeDays} : (editing ? {shelfLifeDays: deleteField()} : {})),
+        ...(shelfLifeDays!==null ? {shelfLifeDays} : {}),
         storageInstructions: draft.storageInstructions.trim(),
         weightOptions: weights,
-        ...(editing ? { weightValue: deleteField(), weightUnit: deleteField() } : {}),
-        status: draft.status, updatedAt: serverTimestamp()
+
+        status: draft.status
       };
-      if (editing) await updateDoc(doc(db, 'marketplace_products', editing.id), data);
-      else await addDoc(collection(db, 'marketplace_products'), { ...data, createdAt: serverTimestamp() });
+      const token=await user.getIdToken();
+      const response=await fetch('/api/seller/products',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({product:data,...(editing?{productId:editing.id,expectedUpdatedAt:(editing.updatedAt as {toMillis?:()=>number}|undefined)?.toMillis?.()}:{})})});
+      const result=await response.json();if(!response.ok)throw new ActionError(result.error||'Could not save product.',response.status);
       setCountVersion(v => v + 1);
       toast({title:draft.status==='draft'?'Product draft saved':editing?'Product updated':'Product published',description:draft.status==='draft'?'Your draft is saved. Publish it when you are ready to show buyers.':`${draft.name.trim()} is saved and visible on its product page.`});
       setFormOpen(false);
@@ -339,6 +342,7 @@ function SellerContent() {
           <div className="rounded-2xl border border-[#e9e3d9] bg-white p-5 sm:rounded-3xl sm:p-7"><p className="eyebrow text-[#a68a64]">Store setup</p><div className="mt-2"><h3 className="font-medium">Get your store ready</h3><p className="mt-2 text-sm text-muted-foreground">Add high-quality photos, publish products and keep your business contact details current.</p><Button variant="outline" className="mt-4 rounded-full" onClick={() => setSection('products')}>Manage products <ArrowUpRight className="ml-2 h-4 w-4" /></Button></div></div>
         </div>}
         {section === 'products' && <div className="space-y-5">
+          <LoadMoreRecords hasMore={hasMore} loadingMore={loadingMore} loadMore={loadMore}/>
           <Input aria-label="Search your products" placeholder="Search your catalog…" value={search} onChange={e => setSearch(e.target.value)} className="w-full max-w-sm rounded-full bg-white" />
           {productsLoading ? <SectionSkeleton /> : visible.length === 0 ? <div className="rounded-3xl border border-dashed bg-white p-12 text-center"><Package className="mx-auto h-8 w-8 text-[#a68a64]" /><h3 className="mt-4 text-xl font-medium">No products yet</h3><p className="mt-2 text-sm text-muted-foreground">Create your first listing to get started.</p><Button onClick={() => openForm()} disabled={!active} className="mt-5 rounded-full">Add product</Button></div> :
             <><div className="space-y-3 md:hidden">{visible.map(p => <article key={p.id} className="rounded-2xl border bg-white p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words text-sm font-semibold">{p.name}</h3><p className="mt-1 text-xs text-muted-foreground">{p.category}</p>{p.advancePaymentRequired && <p className="mt-1 text-xs font-medium text-amber-800">Advance payment required</p>}{!!p.weightOptions?.length && <p className="mt-1 max-w-sm text-[11px] leading-5 text-[#806d56]">{sizePriceLabels(p)}</p>}</div><p className="shrink-0 text-sm font-semibold">{priceRange(p)}</p></div><div className="mt-3 flex flex-wrap gap-2 text-[11px]"><span className="rounded-full bg-[#f1ede6] px-3 py-1 capitalize">{p.availability.replaceAll('-', ' ')}</span><span className="rounded-full bg-[#f1ede6] px-3 py-1 capitalize">{p.status ?? 'draft'}</span></div><div className="mt-4 grid grid-cols-2 gap-2"><Button variant="outline" disabled={!active} onClick={() => openForm(p)} className="h-11"><Pencil className="mr-2 h-4 w-4" />Edit</Button><Button variant="outline" disabled={!active || busy} onClick={() => {setDeleteError('');setPendingDelete(p);}} className="h-11 text-red-700"><Trash2 className="mr-2 h-4 w-4" />Delete</Button></div></article>)}</div><div className="hidden overflow-hidden rounded-2xl border bg-white md:block"><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-[#f1ede6] text-xs uppercase tracking-wider text-muted-foreground"><tr><th className="px-5 py-4">Product</th><th className="px-5 py-4">Price</th><th className="px-5 py-4">Availability</th><th className="px-5 py-4">Visibility</th><th className="px-5 py-4">Actions</th></tr></thead><tbody>{visible.map(p => <tr key={p.id} className="border-t"><td className="min-w-[180px] px-5 py-4"><p className="font-medium">{p.name}</p><p className="text-xs text-muted-foreground">{p.category}</p>{p.advancePaymentRequired && <p className="mt-1 text-xs font-medium text-amber-800">Advance payment required</p>}{!!p.weightOptions?.length && <p className="mt-1 max-w-sm text-[11px] leading-5 text-[#806d56]">{sizePriceLabels(p)}</p>}</td><td className="px-5 py-4">{priceRange(p)}</td><td className="px-5 py-4 capitalize">{p.availability.replaceAll('-', ' ')}</td><td className="px-5 py-4 capitalize">{p.status ?? 'draft'}</td><td className="px-5 py-4"><div className="flex gap-2"><Button size="sm" variant="outline" disabled={!active} onClick={() => openForm(p)} aria-label={`Edit ${p.name}`}><Pencil className="h-4 w-4" /></Button><Button size="sm" variant="outline" disabled={!active || busy} onClick={() => {setDeleteError('');setPendingDelete(p);}} aria-label={`Delete ${p.name}`}><Trash2 className="h-4 w-4" /></Button></div></td></tr>)}</tbody></table></div></div></>}

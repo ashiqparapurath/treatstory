@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/server/request-body';
 import { after, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { ApiError, getServerFirebase, safeResponse, verifiedUser } from '@/lib/server/firebase-admin';
@@ -18,8 +19,8 @@ export async function GET(){return Response.json({ok:true,flow:FLOW},{headers});
 export async function POST(request:NextRequest) {
   try {
     if(request.headers.get('origin')!==new URL(request.url).origin)throw new ApiError(403,'Open TreatStory to continue.');
-    const text=await request.text();if(text.length>1024)throw new ApiError(413,'Request is too large.');
-    const parsed=schema.safeParse(JSON.parse(text));if(!parsed.success)throw new ApiError(400,'Check your account email request.');
+    const raw=await readJsonBody(request,1024);
+    const parsed=schema.safeParse(raw);if(!parsed.success)throw new ApiError(400,'Check your account email request.');
     const data=parsed.data;
     const firebase:ReturnType<typeof getServerFirebase>&{uid?:string}=data.action==='reset-password'?getServerFirebase():await verifiedUser(request);
     const {db,auth}=firebase;

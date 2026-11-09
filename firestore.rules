@@ -266,6 +266,22 @@ service cloud.firestore {
         (labels.size() <= 10 || (labels[10] is string && labels[10].size() > 0 && labels[10].size() <= 40)) &&
         (labels.size() <= 11 || (labels[11] is string && labels[11].size() > 0 && labels[11].size() <= 40));
     }
+    function validImageUrl(url) {
+      return url is string && url.size() <= 2048 && url.matches('https://(res[.]cloudinary[.]com|firebasestorage[.]googleapis[.]com|images[.]unsplash[.]com|placehold[.]co|picsum[.]photos|lh3[.]googleusercontent[.]com)/.*');
+    }
+    function validProductImages(images) {
+      return images is list && images.size() <= 10 &&
+        (images.size() <= 0 || validImageUrl(images[0])) &&
+        (images.size() <= 1 || validImageUrl(images[1])) &&
+        (images.size() <= 2 || validImageUrl(images[2])) &&
+        (images.size() <= 3 || validImageUrl(images[3])) &&
+        (images.size() <= 4 || validImageUrl(images[4])) &&
+        (images.size() <= 5 || validImageUrl(images[5])) &&
+        (images.size() <= 6 || validImageUrl(images[6])) &&
+        (images.size() <= 7 || validImageUrl(images[7])) &&
+        (images.size() <= 8 || validImageUrl(images[8])) &&
+        (images.size() <= 9 || validImageUrl(images[9]));
+    }
     function validMarketplaceProduct(p, changed, previousWeights) {
       return p.keys().hasOnly([
         'sellerId', 'name', 'description', 'price', 'category', 'imageUrls',
@@ -280,6 +296,7 @@ service cloud.firestore {
       p.category is string && p.category.size() > 0 && p.category.size() <= 80 &&
       p.price is number && p.price >= 0 && p.price <= 10000000 &&
       p.imageUrls is list && p.imageUrls.size() <= 10 &&
+      (!changed.hasAny(['imageUrls']) || validProductImages(p.imageUrls)) &&
       p.showPrice is bool &&
       p.availability in ['available', 'unavailable', 'made-to-order'] &&
       p.stockQuantity is int && p.stockQuantity >= 0 &&
@@ -370,6 +387,7 @@ service cloud.firestore {
     match /mail_outbox/{id} { allow read, write: if false; }
     match /mail_limits/{id} { allow read, write: if false; }
 
+    match /checkout_limits/{id} { allow read, write: if false; }
     match /checkout_orders/{checkoutId} {
       allow read, write: if false;
     }
