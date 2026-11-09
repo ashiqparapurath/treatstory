@@ -25,9 +25,17 @@ export interface Seller {
   description: string;
   contactEmail: string;
   contactPhone: string;
+  whatsappNumber?: string;
   logoUrl?: string;
   coverUrl?: string;
   isOpen: boolean;
+  deliveryMethods?: Array<'delivery' | 'pickup'>;
+  deliveryPincodes?: string[];
+  deliveryFee?: number;
+  pickupAddress?: string;
+  deliverySlots?: string[];
+  dailyOrderCapacity?: number;
+  acceptanceHours?: number;
   status: SellerStatus;
   accessType: SellerAccessType;
   accessStartsAt: unknown;
@@ -49,11 +57,18 @@ export interface MarketplaceProduct {
   imageUrls: string[];
   showPrice: boolean;
   availability: 'available' | 'unavailable' | 'made-to-order';
+  advancePaymentRequired?: boolean;
   preparationDays?: number;
   minimumOrderQuantity?: number;
   weightValue?: number;
   weightUnit?: 'g' | 'kg' | 'ml' | 'l' | 'pieces';
   careInstructions?: string;
+  ingredients?: string;
+  allergens?: string[];
+  dietaryTags?: string[];
+  shelfLifeDays?: number;
+  storageInstructions?: string;
+  weightOptions?: Array<{value:number;unit:'g'|'kg'|'ml'|'l'|'pieces';price?:number;stockQuantity?:number}>;
   customizationOptions?: string[];
   stockQuantity?: number;
 }

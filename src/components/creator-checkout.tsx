@@ -1,9 +1,11 @@
 'use client';
+import { errorToast, ActionError } from '@/lib/user-notices';
 
+import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState, type FormEvent } from 'react';
 import { SectionSkeleton } from '@/components/loading-states';
+import { CheckoutAddressDialog } from '@/components/checkout-address-dialog';
 import { addressText } from '@/components/default-delivery-address';
-import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { useAccountData, useFirestore, useUser } from '@/firebase';
 import { useCart } from '@/context/cart-context';
 import { useToast } from '@/hooks/use-toast';
@@ -11,90 +13,149 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import type { MarketplaceProduct, Seller } from '@/lib/marketplace-types';
-import { Banknote, CreditCard, MapPin, ShieldCheck, Truck } from 'lucide-react';
+import { Banknote, CreditCard, MapPin, ShieldCheck, Truck, CheckCircle2, ClipboardCopy } from 'lucide-react';
 
-export function CreatorCheckout({ variant = 'card', onlyProductId, initialNote = '', onComplete }: { variant?: 'card' | 'page'; onlyProductId?: string; initialNote?: string; onComplete?: () => void }) {
+export function CreatorCheckout({ variant = 'card', onlyProductId, onlyLineId, initialNote = '', direct = false, onComplete }: { variant?: 'card' | 'page'; onlyProductId?: string; onlyLineId?: string; initialNote?: string; direct?: boolean; onComplete?: () => void }) {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const { address: savedAddress } = useAccountData();
-  const { cartItems, removeFromCart } = useCart();
+  const { cartItems, directItem, clearDirectCheckout, updateDirectPrice, removeFromCart, updateLinePrice } = useCart();
   const { toast } = useToast();
+  const [editingAddress, setEditingAddress] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | null>(null);
+  const [advanceAccepted, setAdvanceAccepted] = useState(false);
+  const [termsLoading, setTermsLoading] = useState(true);
+  const [termsError, setTermsError] = useState(false);
+  const [termsAttempt, setTermsAttempt] = useState(0);
+  const [advanceProducts, setAdvanceProducts] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [note, setNote] = useState(initialNote);
   useEffect(() => { if (initialNote) setNote(v => v || initialNote); }, [initialNote]);
   const [busy, setBusy] = useState(false);
-  const paymentMethod = 'cod' as const;
+  const [fulfillment, setFulfillment] = useState<'delivery' | 'pickup'>('delivery');
+  const [pincode, setPincode] = useState('');
+  const [requestedDate, setRequestedDate] = useState(() => new Date(Date.now() + 330 * 60000 + 86400000).toISOString().slice(0, 10));
+  const [requestedSlot, setRequestedSlot] = useState('');
+  const [giftRecipient, setGiftRecipient] = useState('');
+  const [giftMessage, setGiftMessage] = useState('');
+  const [priceChanges, setPriceChanges] = useState<Array<{ lineIndex: number; name: string; current: number; expected: number }>>([]);
   const [result, setResult] = useState<string[]>([]);
-  const items = cartItems.filter(i => i.id.startsWith('seller:') && (!onlyProductId || i.id === 'seller:' + onlyProductId));
-  useEffect(() => { if (!savedAddress) return; setName(v=>v||savedAddress.recipient||'');setPhone(v=>v||savedAddress.phone||'');setAddress(v=>v||addressText(savedAddress)); }, [savedAddress]);
+  const sourceItems = direct ? (directItem ? [directItem] : []) : cartItems;
+  const pendingKey = direct ? 'treatstory-direct-checkout-id' : 'treatstory-pending-checkout';
+  const items = sourceItems.filter(i => i.id.startsWith('seller:') && (!onlyProductId || i.id === 'seller:' + onlyProductId) && (!onlyLineId || i.lineId === onlyLineId));
+  useEffect(() => { if (!savedAddress) return; setAddress(addressText(savedAddress));setPincode(savedAddress.pincode || '');setName(savedAddress.recipient || '');setPhone(savedAddress.phone || ''); }, [savedAddress]);
+  const productKey = JSON.stringify([...new Set(items.map(i => i.id.slice('seller:'.length)))]);
+  useEffect(() => {
+    if (!db) return;
+    let live = true;
+    setAdvanceProducts([]); setAdvanceAccepted(false); setTermsLoading(true); setTermsError(false);
+    Promise.all((JSON.parse(productKey) as string[]).map(id => getDoc(doc(db, 'marketplace_products', id)))).then(docs => { if (live) setAdvanceProducts(docs.filter(d => d.data()?.advancePaymentRequired === true).map(d => d.data()?.name as string)); }).catch(() => { if (live) setTermsError(true); }).finally(() => { if (live) setTermsLoading(false); });
+    return () => { live = false; };
+  }, [db, productKey, termsAttempt]);
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!db || !user || busy || !items.length) return;
+    if (!db || !user || busy || !items.length || paymentMethod !== 'cod' || priceChanges.length || termsLoading || termsError || (advanceProducts.length > 0 && !advanceAccepted)) return;
+    if (name.trim().length < 2 || phone.trim().length < 5 || address.trim().length < 10) { setEditingAddress(true); return; }
+    if (!/^\d{6}$/.test(pincode) && fulfillment === 'delivery') {
+      setEditingAddress(true);
+      toast({ variant: 'destructive', title: 'Enter a valid six-digit delivery PIN code' });
+      return;
+    }
     setBusy(true);
-    const placed: string[] = [];
-    let stage = 'checking the product';
     try {
-      // Orders are deliberately submitted per listing so rules can verify
-      // each product, seller, price and quantity independently.
-      for (const item of items) {
-        const productId = item.id.slice('seller:'.length);
-        stage = 'reading product details';
-        const snapshot = await getDoc(doc(db, 'marketplace_products', productId));
-        if (!snapshot.exists()) throw new Error('A product is no longer available.');
-        const product = snapshot.data() as MarketplaceProduct;
-        if (product.status !== 'published' || product.availability === 'unavailable' || !product.showPrice) throw new Error(`${product.name} cannot be ordered.`);
-        stage = 'reading seller eligibility';
-        const sellerSnapshot = await getDoc(doc(db, 'sellers', product.sellerId));
-        if (!sellerSnapshot.exists()) throw new Error(`The seller for ${product.name} is no longer available.`);
-        const seller = sellerSnapshot.data() as Seller;
-        if (seller.status !== 'active') throw new Error(`${seller.businessName || 'This seller'} is not currently active.`);
-        if (!seller.isOpen) throw new Error(`${seller.businessName || 'This seller'} is not accepting orders right now.`);
-        const expiry = seller.accessEndsAt as { toMillis?: () => number } | undefined;
-        if (!expiry?.toMillis || expiry.toMillis() <= Date.now()) throw new Error(`${seller.businessName || 'This seller'}'s marketplace access has expired.`);
-        if (!Number.isInteger(item.quantity) || item.quantity < Math.max(1, product.minimumOrderQuantity ?? 1) || item.quantity > 99) throw new Error(`Please order at least ${product.minimumOrderQuantity || 1} unit(s) of ${product.name} (maximum 99).`);
-        const itemNote = [item.customizationNote ? `Personalization for ${product.name}: ${item.customizationNote}` : '', note.trim()].filter(Boolean).join('\n\n');
-        if (itemNote.length > 1000) throw new Error('Please shorten your customization and delivery notes.');
-        if (name.trim().length < 2 || phone.trim().length < 5 || address.trim().length < 10) throw new Error('Please complete your contact and delivery details.');
-        stage = 'creating the order';
-        const order = await addDoc(collection(db, 'seller_orders'), {
-          buyerUid: user.uid, sellerId: product.sellerId, productId,
-          productName: product.name, quantity: item.quantity,
-          unitPrice: product.price, subtotal: product.price * item.quantity,
-          status: 'pending', paymentMethod, customerName: name.trim(), customerPhone: phone.trim(),
-          deliveryAddress: address.trim(), customerNote: itemNote,
-          createdAt: serverTimestamp(), updatedAt: serverTimestamp()
-        });
-        placed.push(order.id);
-        onComplete?.();
-        removeFromCart(item.id);
+      // Keep this ID between network retries. The backend will return the
+      // original confirmation instead of reserving inventory twice.
+      let checkoutId = sessionStorage.getItem(pendingKey);
+      if (!checkoutId) {
+        checkoutId = crypto.randomUUID();
+        sessionStorage.setItem(pendingKey, checkoutId);
       }
-      setResult(placed);
-      toast({ title: 'Orders submitted', description: `${placed.length} creator order(s) placed.` });
-    } catch (err) {
-      if (placed.length) setResult(placed);
-      const message = err instanceof Error ? err.message : 'Please retry remaining items.';
-      const helpful = message.toLowerCase().includes('permission') ? 'We couldn’t confirm this order. Please refresh and check availability, or contact the seller.' : message;
-      console.error('TreatStory checkout failed', { stage, code: (err as { code?: string })?.code, message });
-      toast({ variant: 'destructive', title: 'Could not finish checkout', description: `${placed.length} order(s) succeeded. ${helpful}` });
+      const token = await user.getIdToken();
+      const response = await fetch('/api/checkout', {
+        method: 'POST', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          checkoutId, advancePaymentAcknowledged: advanceAccepted,
+          lines: items.map(item => ({
+            productId: item.id.slice('seller:'.length), quantity: item.quantity,
+            expectedPrice: item.price, customizationNote: item.customizationNote || '',
+            weight: item.selectedWeight || null,
+          })),
+          customerName: name.trim(), customerPhone: phone.trim(), deliveryAddress: address.trim(),
+          customerNote: note.trim(), deliveryMode: fulfillment, pincode: fulfillment === 'delivery' ? pincode : undefined,
+          requestedDate, requestedSlot, giftRecipient: giftRecipient.trim(), giftMessage: giftMessage.trim(),
+        }),
+      });
+      const payload = await response.json().catch(() => ({})) as {
+        error?: string;
+        details?: { priceChanges?: Array<{lineIndex:number;name:string;current:number;expected:number}> };
+        orderIds?: string[];
+      };
+      if (!response.ok) {
+        if (response.status === 409 && payload.details?.priceChanges?.length) {
+          setPriceChanges(payload.details.priceChanges);
+          throw new ActionError('Some prices changed. Review and accept the updated prices before placing the order.', 409);
+        }
+        throw new ActionError(payload.error || 'Checkout could not be confirmed.', response.status, (payload as {details?:{code?:string}}).details?.code);
+      }
+      const orderIds = payload.orderIds ?? [];
+      if (!orderIds.length) throw new ActionError('The order response was incomplete. Keep this checkout open and retry, or check your orders before starting again.');
+      setResult(orderIds);
+      if (direct) clearDirectCheckout();
+      else for (const item of items) removeFromCart(item.lineId);
+      sessionStorage.removeItem(pendingKey);
+      onComplete?.();
+      toast({ title: 'Order request sent', description: `${orderIds.length} creator order(s) received. Your seller will confirm preparation and delivery; no payment was collected online.` });
+    } catch (error) {
+      console.error('TreatStory checkout response failed', {code:(error as {code?:string})?.code});
+      toast(errorToast(error,'checkout'));
     } finally { setBusy(false); }
   }
+  function acceptUpdatedPrices() {
+    for (const change of priceChanges) {
+      const line = items[change.lineIndex];
+      if (line) { if (direct) updateDirectPrice(change.current); else updateLinePrice(line.lineId, change.current); }
+    }
+    sessionStorage.removeItem(pendingKey);
+    setPriceChanges([]);
+    toast({ title: 'Prices updated', description: 'Review the total, then submit your order again.' });
+  }
+  const returnToCheckout = `/checkout?${new URLSearchParams({...(direct ? {buy:'direct'} : {}), ...(onlyProductId ? {product:onlyProductId} : {}), ...(onlyLineId ? {line:onlyLineId} : {})}).toString()}`;
   if (!items.length && !result.length) return null;
-  return <section className={variant === 'page' ? 'space-y-7 rounded-3xl border border-[#e8e0d5] bg-white p-5 shadow-[0_14px_45px_rgba(51,39,24,0.04)] sm:p-8 lg:p-10' : 'mt-7 space-y-6 rounded-3xl border border-[#e8e0d5] bg-[#faf8f4] p-5 sm:p-7'}>
+  return <section className={variant === 'page' ? 'space-y-4 rounded-2xl border border-[#e8e0d5] bg-white p-5 shadow-[0_14px_45px_rgba(51,39,24,0.04)] sm:p-8 lg:p-10' : 'mt-7 space-y-6 rounded-3xl border border-[#e8e0d5] bg-[#faf8f4] p-5 sm:p-7'}>
     <div className="border-b border-[#e8e0d5] pb-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a68a64]">Step 02 · Secure checkout</p><h3 className="mt-2 text-2xl font-medium tracking-tight">Delivery & payment</h3><p className="mt-2 text-xs leading-5 text-muted-foreground">Order handmade favourites from independent creators. Your seller confirms the order before fulfillment.</p></div>
-    {result.length > 0 && <div className="rounded-2xl border bg-white p-5 text-sm"><p className="font-semibold">{result.length} order(s) submitted</p><p className="mt-2 text-xs text-muted-foreground">References: {result.map(id => id.slice(0, 10)).join(', ')}</p><Link href="/orders" className="mt-3 inline-block font-medium underline underline-offset-4">Track your orders</Link></div>}
-    {isUserLoading ? <SectionSkeleton /> : !user ? <div className="rounded-2xl bg-white p-5"><p className="text-sm">Sign in to continue to checkout.</p><Link href={`/login?next=${encodeURIComponent(onlyProductId ? `/checkout?product=${encodeURIComponent(onlyProductId)}` : "/checkout")}`} className="editorial-button mt-4">Sign in</Link></div> : items.length > 0 && <form onSubmit={submit} className="space-y-6">
+    <CheckoutAddressDialog open={editingAddress} onOpenChange={setEditingAddress} value={{name, phone, address, pincode}} onSave={v => {setName(v.name);setPhone(v.phone);setAddress(v.address);setPincode(v.pincode);}} />
+    {result.length > 0 && <div role="status" aria-live="polite" className="rounded-3xl border border-[#e1d7c8] bg-[#f8f5ee] p-6 text-center sm:p-9"><CheckCircle2 className="mx-auto h-12 w-12 text-[#668657]"/><p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#a68a64]">Order received</p><h2 className="mt-2 text-2xl font-semibold sm:text-3xl">Thank you for ordering!</h2><p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#71685e]">We've received your TreatStory order request. Your seller will review and confirm preparation and delivery details. No payment was collected online.</p><div className="mx-auto mt-5 max-w-lg space-y-2 rounded-2xl border bg-white p-4 text-left"><p className="mb-2 text-xs font-semibold text-[#796b58]">Your order {result.length === 1 ? 'ID' : 'IDs'}</p>{result.map(id => <div key={id} className="flex items-center justify-between gap-2 rounded-lg bg-[#f7f5f1] px-3 py-2"><code className="min-w-0 break-all text-xs font-semibold text-[#29251f]">{id}</code><button type="button" aria-label={`Copy order ID ${id}`} className="shrink-0 rounded-full border p-2" onClick={() => { if (navigator.clipboard) void navigator.clipboard.writeText(id); }}><ClipboardCopy className="h-4 w-4"/></button></div>)}</div><Link href="/orders" className="mt-5 inline-flex min-h-11 items-center rounded-full bg-[#29251f] px-6 text-sm font-semibold text-white">Track your orders</Link></div>}
+    {isUserLoading ? <SectionSkeleton /> : !user ? <div className="rounded-2xl bg-white p-5"><p className="text-sm">Sign in to continue to checkout.</p><Link href={`/login?next=${encodeURIComponent(returnToCheckout)}`} className="editorial-button mt-4">Sign in</Link></div> : items.length > 0 && <form onSubmit={submit} className="space-y-4 sm:space-y-6">
       <div className="space-y-4"><p className="flex items-center gap-2 text-sm font-semibold"><MapPin className="h-4 w-4 text-[#a68a64]" />Contact & delivery details</p>
-      <div className="grid gap-4 sm:grid-cols-2"><label className="block space-y-1.5 text-xs font-medium">Full name<Input required minLength={2} maxLength={120} autoComplete="name" placeholder="Name for your order" value={name} onChange={e => setName(e.target.value)} className="mt-1 bg-white" /></label>
-      <label className="block space-y-1.5 text-xs font-medium">Mobile number<Input required minLength={5} maxLength={40} autoComplete="tel" placeholder="Phone number" value={phone} onChange={e => setPhone(e.target.value)} className="mt-1 bg-white" /></label></div>
-      <label className="block space-y-1.5 text-xs font-medium">Delivery address<Textarea required minLength={10} maxLength={1000} autoComplete="street-address" placeholder="House / building, street, locality, city, PIN code" value={address} onChange={e => setAddress(e.target.value)} className="mt-1 min-h-24 bg-white" /></label>
-      <label className="block space-y-1.5 text-xs font-medium">Notes for the creator (optional)<Textarea maxLength={1000} placeholder="Customisation, delivery instructions…" value={note} onChange={e => setNote(e.target.value)} className="mt-1 bg-white" /></label></div>
-      <div className="space-y-3 border-t border-[#e8e0d5] pt-5"><p className="flex items-center gap-2 text-sm font-semibold"><CreditCard className="h-4 w-4 text-[#a68a64]" />Payment method</p>
-      <div className="flex items-start gap-3 rounded-2xl border-2 border-[#bda17b] bg-[#fcfaf6] p-4 sm:p-5"><span className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-[5px] border-[#846b49] bg-white" aria-hidden="true" /><Banknote className="mt-0.5 h-5 w-5 text-[#846b49]" /><span><span className="block text-sm font-semibold">Cash on Delivery (COD)</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">Pay when your order arrives. Availability and delivery charges are confirmed by the seller.</span></span></div>
+      <div className="flex items-start justify-between gap-3 rounded-xl border bg-[#faf8f4] p-3 text-xs"><div className="min-w-0"><p className="font-semibold">{name ? `${name} · ${phone}` : 'Add your delivery details'}</p><p className="mt-1 line-clamp-2 text-muted-foreground">{address || 'Choose an address for this order.'}</p>{pincode && <p className="mt-1 text-muted-foreground">PIN {pincode}</p>}</div><Button type="button" variant="outline" size="sm" onClick={() => setEditingAddress(true)}>{address ? 'Change address' : 'Add address'}</Button></div>
+      <div className="grid gap-4 rounded-2xl border bg-white p-4 sm:grid-cols-2">
+        <label className="space-y-2 text-xs font-medium">Fulfillment method
+          <select className="h-11 w-full rounded-lg border bg-white px-3 text-sm" value={fulfillment} onChange={e => setFulfillment(e.target.value as typeof fulfillment)}><option value="delivery">Seller delivery</option><option value="pickup">Pickup from creator</option></select>
+        </label>
+        <label className="space-y-2 text-xs font-medium">Requested date
+          <Input required type="date" min={new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10)} max={new Date(Date.now() + 330 * 60000 + 90 * 86400000).toISOString().slice(0, 10)} value={requestedDate} onChange={e => setRequestedDate(e.target.value)} />
+        </label>
+        <label className="space-y-2 text-xs font-medium">Preferred time / slot (optional)
+          <Input maxLength={60} placeholder="e.g. 10 AM – 12 PM" value={requestedSlot} onChange={e => setRequestedSlot(e.target.value)} />
+        </label>
+      </div>
+      <details className="rounded-xl border p-3"><summary className="cursor-pointer text-xs font-medium">Gift options & notes (optional)</summary><div className="mt-3 grid gap-4 sm:grid-cols-2">
+        <label className="space-y-2 text-xs font-medium">Gift recipient (optional)
+          <Input maxLength={120} placeholder="Recipient name" value={giftRecipient} onChange={e => setGiftRecipient(e.target.value)} />
+        </label>
+        <label className="space-y-2 text-xs font-medium sm:col-span-2">Gift message (optional)
+          <Textarea maxLength={300} rows={2} placeholder="A thoughtful note for the gift..." value={giftMessage} onChange={e => setGiftMessage(e.target.value)} />
+        </label>
+      </div>
+      <label className="block space-y-1.5 text-xs font-medium">Notes for the creator (optional)<Textarea maxLength={750} placeholder="Customisation, delivery instructions…" value={note} onChange={e => setNote(e.target.value)} className="mt-1 bg-white" /></label></details></div>
+      <div className="space-y-3 border-t border-[#e8e0d5] pt-5"><p className="flex items-center gap-2 text-sm font-semibold"><CreditCard className="h-4 w-4 text-[#a68a64]" />Payment method</p>{termsLoading && <p role="status" className="text-xs">Checking payment terms…</p>}{termsError && <p role="alert" className="text-xs text-red-700">Could not load payment terms. <button type="button" className="underline" onClick={() => setTermsAttempt(v => v + 1)}>Retry</button></p>}
+      <label className="flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-[#bda17b] bg-[#fcfaf6] p-4 sm:p-5"><input type="radio" name="payment-method" value="cod" required checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="mt-1 h-4 w-4 shrink-0 accent-[#846b49]" /><Banknote className="mt-0.5 h-5 w-5 text-[#846b49]" /><span><span className="block text-sm font-semibold">Cash on Delivery (COD)</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{paymentMethod === 'cod' && advanceProducts.length ? 'The seller arranges the advance; any remaining balance is payable on delivery.' : 'Pay when your order arrives. Select to review the payment terms.'} Availability and delivery charges are confirmed by the seller.</span></span></label>
+      {paymentMethod === 'cod' && advanceProducts.length > 0 && <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm"><strong>Advance payment required</strong><p className="mt-1 text-xs">{advanceProducts.join(', ')}: the seller will arrange the advance and confirm payment before preparation. No payment is collected on this website.</p><label className="mt-3 flex items-start gap-2 text-xs"><input type="checkbox" required checked={advanceAccepted} onChange={e => setAdvanceAccepted(e.target.checked)} />I understand that these products require an advance before preparation.</label></div>}
       <div className="flex items-start gap-3 rounded-2xl border border-dashed p-4 text-muted-foreground"><CreditCard className="h-5 w-5 shrink-0" /><span className="text-xs leading-5"><strong className="block text-foreground">UPI / Cards / Net banking</strong>Coming soon. Online payments are not available yet, and no money will be collected now.</span></div></div>
-      <div className="space-y-3 border-t border-[#e8e0d5] pt-5"><p className="flex items-center gap-2 text-xs text-muted-foreground"><Truck className="h-4 w-4" />Shipping charges and COD availability are subject to seller confirmation.</p><Button type="submit" disabled={busy || !db} className="h-14 w-full rounded-full bg-[#29251f] text-sm font-semibold transition hover:bg-[#51463a]">{busy ? 'Placing your order…' : `Place ${items.length} COD order${items.length === 1 ? '' : 's'}`}</Button><p className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground"><ShieldCheck className="h-4 w-4" />No online payment required</p></div>
+      <div className="space-y-3 border-t border-[#e8e0d5] pt-5"><p className="flex items-center gap-2 text-xs text-muted-foreground"><Truck className="h-4 w-4" />Shipping charges and COD availability are subject to seller confirmation.</p>{priceChanges.length > 0 && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm" role="alert"><strong>Prices changed since you added these products.</strong><ul className="mt-2 space-y-1">{priceChanges.map((change,i) => <li key={i}>{change.name}: ₹{change.expected} → ₹{change.current}</li>)}</ul><Button type="button" onClick={acceptUpdatedPrices} className="mt-3">Accept updated prices</Button></div>}<Button type="submit" disabled={busy || !db || paymentMethod !== 'cod' || termsLoading || termsError || (advanceProducts.length > 0 && !advanceAccepted) || priceChanges.length > 0} className="h-14 w-full rounded-full bg-[#29251f] text-sm font-semibold transition hover:bg-[#51463a]">{busy ? 'Placing your order…' : `Place ${items.length} order${items.length === 1 ? '' : 's'}`}</Button><p className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground"><ShieldCheck className="h-4 w-4" />No payment collected online</p></div>
     </form>}
   </section>;
 }

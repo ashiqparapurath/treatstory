@@ -33,7 +33,7 @@ export default function RootLayout({
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <link rel="manifest" href="/manifest.json" />
+        <link rel="manifest" href="/manifest.json" crossOrigin="use-credentials" />
       </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable)}>
         <FirebaseClientProvider>

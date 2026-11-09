@@ -72,7 +72,7 @@ export function CartDrawer() {
           <ScrollArea className="flex-1 -mx-6">
             <div className="px-6 space-y-4">
             {cartItems.map((item) => (
-                <div key={item.id} className="flex items-start gap-4">
+                <div key={item.lineId} className="flex items-start gap-4">
                    <div className="relative w-20 h-20 rounded-md overflow-hidden flex-shrink-0">
                     <CartImage imageUrl={item.imageUrl} name={item.name} />
                   </div>
@@ -82,16 +82,16 @@ export function CartDrawer() {
                       <p className="text-sm text-muted-foreground">{formatPrice(item.price)}</p>
                     ) : null}
                     <div className="flex items-center gap-2 mt-2">
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, item.quantity - 1)}>
+                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.lineId, item.quantity - 1)}>
                         <Minus className="h-3.5 w-3.5" />
                       </Button>
                       <span className="text-sm font-medium w-5 text-center">{item.quantity}</span>
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, item.quantity + 1)}>
+                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.lineId, item.quantity + 1)}>
                         <Plus className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeFromCart(item.id)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeFromCart(item.lineId)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

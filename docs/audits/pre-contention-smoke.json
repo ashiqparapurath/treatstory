@@ -1,0 +1,209 @@
+{
+  "environment": {
+    "cpuLimit": 2,
+    "memoryGiB": 8,
+    "project": "demo-treatstory-audit",
+    "providerDelivery": "stubbed",
+    "database": "emulator"
+  },
+  "results": [
+    {
+      "concurrency": 10,
+      "durationSeconds": 8.104186748,
+      "summary": {
+        "count": 510,
+        "p50": 14.545094999999492,
+        "p95": 262.91147400000045,
+        "p99": 735.7778600000001,
+        "unexpectedErrors": 0,
+        "expectedResponses": 0,
+        "logicalClientDocReads": 3116
+      },
+      "throughput": 62.93043532416881,
+      "operations": {
+        "page.home": {
+          "count": 50,
+          "p50": 9.849500000000262,
+          "p95": 71.26507399999991,
+          "p99": 80.07479800000056,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 0
+        },
+        "read.catalog": {
+          "count": 49,
+          "p50": 41.053428999999596,
+          "p95": 828.9074,
+          "p99": 941.3616499999998,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 1176
+        },
+        "read.product.variant": {
+          "count": 45,
+          "p50": 14.936403000001519,
+          "p95": 201.76017000000002,
+          "p99": 235.6525459999998,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 45
+        },
+        "read.categories.banners": {
+          "count": 43,
+          "p50": 17.66741700000057,
+          "p95": 88.2094259999999,
+          "p99": 116.49210200000016,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 688
+        },
+        "read.search.filter": {
+          "count": 41,
+          "p50": 42.903511999999864,
+          "p95": 137.3390389999995,
+          "p99": 168.94567599999982,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 984
+        },
+        "read.profile": {
+          "count": 41,
+          "p50": 7.024311000000125,
+          "p95": 75.50725899999998,
+          "p99": 96.10676899999999,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 41
+        },
+        "page.products": {
+          "count": 41,
+          "p50": 10.926442000000861,
+          "p95": 22.86341900000025,
+          "p99": 51.23097400000006,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 0
+        },
+        "admin.approval": {
+          "count": 4,
+          "p50": 8.83792700000049,
+          "p95": 50.69819899999948,
+          "p99": 50.69819899999948,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 0
+        },
+        "read.orders": {
+          "count": 40,
+          "p50": 12.252126999999746,
+          "p95": 57.70290399999976,
+          "p99": 65.14985500000057,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 138
+        },
+        "auth.sign-in": {
+          "count": 40,
+          "p50": 2.0737929999995686,
+          "p95": 12.489478999999847,
+          "p99": 18.340479999999843,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 0
+        },
+        "read.product": {
+          "count": 44,
+          "p50": 9.06081599999925,
+          "p95": 29.59858600000007,
+          "p99": 78.59961100000055,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 44
+        },
+        "write.checkout": {
+          "count": 36,
+          "p50": 136.14436900000055,
+          "p95": 570.6368970000003,
+          "p99": 632.3613859999996,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 0
+        },
+        "auth.sign-up": {
+          "count": 36,
+          "p50": 1.6727449999998498,
+          "p95": 5.386874000001626,
+          "p99": 6.23819900000035,
+          "unexpectedErrors": 0,
+          "expectedResponses": 0,
+          "logicalClientDocReads": 0
+        }
+      },
+      "resources": {
+        "samples": 8,
+        "peakServerRss": 257576960,
+        "peakEventLoopP95Ms": 54.132735,
+        "first": {
+          "at": 1794221330044,
+          "pid": 9937,
+          "counts": {
+            "mail": 0,
+            "upload": 0,
+            "blockedEgress": 0,
+            "transactions": 0,
+            "transactionAttempts": 0,
+            "reads": 0,
+            "writes": 0
+          },
+          "memory": {
+            "rss": 200560640,
+            "heapTotal": 98177024,
+            "heapUsed": 94356680,
+            "external": 5117470,
+            "arrayBuffers": 918111
+          },
+          "cpu": {
+            "user": 1757472,
+            "system": 470819
+          },
+          "eventLoop": {
+            "p95Ms": 30.031871,
+            "p99Ms": 37.912575
+          }
+        },
+        "last": {
+          "at": 1794221337045,
+          "pid": 9937,
+          "counts": {
+            "mail": 0,
+            "upload": 0,
+            "blockedEgress": 0,
+            "transactions": 72,
+            "transactionAttempts": 90,
+            "reads": 198,
+            "writes": 342
+          },
+          "memory": {
+            "rss": 257576960,
+            "heapTotal": 152866816,
+            "heapUsed": 123011840,
+            "external": 9551114,
+            "arrayBuffers": 5407042
+          },
+          "cpu": {
+            "user": 3241951,
+            "system": 597646
+          },
+          "eventLoop": {
+            "p95Ms": 24.182783,
+            "p99Ms": 39.944191
+          }
+        }
+      },
+      "targets": {
+        "standardReadP95Ms": 151.54695300000003,
+        "unexpectedErrorRate": 0
+      }
+    }
+  ]
+}

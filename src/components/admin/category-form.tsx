@@ -1,5 +1,6 @@
-
 'use client';
+
+import { errorToast } from '@/lib/user-notices';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,10 +16,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, addDoc, updateDoc } from 'firebase/firestore';
 import type { Category } from '@/lib/products';
 import { useToast } from '@/hooks/use-toast';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useState } from 'react';
 import { Textarea } from '../ui/textarea';
 
@@ -66,7 +66,7 @@ export function CategoryForm({ category, onFinished }: CategoryFormProps) {
       if (isEditMode && category) {
         const docRef = doc(firestore, 'categories', category.id);
         const updatedData = { ...data, updatedAt: serverTimestamp() };
-        updateDocumentNonBlocking(docRef, updatedData);
+        await updateDoc(docRef, updatedData);
         toast({
           title: 'Category Updated',
           description: `The category "${data.name}" has been successfully updated.`,
@@ -74,7 +74,7 @@ export function CategoryForm({ category, onFinished }: CategoryFormProps) {
       } else {
         const collectionRef = collection(firestore, 'categories');
         const newData = { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
-        addDocumentNonBlocking(collectionRef, newData);
+        await addDoc(collectionRef, newData);
         toast({
           title: 'Category Added',
           description: `The category "${data.name}" has been successfully added.`,
@@ -83,11 +83,7 @@ export function CategoryForm({ category, onFinished }: CategoryFormProps) {
       onFinished();
     } catch (error: any) {
       console.error("Category form submission error:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Failed to save category',
-        description: error.message || 'An unexpected error occurred.',
-      });
+      toast(errorToast(error, 'save'));
     } finally {
       setIsSubmitting(false);
     }

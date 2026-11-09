@@ -1,10 +1,13 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@/firebase';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { getErrorNotice, validateEmail, type UserNotice } from '@/lib/user-notices';
+import { requestAccountMail } from '@/lib/account-mail';
+import { ToastAction } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +16,9 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Sparkles, ShoppingBag, ShieldCheck } from 'lucide-react';
 
 export default function LoginPage() {
+  const [formError,setFormError] = useState<UserNotice|null>(null);
+  const emailInput = useRef<HTMLInputElement>(null);
+  const passwordInput = useRef<HTMLInputElement>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -35,50 +41,40 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading, router]);
 
+  useEffect(() => { if(formError?.field==='password') passwordInput.current?.focus(); else if(formError?.field) emailInput.current?.focus(); },[formError]);
+  function showError(error: unknown, reset = false) {
+    const notice = getErrorNotice(error,reset?'reset-password':'sign-in');
+    setFormError(notice);
+    toast({variant:'destructive',title:notice.title,description:notice.description,
+      ...(notice.field==='credentials'?{action:<ToastAction altText="Reset your password" onClick={()=>{setResetMode(true);setResetSent(false);setFormError(null);}}>Reset password</ToastAction>}:{}),
+    });
+  }
   const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!auth) {
-       toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: 'Authentication service is not available. Please try again later.',
-      });
-      return;
-    }
+    e.preventDefault();if(isLoading)return;setFormError(null);
+    const emailError = validateEmail(email);
+    if(emailError){setFormError(emailError);toast({variant:'destructive',title:emailError.title,description:emailError.description});return;}
+    if(!password){showError({code:'auth/missing-password'});return;}
+    if(!auth){showError({code:'app/service-unavailable'});return;}
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      toast({
-        title: 'Login Successful',
-        description: 'Welcome back to TreatStory.',
-      });
-      // The useEffect routes the signed-in user to their role-specific dashboard.
-    } catch (error: any) {
-      console.error(error);
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: error.message || 'An unexpected error occurred.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+      const result=await signInWithEmailAndPassword(auth,email.trim(),password);
+      const firstName=result.user.displayName?.trim().split(/\s+/)[0];
+      toast({title:'Signed in successfully',description:firstName?`Welcome back, ${firstName}.`:'Welcome back to TreatStory.'});
+    } catch(error) {showError(error);}
+    finally {setIsLoading(false);}
   };
-
+  function resetSuccess() {
+    setResetSent(true);toast({title:'Check your inbox',description:'If an account uses this email, a reset link will arrive shortly. Check your spam folder too.'});
+  }
   const handlePasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!auth || !email.trim()) return;
+    e.preventDefault();if(isLoading)return;setFormError(null);setResetSent(false);
+    const emailError=validateEmail(email);
+    if(emailError){setFormError(emailError);toast({variant:'destructive',title:emailError.title,description:emailError.description});return;}
+    if(!auth){showError({code:'app/service-unavailable'},true);return;}
     setIsLoading(true);
-    try {
-      await sendPasswordResetEmail(auth, email.trim());
-      setResetSent(true);
-      toast({ title: 'Check your inbox', description: 'If this email has a TreatStory account, a password reset link will arrive shortly.' });
-    } catch (error: unknown) {
-      console.error('Password reset request failed', error);
-      toast({ variant: 'destructive', title: 'Unable to send reset email', description: 'Please try again in a moment.' });
-    } finally {
-      setIsLoading(false);
-    }
+    try {await requestAccountMail('reset-password',{email:email.trim()});resetSuccess();}
+    catch(error) {if((error as {code?:string})?.code==='auth/user-not-found')resetSuccess();else showError(error,true);}
+    finally {setIsLoading(false);}
   };
 
   if (isUserLoading || user) {
@@ -113,14 +109,16 @@ export default function LoginPage() {
             <h1 className="text-[34px] font-medium leading-tight tracking-tight sm:text-[44px]">{resetMode ? 'Reset your password.' : 'Welcome back.'}</h1>
             <p className="mt-2 max-w-sm text-[13px] leading-6 text-[#7a7167] sm:mt-3 sm:text-sm">{resetMode ? 'Enter your account email and we’ll send you a secure password reset link.' : 'Sign in to keep your favourite finds, orders and delivery details together.'}</p>
           </div>
-          <form onSubmit={resetMode ? handlePasswordReset : handleSignIn} className="space-y-4 sm:space-y-5">
-            <div className="space-y-2"><Label htmlFor="email" className="text-xs font-semibold">Email address</Label><Input id="email" type="email" autoComplete="email" inputMode="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={isLoading} className="h-[52px] rounded-xl border-[#ddd4c8] bg-[#faf9f6] px-4 text-base sm:h-12 sm:bg-white sm:text-sm focus-visible:ring-[#a78c6a]" /></div>
-            {!resetMode && <div className="space-y-2"><Label htmlFor="password" className="text-xs font-semibold">Password</Label><div className="relative"><Input id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={e => setPassword(e.target.value)} required disabled={isLoading} className="h-[52px] rounded-xl border-[#ddd4c8] bg-[#faf9f6] px-4 pr-12 text-base sm:h-12 sm:bg-white sm:text-sm focus-visible:ring-[#a78c6a]" /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(v=>!v)} className="absolute inset-y-0 right-1 flex w-11 items-center justify-center rounded-lg text-[#7a7167] hover:text-[#29251f]">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>}
-            {!resetMode && <div className="flex justify-end"><button type="button" onClick={() => { setResetMode(true); setResetSent(false); }} className="text-xs font-semibold text-[#6f583d] underline decoration-[#c4aa89] underline-offset-4 hover:text-[#29251f]">Forgot password?</button></div>}
+          <form noValidate onSubmit={resetMode ? handlePasswordReset : handleSignIn} className="space-y-4 sm:space-y-5">
+            <div className="space-y-2"><Label htmlFor="email" className="text-xs font-semibold">Email address</Label><Input ref={emailInput} aria-invalid={formError?.field==='email'||formError?.field==='credentials'} aria-describedby={formError?'sign-in-error':undefined} id="email" type="email" autoComplete="email" inputMode="email" placeholder="you@example.com" value={email} onChange={e => {setEmail(e.target.value);setFormError(null);setResetSent(false);}} required disabled={isLoading} className="h-[52px] rounded-xl border-[#ddd4c8] bg-[#faf9f6] px-4 text-base sm:h-12 sm:bg-white sm:text-sm focus-visible:ring-[#a78c6a]" /></div>
+            {!resetMode && <div className="space-y-2"><Label htmlFor="password" className="text-xs font-semibold">Password</Label><div className="relative"><Input ref={passwordInput} aria-invalid={formError?.field==='password'||formError?.field==='credentials'} aria-describedby={formError?'sign-in-error':undefined} id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={e => {setPassword(e.target.value);setFormError(null);}} required disabled={isLoading} className="h-[52px] rounded-xl border-[#ddd4c8] bg-[#faf9f6] px-4 pr-12 text-base sm:h-12 sm:bg-white sm:text-sm focus-visible:ring-[#a78c6a]" /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(v=>!v)} className="absolute inset-y-0 right-1 flex w-11 items-center justify-center rounded-lg text-[#7a7167] hover:text-[#29251f]">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>}
+            {!resetMode && <div className="flex justify-end"><button type="button" onClick={() => { setResetMode(true); setResetSent(false); setFormError(null); }} className="text-xs font-semibold text-[#6f583d] underline decoration-[#c4aa89] underline-offset-4 hover:text-[#29251f]">Forgot password?</button></div>}
+            {formError&&<div id="sign-in-error" role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"><p className="font-semibold">{formError.title}</p><p className="mt-1 text-xs leading-5">{formError.description}</p></div>}
+            {!auth&&<p role="status" className="text-xs text-amber-800">Sign-in is temporarily unavailable. Please try again later or contact support.</p>}
             {resetMode && resetSent && <p role="status" className="rounded-xl border border-[#e1d8ca] bg-[#f5f0e8] p-3 text-sm leading-6 text-[#5c4b37]">If an account exists for this email, you’ll receive a reset link. Check your inbox and spam folder.</p>}
             <Button type="submit" disabled={isLoading || !auth} className="mt-2 h-[52px] w-full rounded-xl bg-[#29251f] sm:h-12 sm:rounded-full text-sm font-semibold text-white transition hover:bg-[#51463a]">{isLoading ? (resetMode ? 'Sending…' : 'Signing in…') : <>{resetMode ? 'Send reset link' : 'Sign in'} <ArrowRight className="ml-2 h-4 w-4" /></>}</Button>
           </form>
-          {resetMode && <button type="button" onClick={() => { setResetMode(false); setResetSent(false); }} className="mt-5 inline-flex items-center justify-center gap-2 text-sm font-medium text-[#6f583d] hover:text-[#29251f]"><ArrowLeft className="h-4 w-4" /> Back to sign in</button>}
+          {resetMode && <button type="button" onClick={() => { setResetMode(false); setResetSent(false); setFormError(null); }} className="mt-5 inline-flex items-center justify-center gap-2 text-sm font-medium text-[#6f583d] hover:text-[#29251f]"><ArrowLeft className="h-4 w-4" /> Back to sign in</button>}
           <div className="mt-7 border-t border-[#e8e0d5] pt-5"><p className="text-center text-sm text-[#7a7167]">New to TreatStory? <Link href="/register" className="font-semibold text-[#29251f] underline decoration-[#bca07b] underline-offset-4 hover:text-[#8c6c43]">Create an account</Link></p></div>
           <p className="mt-5 flex items-center justify-center gap-2 text-center text-[11px] text-[#958a7c]"><ShieldCheck className="h-4 w-4" /> Secure sign-in for customers and creators</p>
         </div>

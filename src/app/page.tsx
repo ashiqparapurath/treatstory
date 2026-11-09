@@ -6,6 +6,7 @@ import { SellerStorefrontProducts } from '@/components/seller-storefront-product
 import { ProductGridContainer } from '@/components/product-grid';
 import Link from 'next/link';
 import Image from 'next/image';
+import { OptimizedImage } from '@/components/optimized-image';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,9 +25,10 @@ function HomePageContent() {
   }, [firestore]);
   const { data: products, isLoading, error, retry } = usePublicCatalog<Product>(productsQuery);
 
-  if (error) return <LoadError retry={retry} />;
+  if (error) return <LoadError retry={retry} error={error} />;
   if (isLoading) return <ProductGridSkeleton count={8} />;
-  return <ProductGridContainer products={products || []} />;
+  if (!products?.length) return null;
+  return <ProductGridContainer products={products} />;
 }
 
 function BannerCarousel() {
@@ -46,13 +48,13 @@ function BannerCarousel() {
         {banners.map((banner) => (
           <CarouselItem key={banner.id}>
             <Card className="overflow-hidden rounded-[24px] border-0 shadow-none">
-              <CardContent className="relative flex h-56 items-center justify-center p-0 md:h-72 lg:h-[340px]">
-                <Image src={banner.imageUrl} alt={banner.title} fill sizes="100vw" className="object-cover" />
+              <CardContent className="relative flex min-h-72 items-center justify-center p-0 sm:min-h-0 sm:h-64 md:h-72 lg:h-[340px]">
+                <OptimizedImage src={banner.imageUrl} alt={banner.title} fill sizes="(max-width: 1280px) 100vw, 1200px" quality={75} className="object-cover" />
                 <div className="absolute inset-0 bg-black/40" />
-                <div className="relative max-w-2xl px-5 text-center text-white sm:px-10">
+                <div className="relative max-w-2xl px-5 py-6 text-center text-white sm:px-10">
                   <p className="eyebrow text-white/80">The TreatStory edit</p>
-                  <h2 className="mt-3 text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">{banner.title}</h2>
-                  <p className="mx-auto mt-3 max-w-xl text-sm text-white/85 sm:text-base">{banner.subtitle}</p>
+                  <h2 className="mt-3 text-2xl font-medium leading-tight tracking-tight sm:text-4xl md:text-5xl">{banner.title}</h2>
+                  <p className="mx-auto mt-3 max-w-xl line-clamp-3 text-xs leading-5 text-white/85 sm:text-base">{banner.subtitle}</p>
                   <Button asChild className="mt-6 rounded-full bg-white px-6 text-xs font-semibold uppercase tracking-widest text-foreground hover:bg-white/90">
                     <Link href={banner.buttonLink}>{banner.buttonText}<ArrowRight className="ml-2 h-4 w-4" /></Link>
                   </Button>
@@ -62,8 +64,8 @@ function BannerCarousel() {
           </CarouselItem>
         ))}
       </CarouselContent>
-      <CarouselPrevious className="absolute left-4 top-1/2 hidden -translate-y-1/2 md:flex" />
-      <CarouselNext className="absolute right-4 top-1/2 hidden -translate-y-1/2 md:flex" />
+      <CarouselPrevious className="absolute left-4 top-1/2 hidden -translate-y-1/2 border-white/50 bg-white/30 backdrop-blur-xl md:flex" />
+      <CarouselNext className="absolute right-4 top-1/2 hidden -translate-y-1/2 border-white/50 bg-white/30 backdrop-blur-xl md:flex" />
     </Carousel>
   );
 }
@@ -102,11 +104,11 @@ export default function Home() {
             <div className="relative order-1 md:order-2">
               <div className="relative aspect-[1.3/1] overflow-hidden rounded-[22px] bg-[#e8dfd2] md:aspect-[1.18/1] lg:aspect-[1.4/1]">
                 <Image
-                  src="/img/landing-hero.png"
+                  src="/img/landing-hero.webp"
                   alt="Artisanal cakes and homemade treats alongside embroidered crafts, handmade gifts and candles"
                   fill
                   priority
-                  sizes="(max-width: 1024px) 100vw, 55vw"
+                  sizes="(max-width: 767px) 100vw, 55vw"
                   className="object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />

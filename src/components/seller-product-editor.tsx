@@ -1,0 +1,157 @@
+'use client';
+
+import { useState, type Dispatch, type FormEvent, type SetStateAction } from 'react';
+import { Plus, Trash2, X, Sparkles, ChevronDown, ImagePlus, ArrowLeft, ArrowRight } from 'lucide-react';
+import type { MarketplaceProduct } from '@/lib/marketplace-types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+
+export type WeightUnit = 'g' | 'kg' | 'ml' | 'l' | 'pieces';
+export type WeightOptionDraft = { value: string; unit: WeightUnit; price: string; stockQuantity: string };
+export type ProductDraft = {
+  name: string; description: string; category: string; price: string;
+  imageUrls: string; availability: MarketplaceProduct['availability']; stockQuantity: string;
+  preparationDays: string; minimumOrderQuantity: string; weightValue: string; weightUnit: WeightUnit;
+  weightOptions: WeightOptionDraft[]; customizationOptions: string; careInstructions: string;
+  ingredients: string; allergens: string; dietaryTags: string; shelfLifeDays: string; storageInstructions: string;
+  advancePaymentRequired: boolean;
+  showPrice: boolean; status: 'draft' | 'published';
+};
+export const emptyDraft: ProductDraft = {
+  name: '', description: '', category: '', price: '', imageUrls: '', availability: 'available',
+  stockQuantity: '', preparationDays: '', minimumOrderQuantity: '1', weightValue: '', weightUnit: 'g',
+  weightOptions: [], customizationOptions: '', careInstructions: '',
+  ingredients: '', allergens: '', dietaryTags: '', shelfLifeDays: '', storageInstructions: '',
+  advancePaymentRequired: false,
+  showPrice: true, status: 'draft'
+};
+const presets = ['Home bakery', 'Cakes', 'Cookies', 'Desserts', 'Art', 'Paintings', 'Handmade crafts', 'Gifts', 'Candles', 'Accessories'];
+const units: WeightUnit[] = ['g', 'kg', 'ml', 'l', 'pieces'];
+
+export function suggestProductDescription(d: Pick<ProductDraft, 'name' | 'category' | 'availability' | 'preparationDays' | 'careInstructions'> & Partial<Pick<ProductDraft, 'ingredients' | 'weightOptions' | 'customizationOptions' | 'storageInstructions'>>) {
+  const name = d.name.trim();
+  if (name.length < 2) return '';
+  const details = [name + '.'];
+  if (d.weightOptions?.length) details.push('Available sizes: ' + d.weightOptions.filter(w => w.value).map(w => `${w.value} ${w.unit}`).join(', ') + '.');
+  if (d.ingredients?.trim()) details.push('Ingredients: ' + d.ingredients.trim() + '.');
+  if (d.customizationOptions?.trim()) details.push('Personalization options: ' + d.customizationOptions.trim().split(/\n/).filter(Boolean).join(', ') + '.');
+  if (d.availability === 'made-to-order') details.push('Made to order.');
+  if (Number(d.preparationDays) > 0) details.push(`Preparation time: ${Number(d.preparationDays)} day(s).`);
+  if (d.careInstructions.trim()) details.push('Care: ' + d.careInstructions.trim() + '.');
+  if (d.storageInstructions?.trim()) details.push('Storage: ' + d.storageInstructions.trim() + '.');
+  return details.join(' ').slice(0, 2000);
+}
+
+export function SellerProductEditor({ open, editing, busy, enabled, draft, setDraft, categories, onClose, onSubmit, onUploadPhotos, uploading, uploadProgress, saveError }: {
+  saveError?: string;
+  open: boolean;
+  editing: boolean;
+  busy: boolean;
+  enabled: boolean;
+  draft: ProductDraft;
+  setDraft: Dispatch<SetStateAction<ProductDraft>>;
+  categories: string[];
+  onClose: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onUploadPhotos: (files: File[]) => Promise<void>;
+  uploading: boolean;
+  uploadProgress: string;
+}) {
+  const [suggestion, setSuggestion] = useState('');
+  if (!open) return null;
+  const set = <K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) => setDraft(d => ({ ...d, [key]: value }));
+  const allCategories = [...new Set([...presets, ...categories])].filter(Boolean).sort((a,b) => a.localeCompare(b));
+  const photos = draft.imageUrls.split(/\r?\n|,/).map(x => x.trim()).filter(Boolean);
+  const photoCount = photos.length;
+  const arrangePhotos = (next: string[]) => set('imageUrls', next.join('\n'));
+  const shiftPhoto = (index: number, delta: number) => {
+    const target = index + delta;
+    if (target < 0 || target >= photos.length) return;
+    const next = [...photos];
+    [next[index], next[target]] = [next[target], next[index]];
+    arrangePhotos(next);
+  };
+  return <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" role="presentation" onMouseDown={e => { if(e.target === e.currentTarget) onClose(); }}>
+    <div role="dialog" aria-modal="true" aria-label={editing ? 'Edit listing' : 'New listing'} className="flex h-[min(96dvh,920px)] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl bg-[#fbf9f6] shadow-2xl sm:h-[min(94dvh,940px)] sm:rounded-3xl">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#e8e0d5] bg-white px-4 py-3 sm:px-7 sm:py-5">
+        <div><p className="text-[10px] font-semibold uppercase tracking-widest text-[#a68a64]">Seller studio · Catalog</p><h2 className="mt-0.5 text-xl font-semibold sm:text-2xl">{editing ? 'Edit your creation' : 'Add a creation'}</h2></div>
+        <button type="button" onClick={onClose} aria-label="Close product editor" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f5f1eb]"><X className="h-5 w-5" /></button>
+      </div>
+      <form id="sellerProductForm" onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4 sm:space-y-5 sm:px-7 sm:py-6">
+          {saveError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{saveError}</p>}
+          <section className="space-y-3 rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6">
+            <h3 className="text-sm font-semibold">Essential details</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block space-y-1.5 text-xs font-semibold sm:col-span-2">Product name<Input required minLength={2} maxLength={120} placeholder="e.g. Red velvet birthday cake" value={draft.name} onChange={e => set('name',e.target.value)} /></label>
+              <label className="block space-y-1.5 text-xs font-semibold">Category
+                <Input list="sellerProductCategories" required maxLength={80} value={draft.category} onChange={e => set('category',e.target.value)} placeholder="Choose or type a new category" />
+                <datalist id="sellerProductCategories">{allCategories.map(c => <option key={c} value={c} />)}</datalist>
+                <span className="block text-[11px] font-normal text-muted-foreground">New categories are saved with this listing and appear next time.</span>
+              </label>
+              <label className="block space-y-1.5 text-xs font-semibold">{draft.weightOptions.length ? 'Single-product fallback price (₹) · not used for sized variants' : 'Price (₹)'}<Input disabled={draft.weightOptions.length > 0} required={!draft.weightOptions.length} min={0} max={10000000} step="0.01" type="number" inputMode="decimal" value={draft.price} onChange={e => set('price',e.target.value)} /><span className="block text-[11px] font-normal text-muted-foreground">{draft.weightOptions.length ? 'Enter the selling price beside EACH size below. The starting price is calculated automatically from the smallest variant price.' : 'For a single-price product, enter the selling price here. To set prices for 500 g, 1 kg, etc., use the pricing section below.'}</span></label>
+            </div>
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2"><Label htmlFor="creatorDescription">Description</Label><Button type="button" size="sm" variant="outline" className="h-8 rounded-full text-[11px]" disabled={draft.name.trim().length < 2} onClick={() => setSuggestion(suggestProductDescription(draft))}><Sparkles className="mr-1 h-3.5 w-3.5" />Suggest description</Button></div>
+              <Textarea id="creatorDescription" required maxLength={2000} rows={3} placeholder="Tell buyers about the product, materials, portions and special touches…" value={draft.description} onChange={e => set('description',e.target.value)} className="resize-y" />
+              {suggestion && <div className="rounded-xl bg-[#f3eee6] p-3"><p className="text-xs leading-5 text-[#5e5040]">{suggestion}</p><div className="mt-2 flex gap-2"><Button type="button" size="sm" onClick={() => { set('description',suggestion); setSuggestion(''); }}>Use suggestion</Button><Button type="button" size="sm" variant="outline" onClick={() => setSuggestion('')}>Dismiss</Button></div><p className="mt-2 text-[10px] text-muted-foreground">Template suggestion based only on the details you've entered; review its accuracy before publishing.</p></div>}
+            </div>
+          </section>
+          <section className="rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6"><h3 className="mb-3 text-sm font-semibold">Payment requirements</h3>
+              <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={draft.advancePaymentRequired} onChange={e => set('advancePaymentRequired', e.target.checked)} />Advance payment required before preparation</label><p className="text-xs text-muted-foreground sm:col-span-2">Arrange the advance directly with the buyer. TreatStory does not collect online payments.</p>
+          </section>
+          <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Photos & gallery <span className="flex items-center gap-2 text-xs font-normal text-[#8b795e]">{photoCount} photo(s)<ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></span></summary>
+            <div className="mt-4 space-y-3">
+              <p className="text-xs leading-5 text-muted-foreground">Choose images straight from your phone or computer. Upload up to ten photos securely; the first photo becomes the cover.</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <label htmlFor="sellerPhotoFiles" className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-[#bfae95] bg-[#f8f5f0] px-5 text-xs font-semibold text-[#594b39] ${uploading || busy || !enabled || photoCount >= 10 ? 'pointer-events-none opacity-50' : ''}`}><ImagePlus className="h-4 w-4" />{uploading ? 'Uploading photos…' : 'Upload product photos'}</label>
+                <input id="sellerPhotoFiles" className="sr-only" type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={uploading || busy || !enabled || photoCount >= 10} onChange={e => { const files = [...(e.target.files ?? [])]; e.target.value = ''; if (files.length) void onUploadPhotos(files); }} />
+                <span role="status" aria-live="polite" className="text-xs text-muted-foreground">{uploadProgress || `${photoCount} / 10 photos`}</span>
+              </div>
+              {photoCount > 0 && <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{photos.map((url, i) => <div key={url + i} className="space-y-1 overflow-hidden rounded-xl border border-[#e8e0d5] bg-[#f7f4ef] p-2"><div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-[#ebe3d8]"><img src={url} alt={`Product photo ${i + 1}`} className="h-full w-full object-cover" loading="lazy" /></div><div className="flex items-center justify-between gap-1"><span className="truncate text-[10px] text-muted-foreground">{i === 0 ? 'Cover' : `Photo ${i + 1}`}</span><div className="flex gap-1"><button type="button" onClick={() => shiftPhoto(i,-1)} disabled={i===0||uploading} aria-label={`Move photo ${i+1} left`} className="grid h-7 w-7 place-items-center rounded-md border bg-white disabled:opacity-30"><ArrowLeft className="h-3.5 w-3.5" /></button><button type="button" onClick={() => shiftPhoto(i,1)} disabled={i===photos.length-1||uploading} aria-label={`Move photo ${i+1} right`} className="grid h-7 w-7 place-items-center rounded-md border bg-white disabled:opacity-30"><ArrowRight className="h-3.5 w-3.5" /></button><button type="button" onClick={() => arrangePhotos(photos.filter((_, n) => n !== i))} disabled={uploading} aria-label={`Remove photo ${i+1}`} className="grid h-7 w-7 place-items-center rounded-md border bg-white text-red-600 disabled:opacity-30"><X className="h-3.5 w-3.5" /></button></div></div></div>)}</div>}
+              <details className="rounded-xl border border-dashed p-3"><summary className="cursor-pointer text-xs font-medium text-[#71604b]">Or paste image URLs manually</summary><div className="mt-2 space-y-2"><Label htmlFor="creatorImages">HTTPS image links (one per line)</Label><Textarea id="creatorImages" rows={3} maxLength={5000} placeholder={"https://example.com/cake-front.jpg\nhttps://example.com/cake-detail.jpg"} value={draft.imageUrls} onChange={e => set('imageUrls',e.target.value)} /><p className="text-xs text-muted-foreground">You can still use previously hosted photo links. Photos from direct uploads are added here automatically.</p></div></details>
+            </div>
+          </details>
+          <section className="space-y-4 rounded-2xl border-2 border-[#b99b72] bg-[#fffdf8] p-4 sm:p-6" aria-labelledby="variant-pricing-title">
+            <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#98764d]">One product · Multiple prices</p><h3 id="variant-pricing-title" className="mt-1 text-base font-semibold">Weight, size & variant pricing</h3></div><span className="rounded-full bg-[#f0e7da] px-3 py-1.5 text-xs font-semibold text-[#715637]">{draft.weightOptions.length} {draft.weightOptions.length === 1 ? 'size' : 'sizes'}</span></div>
+            <p className="text-xs leading-5 text-[#6d6050]">Example: add <strong>500 g at ₹450</strong> and <strong>1 kg at ₹800</strong> under the same cake product. Enter a price for each size. Each size can also have its own stock; leaving stock blank uses the product's shared stock.</p>
+            <div className="space-y-3">
+              {draft.weightOptions.map((option,i) => <div key={i} className="grid grid-cols-2 items-end gap-3 rounded-xl border border-[#e3d1ba] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_100px_120px_120px_36px]">
+                <p className="col-span-2 text-[11px] font-semibold text-[#82623e] sm:hidden">Size {i+1} · set its selling price</p>
+                <label className="space-y-1 text-xs font-medium">Weight / count<Input type="number" inputMode="decimal" min="0.01" max="100000" step="any" value={option.value} placeholder="500" onChange={e => set('weightOptions', draft.weightOptions.map((v,n)=>n===i?{...v,value:e.target.value}:v))}/></label>
+                <label className="space-y-1 text-xs font-medium">Unit<select className="h-10 w-full rounded-md border bg-white px-2" value={option.unit} onChange={e=>set('weightOptions',draft.weightOptions.map((v,n)=>n===i?{...v,unit:e.target.value as WeightUnit}:v))}>{units.map(u=><option key={u} value={u}>{u}</option>)}</select></label>
+                <label className="space-y-1 text-xs font-semibold text-[#685139]">Price for this size (₹) *<Input required type="number" inputMode="decimal" min={0} max={10000000} step="0.01" value={option.price} placeholder="e.g. 450" onChange={e => set('weightOptions', draft.weightOptions.map((v,n)=>n===i?{...v,price:e.target.value}:v))}/></label>
+                <label className="space-y-1 text-xs font-medium">Size stock<Input type="number" inputMode="numeric" min={0} max={1000000} step={1} value={option.stockQuantity} placeholder="Total stock" onChange={e => set('weightOptions', draft.weightOptions.map((v,n)=>n===i?{...v,stockQuantity:e.target.value}:v))}/></label>
+                <button type="button" aria-label={`Remove weight option ${i+1}`} className="flex h-10 w-9 items-center justify-center rounded-md border text-red-700" onClick={()=>set('weightOptions',draft.weightOptions.filter((_,n)=>n!==i))}><Trash2 className="h-4 w-4"/></button>
+              </div>)}
+              <Button type="button" variant="outline" className="h-10 rounded-full" disabled={draft.weightOptions.length>=8} onClick={()=>set('weightOptions',[...draft.weightOptions,{value:'',unit:'g',price:'',stockQuantity:''}])}><Plus className="mr-2 h-4 w-4"/>Add another size & price</Button>
+              {!!draft.weightOptions.length && <div role="status" className="rounded-xl bg-[#f5ede2] p-3 text-xs leading-6 text-[#5e503f]"><strong>Price preview:</strong> {draft.weightOptions.map((option,i) => `${option.value || 'Size '+(i+1)} ${option.unit}: ₹${option.price.trim() === '' ? 'set price' : option.price}`).join(' · ')}. Each size is saved under this single product.</div>}
+              <label className="block max-w-xs space-y-1 text-xs font-medium">Minimum order quantity (units)<Input type="number" min={1} max={99} value={draft.minimumOrderQuantity} onChange={e=>set('minimumOrderQuantity',e.target.value)}/></label>
+            </div>
+          </section>
+          <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Availability & personalization <ChevronDown className="h-4 w-4 transition group-open:rotate-180"/></summary>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="space-y-1 text-xs font-medium">Availability<select className="h-10 w-full rounded-md border bg-white px-3" value={draft.availability} onChange={e=>set('availability',e.target.value as ProductDraft['availability'])}><option value="available">Available</option><option value="made-to-order">Made to order</option><option value="unavailable">Unavailable</option></select></label>
+
+              <label className="space-y-1 text-xs font-medium">Preparation days<Input type="number" min={0} max={365} value={draft.preparationDays} onChange={e=>set('preparationDays',e.target.value)} /></label>
+              <label className="space-y-1 text-xs font-medium">Stock quantity<Input type="number" min={0} max={1000000} value={draft.stockQuantity} onChange={e=>set('stockQuantity',e.target.value)} /></label>
+              <label className="space-y-1 text-xs font-medium">Listing status<select className="h-10 w-full rounded-md border bg-white px-3" value={draft.status} onChange={e=>set('status',e.target.value as ProductDraft['status'])}><option value="draft">Draft</option><option value="published">Published</option></select></label>
+              <label className="space-y-1 text-xs font-medium sm:col-span-2">Customization prompts (one per line)<Textarea rows={3} maxLength={500} placeholder={"Cake message\nColour preference\nGift note"} value={draft.customizationOptions} onChange={e=>set('customizationOptions',e.target.value)} /><span className="block text-[11px] text-muted-foreground">Up to six prompts (80 characters each). Requests do not change pricing.</span></label>
+              <label className="space-y-1 text-xs font-medium sm:col-span-2">Ingredients, care or handling notes<Textarea rows={2} maxLength={500} value={draft.careInstructions} onChange={e=>set('careInstructions',e.target.value)} /></label>
+              <div className="space-y-3 rounded-xl border border-[#eee7dd] p-4 sm:col-span-2"><h4 className="text-sm font-semibold">Food safety & ingredient details (for bakers)</h4><p className="text-xs text-muted-foreground">Enter accurate information for customers with food sensitivities. These claims are supplied by the seller and aren't independently certified by TreatStory.</p><label className="block space-y-1 text-xs font-medium">Ingredients <Textarea rows={2} maxLength={1000} value={draft.ingredients} onChange={e=>set('ingredients',e.target.value)} placeholder="Flour, milk, eggs, cocoa…"/></label><div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-medium">Allergens (comma separated)<Input maxLength={300} value={draft.allergens} onChange={e=>set('allergens',e.target.value)} placeholder="Milk, eggs, wheat"/></label><label className="block space-y-1 text-xs font-medium">Dietary claims (comma separated)<Input maxLength={300} value={draft.dietaryTags} onChange={e=>set('dietaryTags',e.target.value)} placeholder="Vegetarian, eggless"/></label></div><div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-medium">Shelf life (days)<Input type="number" min={0} max={365} value={draft.shelfLifeDays} onChange={e=>set('shelfLifeDays',e.target.value)} placeholder="e.g. 2"/></label><label className="block space-y-1 text-xs font-medium">Storage instructions<Input maxLength={500} value={draft.storageInstructions} onChange={e=>set('storageInstructions',e.target.value)} placeholder="Refrigerate; consume within 2 days"/></label></div></div>
+              <label className="flex items-center gap-2 text-xs font-medium sm:col-span-2"><input type="checkbox" checked={draft.showPrice} onChange={e=>set('showPrice',e.target.checked)} />Show price publicly</label>
+            </div>
+          </details>
+        </div>
+        <div className="flex shrink-0 items-center gap-3 border-t border-[#e8e0d5] bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:justify-end sm:px-7 sm:py-4">
+          <Button type="button" variant="outline" onClick={onClose} className="h-11 flex-1 rounded-full sm:flex-none">Cancel</Button>
+          <Button type="submit" disabled={busy||uploading||!enabled} className="h-11 flex-[2] rounded-full bg-[#29251f] text-white sm:flex-none sm:px-8">{busy ? 'Saving…' : editing ? 'Save changes' : 'Create product'}</Button>
+        </div>
+      </form>
+    </div>
+  </div>;
+}

@@ -1,4 +1,8 @@
 'use client';
+import {usePagedCollection} from '@/firebase/firestore/use-paged-collection';
+import {LoadMoreRecords} from '@/components/load-more-records';
+import { requestSellerMail } from '@/lib/account-mail';
+import { errorToast } from '@/lib/user-notices';
 import { LoadError } from '@/components/loading-states';
 
 import { useState } from 'react';
@@ -15,7 +19,7 @@ export function SellerApplications() {
   const { user } = useUser();
   const { toast } = useToast();
   const applicationsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'seller_applications') : null, [firestore]);
-  const { data: applications, isLoading, error: loadError, retry: retryLoad } = useCollection<SellerApplication>(applicationsQuery);
+  const { data: applications, isLoading, error: loadError, retry: retryLoad, hasMore, loadingMore, loadMore } = usePagedCollection<SellerApplication>(applicationsQuery);
   const [durationDays, setDurationDays] = useState(30);
   const [working, setWorking] = useState<string | null>(null);
 
@@ -57,15 +61,16 @@ export function SellerApplications() {
       }
       await batch.commit();
       toast({ title: approved ? 'Seller approved' : 'Application rejected' });
-    } catch {
-      toast({ variant: 'destructive', title: 'Review failed', description: 'Please check your permissions and try again.' });
+      try{await requestSellerMail(user,'application',application.id);}catch{toast({title:'Review saved; email update delayed',description:'The application status is saved. The email update could not be queued.'});}
+    } catch(error) {
+      toast(errorToast(error,'seller-application'));
     } finally {
       setWorking(null);
     }
   }
 
   const pending = (applications || []).filter(item => item.status === 'pending');
-  if (loadError) return <LoadError retry={retryLoad} />;
+  if (loadError) return <LoadError retry={retryLoad} error={loadError} />;
 
   return (
     <section className="space-y-6">
@@ -94,6 +99,7 @@ export function SellerApplications() {
             </article>
           ))}
         </div>}
+    <LoadMoreRecords hasMore={hasMore} loadingMore={loadingMore} loadMore={loadMore}/>
     </section>
   );
 }

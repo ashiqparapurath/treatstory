@@ -1,0 +1,36 @@
+{
+  "cleanInstall": true,
+  "node": "24.22.1",
+  "next": "15.5.29",
+  "knownDependencyAdvisories": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "unitRegressionTests": {
+    "passed": 57,
+    "failed": 0
+  },
+  "typecheck": "passed",
+  "stagingProductionBuild": "passed",
+  "normalProductionBuildWithoutEmulatorConfiguration": "passed",
+  "browserSourceMapsPresent": false,
+  "auditProjectIdentifierInNormalClientBundles": false,
+  "emulatorSuites": {
+    "atomicCheckoutAndOrderLifecycle": "passed",
+    "sellerProductRules": "passed",
+    "maximumProductServerSavesAndStaleEdits": "passed",
+    "privateAccountMailOutboxAndRetry": "passed"
+  },
+  "securityChecks": 28,
+  "securityPassed": true,
+  "browserFunctionalJourneysPassed": true,
+  "registrationPassed": true,
+  "rareCatalogSearchPassed": true,
+  "productionStressOrBusinessWrites": false,
+  "realMailOrUploadProviderCalls": false,
+  "cloudProductionCapacityCertified": false
+}

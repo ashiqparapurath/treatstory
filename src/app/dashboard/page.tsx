@@ -22,7 +22,7 @@ export default function DashboardRouter() {
     <main className="section-shell py-10">
       <h1 className="text-2xl font-medium">Opening your workspace</h1>
       {roleError ? <div role="alert" className="mt-6 rounded-2xl border border-amber-200 bg-white p-5 text-sm">
-        We couldn’t verify your account access. Check the deployed Firestore rules and try refreshing. Your account role has not been changed.
+        We couldn’t verify your account access. Please refresh or contact support. Your account role has not been changed.
       </div> : <SectionSkeleton />}
     </main>
   </div>;

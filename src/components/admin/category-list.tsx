@@ -1,10 +1,13 @@
 'use client';
+import {usePagedCollection} from '@/firebase/firestore/use-paged-collection';
+import {LoadMoreRecords} from '@/components/load-more-records';
+import { errorToast } from '@/lib/user-notices';
 import { LoadError } from '@/components/loading-states';
 
 
 import { useState } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, deleteDoc } from 'firebase/firestore';
 import type { Category } from '@/lib/products';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,7 +32,6 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { CategoryDialog } from './category-dialog';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { format } from 'date-fns';
 
 export function CategoryList() {
@@ -40,7 +42,7 @@ export function CategoryList() {
     return collection(firestore, 'categories');
   }, [firestore]);
 
-  const { data: categories, isLoading, error: loadError, retry: retryLoad } = useCollection<Category>(categoriesQuery);
+  const { data: categories, isLoading, error: loadError, retry: retryLoad, hasMore, loadingMore, loadMore } = usePagedCollection<Category>(categoriesQuery);
 
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
@@ -60,13 +62,15 @@ export function CategoryList() {
   const confirmDelete = async () => {
     if (categoryToDelete && firestore) {
       const docRef = doc(firestore, 'categories', categoryToDelete.id);
-      deleteDocumentNonBlocking(docRef);
+      try {
+      await deleteDoc(docRef);
       toast({
         title: 'Category Deleted',
         description: `The category "${categoryToDelete.name}" has been removed.`,
       });
       setIsDeleteConfirmOpen(false);
       setCategoryToDelete(null);
+      } catch(error) {toast(errorToast(error,'delete'));}
     }
   };
   
@@ -82,11 +86,11 @@ export function CategoryList() {
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-12 w-full" />
-      </div>
+      <LoadMoreRecords hasMore={hasMore} loadingMore={loadingMore} loadMore={loadMore}/></div>
     );
   }
 
-  if (loadError) return <LoadError retry={retryLoad} />;
+  if (loadError) return <LoadError retry={retryLoad} error={loadError} />;
 
   return (
     <>

@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "scenario": "Rare product found beyond initial catalog page",
+  "query": "0999",
+  "elapsedMs": 2995,
+  "seededCatalogSize": 1000,
+  "conditions": "Desktop Chromium, no artificial network throttling, no VU load; supplemental test fixtures may also exist."
+}

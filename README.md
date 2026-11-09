@@ -24,3 +24,7 @@ Instagram: [@mrashiq._](https://www.instagram.com/mrashiq._)
 ---
 
 © 2026 TreatStory. All rights reserved.
+
+## Transactional email
+
+All app emails, including verification/password reset, use a signed Google Apps Script relay with 31 branded HTML/plain-text templates. Firebase generates and validates secure account links; Apps Script sends the messages from the deploying Google account. See [email setup](docs/email-setup.md) and the complete [Code.gs](apps-script/Code.gs) for deployment, environment variables and the included retry trigger. No custom email domain is required; no secrets are stored in this repository.

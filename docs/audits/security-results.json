@@ -1,0 +1,118 @@
+{
+  "passed": true,
+  "checks": 28,
+  "results": [
+    {
+      "test": "Cross-account read denied: customer_addresses",
+      "passed": true
+    },
+    {
+      "test": "Cross-account read denied: seller_orders",
+      "passed": true
+    },
+    {
+      "test": "Cross-account read denied: custom_quotes",
+      "passed": true
+    },
+    {
+      "test": "Cross-account read denied: support_tickets",
+      "passed": true
+    },
+    {
+      "test": "Cross-account read denied: mail_outbox",
+      "passed": true
+    },
+    {
+      "test": "Cross-account read denied: notifications",
+      "passed": true
+    },
+    {
+      "test": "Cross-account read denied: favorites",
+      "passed": true
+    },
+    {
+      "test": "Self-granted administrator rejected",
+      "passed": true
+    },
+    {
+      "test": "Direct fabricated order rejected",
+      "passed": true
+    },
+    {
+      "test": "Buyer cannot edit seller product",
+      "passed": true
+    },
+    {
+      "test": "Seller cannot change access grant",
+      "passed": true
+    },
+    {
+      "test": "Seller cannot edit another seller product",
+      "passed": true
+    },
+    {
+      "test": "Buyer cannot approve seller",
+      "passed": true
+    },
+    {
+      "test": "Administrator can inspect order",
+      "passed": true
+    },
+    {
+      "test": "Unauthenticated checkout rejected",
+      "passed": true
+    },
+    {
+      "test": "Forged bearer rejected",
+      "passed": true
+    },
+    {
+      "test": "Malformed authenticated checkout rejected",
+      "passed": true
+    },
+    {
+      "test": "Cross-account order mutation rejected",
+      "passed": true
+    },
+    {
+      "test": "Chunked oversized checkout rejected",
+      "passed": true
+    },
+    {
+      "test": "Browser price manipulation rejected without inventory reservation",
+      "passed": true
+    },
+    {
+      "test": "Unsupported image objects rejected by seller rules",
+      "passed": true
+    },
+    {
+      "test": "Unsafe image origins rejected by seller rules",
+      "passed": true
+    },
+    {
+      "test": "Custom quote persists authoritative seller/product names",
+      "passed": true
+    },
+    {
+      "test": "Nested document path rejected: /api/checkout",
+      "passed": true
+    },
+    {
+      "test": "Nested document path rejected: /api/quotes",
+      "passed": true
+    },
+    {
+      "test": "Nested document path rejected: /api/support",
+      "passed": true
+    },
+    {
+      "test": "Nested document path rejected: /api/reviews",
+      "passed": true
+    },
+    {
+      "test": "Nested document path rejected: /api/orders/action",
+      "passed": true
+    }
+  ]
+}

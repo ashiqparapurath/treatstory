@@ -1,5 +1,6 @@
-
 'use client';
+
+import { ActionError, getErrorNotice, errorToast } from '@/lib/user-notices';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,18 +17,21 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useAccountRole, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, doc, serverTimestamp, addDoc, updateDoc } from 'firebase/firestore';
+import { uploadTreatStoryPhoto } from '@/lib/cloudinary-upload';
 import type { Banner, Category } from '@/lib/products';
 import { useToast } from '@/hooks/use-toast';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { useState, useRef } from 'react';
+ import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { X, UploadCloud } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '../ui/skeleton';
 
-const MAX_FILE_SIZE = 1024 * 1024; // 1 MB
+const MAX_FILE_SIZE = 1_000_000; // Under 1 MB. Images live on Cloudinary, not inside Firestore.
+const ACCEPTED_TYPES = new Set(['image/jpeg', 'image/png']);
+
+function bannerSaveError(error: unknown): string { return getErrorNotice(error,'upload-photo').description; }
 
 const formSchema = z.object({
   title: z.string().min(2, 'Title must be at least 2 characters.'),
@@ -35,7 +39,7 @@ const formSchema = z.object({
   buttonText: z.string().min(2, 'Button text must be at least 2 characters.'),
   buttonLink: z.string().min(1, 'Please select a category link.'),
   imageUrl: z.string().min(1, "An image is required."),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean(),
 });
 
 type BannerFormValues = z.infer<typeof formSchema>;
@@ -47,12 +51,20 @@ interface BannerFormProps {
 
 export function BannerForm({ banner, onFinished }: BannerFormProps) {
   const firestore = useFirestore();
+  const { role, isRoleLoading } = useAccountRole();
   const { toast } = useToast();
   const { user } = useUser();
   const isEditMode = !!banner;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(banner?.imageUrl || null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const temporaryPreview = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => () => { if (temporaryPreview.current) URL.revokeObjectURL(temporaryPreview.current); }, []);
+  const discardTemporaryPreview = () => {
+    if (temporaryPreview.current) URL.revokeObjectURL(temporaryPreview.current);
+    temporaryPreview.current = null;
+  };
 
   const categoriesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -76,73 +88,71 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) return;
-
+    if (!ACCEPTED_TYPES.has(file.type)) {
+      form.setError('imageUrl', { type: 'manual', message: 'Choose a JPG or PNG image.' });
+      return;
+    }
     if (file.size > MAX_FILE_SIZE) {
-      form.setError("imageUrl", { type: "manual", message: `File is too large (max 1MB).` });
+      form.setError('imageUrl', { type: 'manual', message: 'Image exceeds 1 MB. Compress it before uploading.' });
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      setImagePreview(result);
-      form.setValue('imageUrl', result, { shouldValidate: true });
-    };
-    reader.readAsDataURL(file);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    discardTemporaryPreview();
+    const url = URL.createObjectURL(file);
+    temporaryPreview.current = url;
+    setSelectedFile(file);
+    setImagePreview(url);
+    form.clearErrors('imageUrl');
+    // Form requires an image, but the file itself is uploaded only on Save.
+    // Only the resulting Cloudinary HTTPS URL is saved in Firestore.
+    form.setValue('imageUrl', 'pending-upload', { shouldValidate: true, shouldDirty: true });
   };
 
   const removeImage = () => {
+    discardTemporaryPreview();
+    setSelectedFile(null);
     setImagePreview(null);
-    form.setValue('imageUrl', '', { shouldValidate: true });
-  }
+    form.setValue('imageUrl', '', { shouldValidate: true, shouldDirty: true });
+  };
 
   const onSubmit = async (data: BannerFormValues) => {
-    if (!firestore || !user) {
+    if (!firestore || !user || role !== 'admin') {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'You must be logged in to manage banners.',
+        title: 'Administrator access required',
+        description: 'Sign in as an administrator with a roles_admin document to manage homepage banners.',
       });
       return;
     }
-
+    if (isSubmitting) return;
     setIsSubmitting(true);
 
     try {
-      const bannerData = {
-        ...data,
-      };
+      let url = data.imageUrl;
+      if (selectedFile) url = await uploadTreatStoryPhoto(user, selectedFile, 'banner');
+      if (!url || url === 'pending-upload') throw new ActionError('Choose a banner image before saving.',400);
 
+      const bannerData = {
+        title: data.title.trim(),
+        subtitle: data.subtitle.trim(),
+        buttonText: data.buttonText.trim(),
+        buttonLink: data.buttonLink,
+        imageUrl: url,
+        isActive: data.isActive,
+      };
       if (isEditMode && banner) {
-        const docRef = doc(firestore, 'banners', banner.id);
-        const updatedData = { ...bannerData, updatedAt: serverTimestamp() };
-        updateDocumentNonBlocking(docRef, updatedData);
-        toast({
-          title: 'Banner Updated',
-          description: `The banner "${data.title}" has been successfully updated.`,
-        });
+        await updateDoc(doc(firestore, 'banners', banner.id), { ...bannerData, updatedAt: serverTimestamp() });
       } else {
-        const collectionRef = collection(firestore, 'banners');
-        const newData = { ...bannerData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
-        addDocumentNonBlocking(collectionRef, newData);
-        toast({
-          title: 'Banner Added',
-          description: `The banner "${data.title}" has been successfully added.`,
-        });
+        await addDoc(collection(firestore, 'banners'), { ...bannerData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
       }
+
+      toast({ title: isEditMode ? 'Banner updated' : 'Banner added', description: `"${data.title}" is saved and ready.` });
       onFinished();
-    } catch (error: any) {
-      console.error("Banner form submission error:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Failed to save banner',
-        description: error.message || 'An unexpected error occurred.',
-      });
+    } catch (error: unknown) {
+      console.error('Banner save failed', { code: (error as { code?: string })?.code, error });
+      toast(errorToast(error, 'save'));
     } finally {
       setIsSubmitting(false);
     }
@@ -169,7 +179,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
                           <span className="font-semibold">Click to upload</span>
                         </p>
                         <p className="text-xs text-muted-foreground">Recommended: 1280x720px (16:9)</p>
-                        <p className="text-xs text-muted-foreground">PNG, JPG (MAX 1MB)</p>
+                        <p className="text-xs text-muted-foreground">PNG, JPG (under 1 MB).</p>
                         <Input 
                           type="file" 
                           accept="image/png, image/jpeg" 
@@ -182,7 +192,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
                       </div>
                    ) : (
                       <div className="relative w-full aspect-video rounded-md overflow-hidden border">
-                        <Image src={imagePreview} alt="Banner preview" fill objectFit="cover" />
+                        <Image src={imagePreview} alt="Banner preview" fill unoptimized className="object-cover" />
                         <Button 
                           type="button" 
                           variant="destructive" 
@@ -289,8 +299,8 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
           />
         </div>
         
-        <Button type="submit" disabled={isSubmitting || !form.formState.isValid} className="w-full">
-          {isSubmitting ? 'Saving...' : 'Save Banner'}
+        <Button type="submit" disabled={isSubmitting || isRoleLoading || role !== 'admin' || !form.formState.isValid} className="w-full">
+          {isSubmitting ? 'Uploading and saving…' : 'Save Banner'}
         </Button>
       </form>
     </Form>

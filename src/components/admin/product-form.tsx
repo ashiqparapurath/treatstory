@@ -1,5 +1,6 @@
-
 'use client';
+
+import { getErrorNotice, errorToast } from '@/lib/user-notices';
 
 import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
@@ -25,26 +26,26 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useAccountRole } from '@/firebase';
+import { collection, doc, serverTimestamp, addDoc, updateDoc } from 'firebase/firestore';
 import type { Product } from '@/lib/products';
 import { useToast } from '@/hooks/use-toast';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { uploadTreatStoryPhoto } from '@/lib/cloudinary-upload';
 import { useUser } from '@/firebase';
 import { X, UploadCloud, PlusCircle } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { CategoryDialog } from './category-dialog';
 
-const MAX_FILE_SIZE = 1024 * 1024; // 1 MB
+const MAX_FILE_SIZE = 2_000_000; // 2 MB
 const MAX_IMAGES = 5;
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
   description: z.string().min(10, 'Description must be at least 10 characters.'),
-  price: z.coerce.number().positive('Price must be a positive number.'),
+  price: z.coerce.number<number>().positive('Price must be a positive number.'),
   category: z.string().min(1, 'Please select a category.'),
   imageUrls: z.array(z.string()).min(1, "At least one image is required.").max(MAX_IMAGES, `You can upload a maximum of ${MAX_IMAGES} images.`),
-  showPrice: z.boolean().default(true),
+  showPrice: z.boolean(),
 });
 
 
@@ -65,7 +66,9 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
   const { toast } = useToast();
   const isEditMode = !!product;
   const { user } = useUser();
+  const { role } = useAccountRole();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>(product?.imageUrls || []);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
@@ -90,40 +93,36 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
     mode: 'onChange',
   });
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files) return;
-
-    const currentImageCount = imagePreviews.length;
-    if (currentImageCount + files.length > MAX_IMAGES) {
-      form.setError("imageUrls", { type: "manual", message: `You can only upload a total of ${MAX_IMAGES} images.`});
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    if (!files.length) return;
+    if (!user || role !== 'admin') {
+      form.setError('imageUrls', { type: 'manual', message: 'Only administrators can upload product photos.' });
       return;
     }
-
-    const newPreviews: string[] = [];
-    const newImageUrls = form.getValues('imageUrls') || [];
-    
-    Array.from(files).forEach(file => {
-      if (file.size > MAX_FILE_SIZE) {
-        form.setError("imageUrls", { type: "manual", message: `File "${file.name}" is too large (max 1MB).` });
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        newPreviews.push(result);
-        newImageUrls.push(result);
-        if (newPreviews.length === files.length) {
-            setImagePreviews(prev => [...prev, ...newPreviews]);
-            form.setValue('imageUrls', newImageUrls, { shouldValidate: true });
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-
-    if(fileInputRef.current) {
-        fileInputRef.current.value = "";
+    const existing = form.getValues('imageUrls') || [];
+    if (existing.length + files.length > MAX_IMAGES) {
+      form.setError('imageUrls', { type: 'manual', message: `You can upload at most ${MAX_IMAGES} photos.` });
+      return;
     }
+    if (files.some(f => !['image/jpeg', 'image/png', 'image/webp'].includes(f.type) || f.size > MAX_FILE_SIZE || !f.size)) {
+      form.setError('imageUrls', { type: 'manual', message: 'Choose JPG, PNG or WebP images under 2 MB each.' });
+      return;
+    }
+    setUploading(true);
+    try {
+      const urls = [...existing];
+      for (const file of files) {
+        urls.push(await uploadTreatStoryPhoto(user, file, 'product'));
+        setImagePreviews([...urls]);
+        form.setValue('imageUrls', [...urls], { shouldValidate: true, shouldDirty: true });
+      }
+      form.clearErrors('imageUrls');
+      toast({ title: 'Product photos uploaded', description: 'Save the product to display them to buyers.' });
+    } catch (error) {
+      form.setError('imageUrls', { type: 'manual', message: getErrorNotice(error,'upload-photo').description });
+    } finally { setUploading(false); }
   };
 
   const removeImage = (index: number) => {
@@ -137,13 +136,13 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
     if (!firestore) {
       toast({
         variant: 'destructive',
-        title: 'Firestore Error',
-        description: 'Firestore is not available. Please try again later.',
+        title: 'Unable to save',
+        description: 'Saving is temporarily unavailable. Please try again later.',
       });
       return;
     }
 
-    if (!user) {
+    if (!user || role !== 'admin') {
         toast({
             variant: "destructive",
             title: "Authentication Error",
@@ -152,6 +151,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
         return;
     }
 
+    if (uploading || isSubmitting) return;
     setIsSubmitting(true);
 
     try {
@@ -167,11 +167,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
         await saveProduct(data);
     } catch (error: any) {
         console.error("Product form submission error:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Failed to save product',
-            description: error.message || 'An unexpected error occurred.',
-        });
+        toast(errorToast(error, 'save-product'));
         setIsSubmitting(false);
     }
   };
@@ -193,7 +189,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
     if (isEditMode && product) {
       const docRef = doc(firestore, 'products', product.id);
       const updatedData = { ...productData, updatedAt: serverTimestamp() };
-      updateDocumentNonBlocking(docRef, updatedData);
+      await updateDoc(docRef, updatedData);
       toast({
         title: 'Product Updated',
         description: `${data.name} has been successfully updated.`,
@@ -201,7 +197,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
     } else {
       const collectionRef = collection(firestore, 'products');
       const newData = { ...productData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
-      addDocumentNonBlocking(collectionRef, newData);
+      await addDoc(collectionRef, newData);
       toast({
         title: 'Product Added',
         description: `${data.name} has been successfully added.`,
@@ -230,23 +226,23 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
                         >
                             <UploadCloud className="w-10 h-10 text-muted-foreground mb-2" />
                             <p className="text-sm text-muted-foreground">
-                                <span className="font-semibold">Click to upload</span> or drag and drop
+                                <span className="font-semibold">Click to upload</span>
                             </p>
-                            <p className="text-xs text-muted-foreground">PNG, JPG (MAX 1MB each)</p>
+                            <p className="text-xs text-muted-foreground">JPG, PNG or WebP · max 2 MB</p>
                             <Input
                                 type="file"
-                                accept="image/png, image/jpeg"
+                                accept="image/png, image/jpeg, image/webp"
                                 multiple
                                 onChange={handleImageChange}
                                 ref={fileInputRef}
                                 className="sr-only"
                                 id={field.name}
-                                disabled={isSubmitting || imagePreviews.length >= MAX_IMAGES}
+                                disabled={isSubmitting || uploading || imagePreviews.length >= MAX_IMAGES}
                             />
                         </div>
                     </FormControl>
                     <FormDescription>
-                      You can upload between 1 and {MAX_IMAGES} images.
+                      You can upload between 1 and {MAX_IMAGES} images. Your uploaded images are saved securely.
                     </FormDescription>
                     
                     {imagePreviews.length > 0 && (
@@ -260,7 +256,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
                               size="icon" 
                               className="absolute top-1 right-1 h-6 w-6"
                               onClick={() => removeImage(index)}
-                              disabled={isSubmitting}
+                              disabled={isSubmitting || uploading}
                             >
                               <X className="h-4 w-4"/>
                             </Button>
@@ -279,7 +275,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Product Name" {...field} disabled={isSubmitting} />
+                      <Input placeholder="Product Name" {...field} disabled={isSubmitting || uploading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -293,7 +289,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
                       <FormItem>
                         <FormLabel>Price</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="99.99" {...field} disabled={isSubmitting} />
+                          <Input type="number" placeholder="99.99" {...field} disabled={isSubmitting || uploading} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -309,7 +305,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
                           <Skeleton className="h-10 w-full" />
                         ) : (
                           <div className="flex gap-2">
-                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting || uploading}>
                               <FormControl>
                                 <SelectTrigger id={field.name}>
                                   <SelectValue placeholder="Select a category" />
@@ -344,7 +340,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Product description..." {...field} disabled={isSubmitting} rows={5} />
+                      <Textarea placeholder="Product description..." {...field} disabled={isSubmitting || uploading} rows={5} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -363,7 +359,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
                       <Switch
                         checked={field.value}
                         onCheckedChange={field.onChange}
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || uploading}
                       />
                     </FormControl>
                   </FormItem>
@@ -372,7 +368,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
           </div>
           
           <Button type="submit" disabled={isSubmitting || !form.formState.isValid} className="w-full">
-            {isSubmitting ? 'Saving...' : 'Save Product'}
+            {isSubmitting ? 'Saving…' : uploading ? 'Uploading…' : 'Save Product'}
           </Button>
         </form>
       </Form>

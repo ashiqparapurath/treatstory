@@ -1,4 +1,8 @@
 'use client';
+import {usePagedCollection} from '@/firebase/firestore/use-paged-collection';
+import {LoadMoreRecords} from '@/components/load-more-records';
+import { errorToast, getErrorNotice, ActionError } from '@/lib/user-notices';
+import { ConfirmActionDialog } from '@/components/confirm-action-dialog';
 import { Suspense } from 'react';
 import { DashboardShellSkeleton, SectionSkeleton } from '@/components/loading-states';
 
@@ -15,12 +19,24 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { MarketplaceProduct, SellerApplication } from '@/lib/marketplace-types';
-import { LayoutDashboard, Package, Settings, ShoppingBag, Plus, ArrowUpRight, Clock3, Store, Trash2, Pencil, X, CheckCircle2, AlertCircle, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, Settings, ShoppingBag, Plus, ArrowUpRight, Clock3, Store, Trash2, Pencil, CheckCircle2, AlertCircle, LogOut } from 'lucide-react';
+import { SellerProductEditor, emptyDraft, type ProductDraft } from '@/components/seller-product-editor';
+import { uploadTreatStoryPhoto } from '@/lib/cloudinary-upload';
 
 type Section = 'overview' | 'products' | 'orders' | 'store';
-type ProductDraft = { name: string; description: string; price: string; category: string; imageUrls: string; availability: MarketplaceProduct['availability']; stockQuantity: string; preparationDays: string; minimumOrderQuantity: string; weightValue: string; weightUnit: NonNullable<MarketplaceProduct['weightUnit']>; customizationOptions: string; careInstructions: string; showPrice: boolean; status: 'draft' | 'published' };
-const emptyDraft: ProductDraft = { name: '', description: '', price: '', category: '', imageUrls: '', availability: 'available', stockQuantity: '', preparationDays: '', minimumOrderQuantity: '1', weightValue: '', weightUnit: 'g', customizationOptions: '', careInstructions: '', showPrice: true, status: 'draft' };
 const dateText = (value: unknown) => { const d = (value as { toDate?: () => Date } | null)?.toDate?.(); return d ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not set'; };
+const priceRange = (product: MarketplaceProduct) => {
+  const prices = product.weightOptions?.length
+    ? product.weightOptions.map(option => option.price ?? product.price)
+    : [product.price];
+  const low = Math.min(...prices);
+  const high = Math.max(...prices);
+  const rupees = (amount: number) => '₹' + amount.toLocaleString('en-IN');
+  return high > low ? rupees(low) + ' – ' + rupees(high) : rupees(low);
+};
+const sizePriceLabels = (product: MarketplaceProduct) =>
+  (product.weightOptions ?? []).map(option => `${option.value} ${option.unit}: ₹${(option.price ?? product.price).toLocaleString('en-IN')}`).join(' · ');
+
 
 function SellerContent() {
   const { user, isUserLoading } = useUser();
@@ -41,14 +57,26 @@ function SellerContent() {
   const setSection = (next: Section) => router.push(`/seller/dashboard?section=${next}`, { scroll: false });
   const [editing, setEditing] = useState<MarketplaceProduct | null>(null);
   const [draft, setDraft] = useState<ProductDraft>(emptyDraft);
+  const [pendingDelete,setPendingDelete] = useState<MarketplaceProduct|null>(null);
+  const [deleteError,setDeleteError] = useState('');
+  const [saveError, setSaveError] = useState('');
   const [formOpen, setFormOpen] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState('');
-  const [storeDraft, setStoreDraft] = useState({ description: '', contactPhone: '', isOpen: true });
+  const [storeDraft, setStoreDraft] = useState({ description: '', contactPhone: '', whatsappNumber: '', isOpen: true,
+    deliveryMethods: ['delivery'] as Array<'delivery'|'pickup'>, deliveryPincodes: '', deliveryFee: '0',
+    pickupAddress: '', deliverySlots: '', dailyOrderCapacity: '0', acceptanceHours: '24' });
 
   useEffect(() => { if (!isUserLoading && !user) router.replace('/login'); }, [isUserLoading, user, router]);
   useEffect(() => {
-    if (seller) setStoreDraft({ description: seller.description, contactPhone: seller.contactPhone, isOpen: seller.isOpen });
+    if (seller) setStoreDraft({ description: seller.description, contactPhone: seller.contactPhone,
+      whatsappNumber: seller.whatsappNumber || '', isOpen: seller.isOpen,
+      deliveryMethods: seller.deliveryMethods?.length ? seller.deliveryMethods : ['delivery'],
+      deliveryPincodes: (seller.deliveryPincodes || []).join('\\n'), deliveryFee: String(seller.deliveryFee ?? 0),
+      pickupAddress: seller.pickupAddress || '', deliverySlots: (seller.deliverySlots || []).join('\\n'),
+      dailyOrderCapacity: String(seller.dailyOrderCapacity ?? 0), acceptanceHours: String(seller.acceptanceHours ?? 24) });
   }, [seller]);
 
   // Overview uses aggregation queries; the full catalog is only downloaded when editing products.
@@ -91,12 +119,13 @@ function SellerContent() {
   }, [db, user?.uid, seller?.id, section, countVersion]);
 
   const productsQuery = useMemoFirebase(() => db && user && seller && section === 'products' ? query(collection(db, 'marketplace_products'), where('sellerId', '==', user.uid)) : null, [db, user?.uid, seller?.id, section]);
-  const { data: products, isLoading: productsLoading } = useCollection<MarketplaceProduct & { status?: string }>(productsQuery);
+  const { data: products, isLoading: productsLoading, hasMore, loadingMore, loadMore } = usePagedCollection<MarketplaceProduct & { status?: string }>(productsQuery);
   const active = !!seller && seller.status === 'active' && ((seller.accessEndsAt as { toMillis?: () => number } | null)?.toMillis?.() ?? 0) > Date.now();
   const visible = useMemo(() => (products ?? []).filter(p => (p.name + ' ' + p.category).toLowerCase().includes(search.toLowerCase())), [products, search]);
 
   function openForm(product?: MarketplaceProduct & { status?: string }) {
     setEditing(product ?? null);
+    setUploadProgress('');
     setDraft(product ? {
       name: product.name, description: product.description, price: String(product.price), category: product.category,
       imageUrls: product.imageUrls.join('\n'), availability: product.availability,
@@ -106,17 +135,61 @@ function SellerContent() {
       weightValue: product.weightValue == null ? '' : String(product.weightValue),
       weightUnit: product.weightUnit || 'g',
       customizationOptions: (product.customizationOptions ?? []).join('\n'),
+      advancePaymentRequired: product.advancePaymentRequired === true,
       careInstructions: product.careInstructions ?? '',
+      ingredients: product.ingredients ?? '', allergens: (product.allergens??[]).join(', '),
+      dietaryTags: (product.dietaryTags??[]).join(', '), shelfLifeDays: product.shelfLifeDays == null ? '' : String(product.shelfLifeDays),
+      storageInstructions: product.storageInstructions ?? '',
+      weightOptions: (product.weightOptions?.length ? product.weightOptions : product.weightValue && product.weightUnit ? [{ value: product.weightValue, unit: product.weightUnit }] : []).map(w => ({ value: String(w.value), unit: w.unit, price: 'price' in w && typeof w.price === 'number' ? String(w.price) : String(product.price), stockQuantity: 'stockQuantity' in w && typeof w.stockQuantity === 'number' ? String(w.stockQuantity) : '' })),
       showPrice: product.showPrice, status: product.status === 'published' ? 'published' : 'draft'
     } : emptyDraft);
+    setSaveError('');
     setFormOpen(true);
+  }
+
+  async function uploadProductPhotos(files: File[]) {
+    if (!user || !active || uploadingPhotos || busy || !files.length) return;
+    const currentCount = draft.imageUrls.split(/\r?\n|,/).filter(x => x.trim()).length;
+    if (currentCount + files.length > 10) {
+      toast({ variant: 'destructive', title: 'Maximum 10 photos', description: 'Remove some photos before adding more.' });
+      return;
+    }
+    for (const file of files) {
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 2_000_000 || file.size === 0) {
+        toast({ variant: 'destructive', title: 'Unsupported photo', description: 'Select JPG, PNG or WebP images under 2 MB each.' });
+        return;
+      }
+    }
+    setUploadingPhotos(true);
+    let uploaded=0;
+    try {
+      for (const [index, file] of files.entries()) {
+        setUploadProgress(`Uploading photo ${index + 1} of ${files.length}…`);
+        const url = await uploadTreatStoryPhoto(user, file, 'product');
+        uploaded++;
+        setDraft(previous => ({
+          ...previous,
+          imageUrls: [...previous.imageUrls.split(/\r?\n|,/).map(v => v.trim()).filter(Boolean), url].join('\n'),
+        }));
+      }
+      setUploadProgress(`${files.length} photo(s) uploaded`);
+      toast({ title: 'Photos uploaded', description: 'Save the product to publish these images.' });
+    } catch (error) {
+      setUploadProgress('');
+      const notice=errorToast(error,'upload-photo');
+      toast({...notice,...(uploaded?{title:`${uploaded} of ${files.length} photos uploaded`,description:`Uploaded photos are kept in your draft. ${notice.description}`}:{})});
+    } finally { setUploadingPhotos(false); }
   }
 
   async function saveProduct(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!db || !user || !active || busy) return;
-    const price = Number(draft.price);
-    if (!Number.isFinite(price) || price < 0) return toast({ variant: 'destructive', title: 'Enter a valid price' });
+    if (!db || !user || !active || busy || uploadingPhotos) return;
+    // Size-specific prices are stored on the same listing. Its base price
+    // is the lowest effective variant price for catalog previews.
+    const baseEntered = draft.price.trim() !== '';
+    const basePrice = baseEntered ? Number(draft.price) : null;
+    if (baseEntered && (!Number.isFinite(basePrice) || basePrice! < 0 || basePrice! > 10000000))
+      return toast({ variant: 'destructive', title: 'Enter a valid base price' });
     const imageUrls = draft.imageUrls.split(/\n|,/).map(v => v.trim()).filter(Boolean);
     if (imageUrls.some(url => !/^https:\/\//i.test(url))) return toast({ variant: 'destructive', title: 'Image links must use HTTPS' });
     if (imageUrls.length > 10) return toast({ variant: 'destructive', title: 'Add up to 10 product photos' });
@@ -124,46 +197,105 @@ function SellerContent() {
     if (options.length > 6 || options.some(x => x.length > 80)) return toast({ variant: 'destructive', title: 'Add up to 6 short personalization prompts (80 characters each)' });
     const minQty = Number(draft.minimumOrderQuantity);
     if (!Number.isInteger(minQty) || minQty < 1 || minQty > 99) return toast({ variant: 'destructive', title: 'Minimum order quantity must be 1–99' });
-    const weight = draft.weightValue.trim() ? Number(draft.weightValue) : null;
-    if (weight !== null && (!Number.isFinite(weight) || weight <= 0 || weight > 100000)) return toast({ variant: 'destructive', title: 'Enter a valid optional weight / quantity' });
+    const weights = draft.weightOptions.map(w => ({ value: Number(w.value), unit: w.unit,
+      ...(w.price.trim() !== '' ? { price: Number(w.price) } : {}),
+      ...(w.stockQuantity.trim() !== '' ? { stockQuantity: Number(w.stockQuantity) } : {}) }));
+    if (weights.length > 8 || weights.some(w => !Number.isFinite(w.value) || w.value <= 0 || w.value > 100000 || !['g','kg','ml','l','pieces'].includes(w.unit) ||
+      ('price' in w && (!Number.isFinite(w.price) || (w.price ?? -1) < 0 || (w.price ?? 10000001) > 10000000)) ||
+      ('stockQuantity' in w && (!Number.isInteger(w.stockQuantity) || (w.stockQuantity ?? -1) < 0 || (w.stockQuantity ?? 1000001) > 1000000))))
+      return toast({ variant: 'destructive', title: 'Check size options, prices and stock (maximum 8 sizes)' });
+    if (new Set(weights.map(w => `${w.value}:${w.unit}`)).size !== weights.length)
+      return toast({ variant: 'destructive', title: 'Duplicate sizes', description: 'Each weight and unit combination must be unique.' });
+    if (weights.length && weights.some(w => w.price === undefined))
+      return toast({ variant: 'destructive', title: 'Price required for every size', description: 'Enter an individual selling price for each weight or unit.' });
+    if (!weights.length && basePrice === null)
+      return toast({ variant: 'destructive', title: 'Enter a selling price' });
+    const price = weights.length
+      ? Math.min(...weights.map(w => w.price!))
+      : basePrice!;
+    const sharedStock = draft.stockQuantity.trim() === '' ? 0 : Number(draft.stockQuantity);
+    if (!Number.isInteger(sharedStock) || sharedStock < 0 || sharedStock > 1000000)
+      return toast({ variant: 'destructive', title: 'Stock must be a whole number between 0 and 1,000,000' });
+    if (draft.availability === 'available' && weights.length > 0 &&
+        weights.some(w => w.stockQuantity === undefined) && sharedStock === 0)
+      return toast({ variant: 'destructive', title: 'Set the stock for each size', description: 'Enter size-specific stock, or a shared stock quantity. Made-to-order items do not need stock.' });
+    if (draft.category.trim().length < 2) return toast({ variant: 'destructive', title: 'Enter a product category' });
+    const allergens = draft.allergens.split(',').map(s=>s.trim()).filter(Boolean);
+    const dietaryTags = draft.dietaryTags.split(',').map(s=>s.trim()).filter(Boolean);
+    const shelfLifeDays = draft.shelfLifeDays.trim()==='' ? null : Number(draft.shelfLifeDays);
+    if (allergens.length>12 || dietaryTags.length>12 || [...allergens,...dietaryTags].some(s=>s.length>40) ||
+      draft.ingredients.length>1000 || draft.storageInstructions.length>500 ||
+      (shelfLifeDays!==null && (!Number.isInteger(shelfLifeDays)||shelfLifeDays<0||shelfLifeDays>365))) {
+      return toast({variant:'destructive',title:'Check food information',description:'Use up to 12 allergen/dietary labels, and a shelf life between 0 and 365 days.'});
+    }
+
+    const preparationDays = draft.preparationDays.trim() === '' ? 0 : Number(draft.preparationDays);
+    if (!Number.isInteger(preparationDays) || preparationDays < 0 || preparationDays > 365)
+      return toast({ variant: 'destructive', title: 'Preparation days must be a whole number between 0 and 365' });
+    setSaveError('');
     setBusy(true);
     try {
       const data = {
         sellerId: user.uid, name: draft.name.trim(), description: draft.description.trim(), category: draft.category.trim(),
         price, imageUrls, showPrice: draft.showPrice, availability: draft.availability,
-        stockQuantity: draft.stockQuantity ? Number(draft.stockQuantity) : 0,
-        preparationDays: draft.preparationDays ? Number(draft.preparationDays) : 0,
+        stockQuantity: sharedStock,
+        preparationDays,
         minimumOrderQuantity: minQty,
         customizationOptions: options,
+        advancePaymentRequired: draft.advancePaymentRequired,
         careInstructions: draft.careInstructions.trim(),
-        ...(weight !== null ? { weightValue: weight, weightUnit: draft.weightUnit } : editing ? { weightValue: deleteField(), weightUnit: deleteField() } : {}),
-        status: draft.status, updatedAt: serverTimestamp()
+        ingredients: draft.ingredients.trim(), allergens, dietaryTags,
+        ...(shelfLifeDays!==null ? {shelfLifeDays} : {}),
+        storageInstructions: draft.storageInstructions.trim(),
+        weightOptions: weights,
+
+        status: draft.status
       };
-      if (editing) await updateDoc(doc(db, 'marketplace_products', editing.id), data);
-      else await addDoc(collection(db, 'marketplace_products'), { ...data, createdAt: serverTimestamp() });
+      const token=await user.getIdToken();
+      const response=await fetch('/api/seller/products',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({product:data,...(editing?{productId:editing.id,expectedUpdatedAt:(editing.updatedAt as {toMillis?:()=>number}|undefined)?.toMillis?.()}:{})})});
+      const result=await response.json();if(!response.ok)throw new ActionError(result.error||'Could not save product.',response.status);
       setCountVersion(v => v + 1);
-      toast({ title: editing ? 'Product updated' : 'Product created' });
+      toast({title:draft.status==='draft'?'Product draft saved':editing?'Product updated':'Product published',description:draft.status==='draft'?'Your draft is saved. Publish it when you are ready to show buyers.':`${draft.name.trim()} is saved and visible on its product page.`});
       setFormOpen(false);
-    } catch { toast({ variant: 'destructive', title: 'Could not save product', description: 'Check your account access and field values.' }); }
+    } catch (error) {
+      const code = (error as {code?: string})?.code || 'unknown';
+      console.error('TreatStory product save failed', { code, operation: editing ? 'update' : 'create', sizes: weights.length, allergens: allergens.length, dietaryLabels: dietaryTags.length });
+      const notice=errorToast(error,'save-product');
+      setSaveError(`${notice.title}. ${notice.description}`);toast(notice);
+    }
     finally { setBusy(false); }
   }
 
   async function removeProduct(product: MarketplaceProduct) {
-    if (!db || !active || busy || !window.confirm('Delete this product permanently?')) return;
+    if (!db || !active || busy) return;
     setBusy(true);
-    try { await deleteDoc(doc(db, 'marketplace_products', product.id)); setCountVersion(v => v + 1); toast({ title: 'Product deleted' }); }
-    catch { toast({ variant: 'destructive', title: 'Could not delete product' }); }
+    try { await deleteDoc(doc(db, 'marketplace_products', product.id)); setCountVersion(v => v + 1); setPendingDelete(null);toast({title:'Product deleted',description:`${product.name} has been removed from your shop.`}); }
+    catch(error) {const notice=errorToast(error,'delete-product');setDeleteError(notice.description);toast(notice);}
     finally { setBusy(false); }
   }
 
   async function saveStore(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!db || !user || !active || busy) return;
+    const digits = storeDraft.whatsappNumber.replace(/[^0-9]/g, '');
+    if (digits && (digits.length < 8 || digits.length > 15)) { toast({ variant: 'destructive', title: 'Enter a valid WhatsApp number with country code' }); return; }
+    const codes = storeDraft.deliveryPincodes.split(/[\s,]+/).map(v=>v.trim()).filter(Boolean);
+    const slots = storeDraft.deliverySlots.split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
+    const deliveryFee = Number(storeDraft.deliveryFee), capacity = Number(storeDraft.dailyOrderCapacity), acceptanceHours = Number(storeDraft.acceptanceHours);
+    if (codes.length>10 || codes.some(v=>!/^\d{6}$/.test(v))) return toast({variant:'destructive',title:'Enter up to 10 valid six-digit PIN codes'});
+    if (slots.length>6 || slots.some(v=>v.length>60)) return toast({variant:'destructive',title:'Enter up to 6 short delivery slots'});
+    if (!storeDraft.deliveryMethods.length) return toast({variant:'destructive',title:'Enable pickup or delivery'});
+    if (!Number.isFinite(deliveryFee) || deliveryFee<0 || deliveryFee>5000 || !Number.isInteger(capacity) || capacity<0 || capacity>100 || !Number.isInteger(acceptanceHours) || acceptanceHours<1 || acceptanceHours>72) return toast({variant:'destructive',title:'Check delivery charge, daily capacity and reply deadline'});
     setBusy(true);
     try {
-      await updateDoc(doc(db, 'sellers', user.uid), { ...storeDraft, updatedAt: serverTimestamp() });
+      await updateDoc(doc(db, 'sellers', user.uid), {
+        description: storeDraft.description, contactPhone: storeDraft.contactPhone, whatsappNumber: digits,
+        isOpen: storeDraft.isOpen, deliveryMethods: storeDraft.deliveryMethods,
+        deliveryPincodes: codes, deliveryFee, pickupAddress: storeDraft.pickupAddress,
+        deliverySlots: slots, dailyOrderCapacity: capacity, acceptanceHours, updatedAt: serverTimestamp(),
+      });
       toast({ title: 'Store settings saved' });
-    } catch { toast({ variant: 'destructive', title: 'Could not save store settings' }); }
+    } catch(error) {toast(errorToast(error,'save-store'));}
     finally { setBusy(false); }
   }
 
@@ -175,13 +307,13 @@ function SellerContent() {
   ];
 
   if (isUserLoading || isRoleLoading || (!seller && applicationLoading)) return <div className="min-h-screen bg-[#f7f5f1]"><Header /><DashboardShellSkeleton title="Seller studio" /></div>;
-  if (roleError) return <div className="min-h-screen bg-[#f7f5f1]"><Header /><main className="section-shell py-10"><h1 className="text-xl font-semibold">Unable to verify seller access</h1><p className="mt-3 text-sm text-muted-foreground">Check your connection and deployed Firestore rules. No access changes were made.</p></main></div>;
+  if (roleError) return <div className="min-h-screen bg-[#f7f5f1]"><Header /><main className="section-shell py-10"><h1 className="text-xl font-semibold">Unable to verify seller access</h1><p className="mt-3 text-sm text-muted-foreground">Check your connection and try again. No access changes were made.</p></main></div>;
   if (!seller) return <div className="min-h-screen bg-[#f7f5f1]"><Header /><main className="section-shell mx-auto max-w-2xl py-20"><p className="eyebrow text-[#a68a64]">TreatStory for creators</p><h1 className="mt-4 text-4xl font-medium">Your seller journey starts here.</h1><p className="mt-5 text-muted-foreground">{application ? `Your application is ${application.status}. Your workspace becomes available once approved.` : 'Apply to become a seller to access your workspace.'}</p><Link href="/become-a-seller" className="editorial-button mt-8">Seller application <ArrowUpRight className="ml-2 h-4 w-4" /></Link></main></div>;
 
   return <div className="min-h-screen bg-[#f7f5f1]"><Header />
-    <div className="section-shell grid min-w-0 gap-4 py-4 sm:gap-6 sm:py-7 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-8 lg:py-10">
+    <div className="section-shell seller-workspace grid min-w-0 w-full gap-4 py-4 sm:gap-6 sm:py-7 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-8 lg:py-10">
       <aside className="min-w-0 space-y-3 lg:space-y-6">
-        <div className="rounded-2xl bg-[#29251f] p-5 text-white sm:p-6 lg:rounded-3xl"><p className="text-[10px] uppercase tracking-[0.2em] text-[#c9ae85]">Seller studio</p><h2 className="mt-2 break-words text-xl font-medium sm:text-2xl">{seller.businessName}</h2><p className="mt-3 inline-flex items-center gap-2 text-xs text-white/70"><span className={`h-2 w-2 rounded-full ${active ? 'bg-emerald-400' : 'bg-amber-400'}`} />{active ? 'Store access active' : 'Access restricted'}</p></div>
+        <div className="rounded-2xl bg-[#29251f] p-5 text-white sm:p-6 lg:rounded-3xl"><p className="text-[10px] uppercase tracking-[0.2em] text-[#c9ae85]">Seller studio</p><h2 className="mt-2 break-words text-xl font-medium sm:text-2xl">{seller.businessName}</h2><p className="mt-2 text-xs text-[#d2b58b] capitalize">{seller.accessType === 'trial' ? 'Trial access' : 'Permanent / full access'} · Until {dateText(seller.accessEndsAt)}</p><p className="mt-3 inline-flex items-center gap-2 text-xs text-white/70"><span className={`h-2 w-2 rounded-full ${active ? 'bg-emerald-400' : 'bg-amber-400'}`} />{active ? 'Store access active' : 'Access restricted'}</p></div>
         <nav aria-label="Seller workspace" className="grid grid-cols-4 gap-2 rounded-2xl bg-white p-1.5 shadow-sm lg:flex lg:flex-col lg:bg-transparent lg:p-0 lg:shadow-none">{menu.map(item => <button key={item.key} aria-current={section === item.key ? "page" : undefined} onClick={() => setSection(item.key)} className={`flex min-h-[66px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl px-1 py-2 text-center text-[10px] font-medium transition sm:text-xs lg:min-h-11 lg:w-full lg:flex-row lg:justify-start lg:gap-3 lg:px-4 lg:py-3 lg:text-left lg:text-sm ${section === item.key ? 'bg-[#e7dfd2] font-semibold text-[#29251f]' : 'text-muted-foreground hover:bg-white'}`}><item.icon className="h-5 w-5 shrink-0 lg:h-4 lg:w-4" /><span className="break-words">{item.label}</span></button>)}</nav>
         <Link href="/account" className="hidden items-center gap-2 px-4 text-xs text-muted-foreground hover:text-foreground lg:inline-flex"><LogOut className="h-4 w-4" />Account & sign out</Link>
       </aside>
@@ -207,18 +339,27 @@ function SellerContent() {
             <button type="button" onClick={() => setSection('products')} className="rounded-full bg-[#eee6da] px-4 py-2 text-xs font-medium text-[#6d5336]">Low-stock listings (1–3 units): {fulfillment ? fulfillment.lowStock ?? '—' : '…'}</button>
             {((seller.accessEndsAt as { toMillis?: () => number } | null)?.toMillis?.() ?? 0) < Date.now() + 7 * 86400000 && <span className="rounded-full bg-amber-50 px-4 py-2 text-xs text-amber-900">Seller access expires {dateText(seller.accessEndsAt)} · Contact admin to renew</span>}
           </div>
-          <div className="rounded-2xl border border-[#e9e3d9] bg-white p-5 sm:rounded-3xl sm:p-7"><p className="eyebrow text-[#a68a64]">Membership</p><h2 className="mt-3 text-xl font-medium capitalize">{seller.accessType} access</h2><p className="mt-2 text-sm text-muted-foreground">Valid until {dateText(seller.accessEndsAt)} · Status: {seller.status}</p><div className="mt-6 border-t pt-5"><h3 className="font-medium">Get your store ready</h3><p className="mt-2 text-sm text-muted-foreground">Add high-quality photos, publish products and keep your business contact details current.</p><Button variant="outline" className="mt-4 rounded-full" onClick={() => setSection('products')}>Manage products <ArrowUpRight className="ml-2 h-4 w-4" /></Button></div></div>
+          <div className="rounded-2xl border border-[#e9e3d9] bg-white p-5 sm:rounded-3xl sm:p-7"><p className="eyebrow text-[#a68a64]">Store setup</p><div className="mt-2"><h3 className="font-medium">Get your store ready</h3><p className="mt-2 text-sm text-muted-foreground">Add high-quality photos, publish products and keep your business contact details current.</p><Button variant="outline" className="mt-4 rounded-full" onClick={() => setSection('products')}>Manage products <ArrowUpRight className="ml-2 h-4 w-4" /></Button></div></div>
         </div>}
         {section === 'products' && <div className="space-y-5">
+          <LoadMoreRecords hasMore={hasMore} loadingMore={loadingMore} loadMore={loadMore}/>
           <Input aria-label="Search your products" placeholder="Search your catalog…" value={search} onChange={e => setSearch(e.target.value)} className="w-full max-w-sm rounded-full bg-white" />
           {productsLoading ? <SectionSkeleton /> : visible.length === 0 ? <div className="rounded-3xl border border-dashed bg-white p-12 text-center"><Package className="mx-auto h-8 w-8 text-[#a68a64]" /><h3 className="mt-4 text-xl font-medium">No products yet</h3><p className="mt-2 text-sm text-muted-foreground">Create your first listing to get started.</p><Button onClick={() => openForm()} disabled={!active} className="mt-5 rounded-full">Add product</Button></div> :
-            <><div className="space-y-3 md:hidden">{visible.map(p => <article key={p.id} className="rounded-2xl border bg-white p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words text-sm font-semibold">{p.name}</h3><p className="mt-1 text-xs text-muted-foreground">{p.category}</p></div><p className="shrink-0 text-sm font-semibold">₹{p.price.toLocaleString('en-IN')}</p></div><div className="mt-3 flex flex-wrap gap-2 text-[11px]"><span className="rounded-full bg-[#f1ede6] px-3 py-1 capitalize">{p.availability.replaceAll('-', ' ')}</span><span className="rounded-full bg-[#f1ede6] px-3 py-1 capitalize">{p.status ?? 'draft'}</span></div><div className="mt-4 grid grid-cols-2 gap-2"><Button variant="outline" disabled={!active} onClick={() => openForm(p)} className="h-11"><Pencil className="mr-2 h-4 w-4" />Edit</Button><Button variant="outline" disabled={!active || busy} onClick={() => removeProduct(p)} className="h-11 text-red-700"><Trash2 className="mr-2 h-4 w-4" />Delete</Button></div></article>)}</div><div className="hidden overflow-hidden rounded-2xl border bg-white md:block"><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-[#f1ede6] text-xs uppercase tracking-wider text-muted-foreground"><tr><th className="px-5 py-4">Product</th><th className="px-5 py-4">Price</th><th className="px-5 py-4">Availability</th><th className="px-5 py-4">Visibility</th><th className="px-5 py-4">Actions</th></tr></thead><tbody>{visible.map(p => <tr key={p.id} className="border-t"><td className="min-w-[180px] px-5 py-4"><p className="font-medium">{p.name}</p><p className="text-xs text-muted-foreground">{p.category}</p></td><td className="px-5 py-4">₹{p.price.toLocaleString('en-IN')}</td><td className="px-5 py-4 capitalize">{p.availability.replaceAll('-', ' ')}</td><td className="px-5 py-4 capitalize">{p.status ?? 'draft'}</td><td className="px-5 py-4"><div className="flex gap-2"><Button size="sm" variant="outline" disabled={!active} onClick={() => openForm(p)} aria-label={`Edit ${p.name}`}><Pencil className="h-4 w-4" /></Button><Button size="sm" variant="outline" disabled={!active || busy} onClick={() => removeProduct(p)} aria-label={`Delete ${p.name}`}><Trash2 className="h-4 w-4" /></Button></div></td></tr>)}</tbody></table></div></div></>}
+            <><div className="space-y-3 md:hidden">{visible.map(p => <article key={p.id} className="rounded-2xl border bg-white p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words text-sm font-semibold">{p.name}</h3><p className="mt-1 text-xs text-muted-foreground">{p.category}</p>{p.advancePaymentRequired && <p className="mt-1 text-xs font-medium text-amber-800">Advance payment required</p>}{!!p.weightOptions?.length && <p className="mt-1 max-w-sm text-[11px] leading-5 text-[#806d56]">{sizePriceLabels(p)}</p>}</div><p className="shrink-0 text-sm font-semibold">{priceRange(p)}</p></div><div className="mt-3 flex flex-wrap gap-2 text-[11px]"><span className="rounded-full bg-[#f1ede6] px-3 py-1 capitalize">{p.availability.replaceAll('-', ' ')}</span><span className="rounded-full bg-[#f1ede6] px-3 py-1 capitalize">{p.status ?? 'draft'}</span></div><div className="mt-4 grid grid-cols-2 gap-2"><Button variant="outline" disabled={!active} onClick={() => openForm(p)} className="h-11"><Pencil className="mr-2 h-4 w-4" />Edit</Button><Button variant="outline" disabled={!active || busy} onClick={() => {setDeleteError('');setPendingDelete(p);}} className="h-11 text-red-700"><Trash2 className="mr-2 h-4 w-4" />Delete</Button></div></article>)}</div><div className="hidden overflow-hidden rounded-2xl border bg-white md:block"><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-[#f1ede6] text-xs uppercase tracking-wider text-muted-foreground"><tr><th className="px-5 py-4">Product</th><th className="px-5 py-4">Price</th><th className="px-5 py-4">Availability</th><th className="px-5 py-4">Visibility</th><th className="px-5 py-4">Actions</th></tr></thead><tbody>{visible.map(p => <tr key={p.id} className="border-t"><td className="min-w-[180px] px-5 py-4"><p className="font-medium">{p.name}</p><p className="text-xs text-muted-foreground">{p.category}</p>{p.advancePaymentRequired && <p className="mt-1 text-xs font-medium text-amber-800">Advance payment required</p>}{!!p.weightOptions?.length && <p className="mt-1 max-w-sm text-[11px] leading-5 text-[#806d56]">{sizePriceLabels(p)}</p>}</td><td className="px-5 py-4">{priceRange(p)}</td><td className="px-5 py-4 capitalize">{p.availability.replaceAll('-', ' ')}</td><td className="px-5 py-4 capitalize">{p.status ?? 'draft'}</td><td className="px-5 py-4"><div className="flex gap-2"><Button size="sm" variant="outline" disabled={!active} onClick={() => openForm(p)} aria-label={`Edit ${p.name}`}><Pencil className="h-4 w-4" /></Button><Button size="sm" variant="outline" disabled={!active || busy} onClick={() => {setDeleteError('');setPendingDelete(p);}} aria-label={`Delete ${p.name}`}><Trash2 className="h-4 w-4" /></Button></div></td></tr>)}</tbody></table></div></div></>}
         </div>}
         {section === 'orders' && <OrderManagement mode="seller" />}
-        {section === 'store' && <form onSubmit={saveStore} className="space-y-5 rounded-2xl border bg-white p-4 sm:space-y-6 sm:rounded-3xl sm:p-8"><div><h2 className="text-xl font-medium">Business profile</h2><p className="mt-1 text-sm text-muted-foreground">Only editable store details appear here. Business identity and access are controlled by TreatStory.</p></div><div><Label>Business name</Label><Input value={seller.businessName} disabled className="mt-2" /></div><div><Label htmlFor="storeDescription">About your store</Label><Textarea id="storeDescription" rows={5} maxLength={2000} value={storeDraft.description} onChange={e => setStoreDraft(s => ({ ...s, description: e.target.value }))} className="mt-2" /></div><div><Label htmlFor="storePhone">Contact phone</Label><Input id="storePhone" maxLength={40} value={storeDraft.contactPhone} onChange={e => setStoreDraft(s => ({ ...s, contactPhone: e.target.value }))} className="mt-2" /></div><label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={storeDraft.isOpen} onChange={e => setStoreDraft(s => ({ ...s, isOpen: e.target.checked }))} />Accepting enquiries</label><Button type="submit" disabled={!active || busy} className="rounded-full">Save changes</Button></form>}
+        {section === 'store' && <form onSubmit={saveStore} className="space-y-5 rounded-2xl border bg-white p-4 sm:space-y-6 sm:rounded-3xl sm:p-8"><div><h2 className="text-xl font-medium">Business profile</h2><p className="mt-1 text-sm text-muted-foreground">Only editable store details appear here. Business identity and access are controlled by TreatStory.</p></div><div><Label>Business name</Label><Input value={seller.businessName} disabled className="mt-2" /></div><div><Label htmlFor="storeDescription">About your store</Label><Textarea id="storeDescription" rows={5} maxLength={2000} value={storeDraft.description} onChange={e => setStoreDraft(s => ({ ...s, description: e.target.value }))} className="mt-2" /></div><div><Label htmlFor="storePhone">Contact phone</Label><Input id="storePhone" maxLength={40} value={storeDraft.contactPhone} onChange={e => setStoreDraft(s => ({ ...s, contactPhone: e.target.value }))} className="mt-2" /></div><div><Label htmlFor="storeWhatsapp">WhatsApp orders · business number</Label><Input id="storeWhatsapp" type="tel" inputMode="tel" maxLength={20} placeholder="919876543210 (include country code)" value={storeDraft.whatsappNumber} onChange={e => setStoreDraft(s => ({...s, whatsappNumber:e.target.value}))} className="mt-2" /><p className="mt-1 text-xs text-muted-foreground">Buyers can contact your store directly from product pages. Digits only, with country code. Leave empty to hide the WhatsApp button.</p></div><div className="rounded-2xl border bg-[#faf8f4] p-4 sm:p-6"><h3 className="text-base font-semibold">Delivery, pickup & booking</h3><p className="mt-2 text-xs leading-5 text-muted-foreground">You manage your own delivery. Set PIN codes and schedules buyers can choose at checkout. Leave coverage empty to accept requests from any location. Set capacity to zero for no daily limit.</p><div className="mt-4 space-y-4">
+          <div className="flex flex-wrap gap-4 text-xs"><label className="flex items-center gap-2"><input type="checkbox" checked={storeDraft.deliveryMethods.includes('delivery')} onChange={e=>setStoreDraft(v=>({...v,deliveryMethods:e.target.checked?[...new Set([...v.deliveryMethods,'delivery' as const])]:v.deliveryMethods.filter(x=>x!=='delivery')}))}/>Seller delivery</label><label className="flex items-center gap-2"><input type="checkbox" checked={storeDraft.deliveryMethods.includes('pickup')} onChange={e=>setStoreDraft(v=>({...v,deliveryMethods:e.target.checked?[...new Set([...v.deliveryMethods,'pickup' as const])]:v.deliveryMethods.filter(x=>x!=='pickup')}))}/>Customer pickup</label></div>
+          <div className="grid gap-4 sm:grid-cols-2"><label className="space-y-1 text-xs font-medium">Delivery fee (₹)<Input type="number" min={0} max={5000} step="0.01" value={storeDraft.deliveryFee} onChange={e=>setStoreDraft(v=>({...v,deliveryFee:e.target.value}))}/></label><label className="space-y-1 text-xs font-medium">Daily order capacity (0 = unlimited)<Input type="number" min={0} max={100} value={storeDraft.dailyOrderCapacity} onChange={e=>setStoreDraft(v=>({...v,dailyOrderCapacity:e.target.value}))}/></label></div>
+          <label className="block space-y-1 text-xs font-medium">Delivery PIN codes (up to 10; comma or newline separated)<Textarea rows={2} placeholder="673001, 673002" value={storeDraft.deliveryPincodes} onChange={e=>setStoreDraft(v=>({...v,deliveryPincodes:e.target.value}))}/></label>
+          <label className="block space-y-1 text-xs font-medium">Pickup address<Input maxLength={500} value={storeDraft.pickupAddress} onChange={e=>setStoreDraft(v=>({...v,pickupAddress:e.target.value}))} placeholder="Where customers can collect their order"/></label>
+          <label className="block space-y-1 text-xs font-medium">Delivery / pickup time slots (one per line, up to 6)<Textarea rows={3} value={storeDraft.deliverySlots} onChange={e=>setStoreDraft(v=>({...v,deliverySlots:e.target.value}))} placeholder={'Morning (9–12)\\nAfternoon (2–5)'}/></label>
+          <label className="block max-w-xs space-y-1 text-xs font-medium">Accept incoming orders within (hours)<Input type="number" min={1} max={72} value={storeDraft.acceptanceHours} onChange={e=>setStoreDraft(v=>({...v,acceptanceHours:e.target.value}))}/></label>
+        </div></div><label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={storeDraft.isOpen} onChange={e => setStoreDraft(s => ({ ...s, isOpen: e.target.checked }))} />Accepting enquiries</label><Button type="submit" disabled={!active || busy} className="rounded-full">Save changes</Button></form>}
       </main>
     </div>
-    {formOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3" role="presentation"><div role="dialog" aria-modal="true" aria-label="Product editor" className="max-h-[94dvh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:rounded-3xl sm:p-8"><div className="flex items-center justify-between"><h2 className="text-2xl font-medium">{editing ? 'Edit product' : 'New product'}</h2><Button variant="ghost" size="icon" onClick={() => setFormOpen(false)} aria-label="Close"><X className="h-5 w-5" /></Button></div><form onSubmit={saveProduct} className="mt-6 space-y-4"><div><Label htmlFor="productName">Product name</Label><Input id="productName" required minLength={2} maxLength={120} value={draft.name} onChange={e => setDraft(s => ({ ...s, name: e.target.value }))} /></div><div><Label htmlFor="productDescription">Description</Label><Textarea id="productDescription" required maxLength={2000} value={draft.description} onChange={e => setDraft(s => ({ ...s, description: e.target.value }))} /></div><div className="grid gap-4 sm:grid-cols-2"><div><Label htmlFor="productPrice">Price (INR)</Label><Input id="productPrice" required type="number" min="0" step="0.01" value={draft.price} onChange={e => setDraft(s => ({ ...s, price: e.target.value }))} /></div><div><Label htmlFor="productCategory">Category</Label><Input id="productCategory" required maxLength={80} value={draft.category} onChange={e => setDraft(s => ({ ...s, category: e.target.value }))} /></div></div><div><Label htmlFor="productImages">Product photo URLs (one HTTPS link per line)</Label><p className="mb-2 text-xs text-muted-foreground">Add up to 10 images. The first photo is the cover; buyers can swipe between all photos in the product gallery.</p><Textarea id="productImages" rows={4} value={draft.imageUrls} onChange={e => setDraft(s => ({ ...s, imageUrls: e.target.value }))} /></div><div className="grid gap-4 sm:grid-cols-2"><div><Label htmlFor="productAvailability">Availability</Label><select id="productAvailability" className="mt-1 h-10 w-full rounded-md border px-3 text-sm" value={draft.availability} onChange={e => setDraft(s => ({ ...s, availability: e.target.value as MarketplaceProduct['availability'] }))}><option value="available">Available</option><option value="made-to-order">Made to order</option><option value="unavailable">Unavailable</option></select></div><div><Label htmlFor="productStatus">Visibility</Label><select id="productStatus" className="mt-1 h-10 w-full rounded-md border px-3 text-sm" value={draft.status} onChange={e => setDraft(s => ({ ...s, status: e.target.value as ProductDraft['status'] }))}><option value="draft">Draft</option><option value="published">Published</option></select></div></div><div className="grid gap-4 sm:grid-cols-2"><div><Label htmlFor="stock">Stock quantity</Label><Input id="stock" type="number" min="0" step="1" value={draft.stockQuantity} onChange={e => setDraft(s => ({ ...s, stockQuantity: e.target.value }))} /></div><div><Label htmlFor="prep">Preparation days</Label><Input id="prep" type="number" min="0" step="1" value={draft.preparationDays} onChange={e => setDraft(s => ({ ...s, preparationDays: e.target.value }))} /></div></div><div className="grid gap-4 sm:grid-cols-3"><div><Label htmlFor="minQty">Minimum order (units)</Label><Input id="minQty" type="number" min={1} max={99} step={1} value={draft.minimumOrderQuantity} onChange={e => setDraft(s => ({...s,minimumOrderQuantity:e.target.value}))} /></div><div><Label htmlFor="weightValue">Weight / quantity (optional)</Label><Input id="weightValue" type="number" min="0.01" step="any" max="100000" placeholder="e.g. 500" value={draft.weightValue} onChange={e => setDraft(s => ({...s,weightValue:e.target.value}))} /></div><div><Label htmlFor="weightUnit">Unit</Label><select id="weightUnit" className="h-10 w-full rounded-md border bg-white px-3 text-sm" value={draft.weightUnit} onChange={e => setDraft(s => ({...s,weightUnit:e.target.value as ProductDraft['weightUnit']}))}><option value="g">grams (g)</option><option value="kg">kilograms (kg)</option><option value="ml">millilitres (ml)</option><option value="l">litres (l)</option><option value="pieces">pieces</option></select></div></div><div><Label htmlFor="customizationOptions">Customization prompts (optional, one per line)</Label><Textarea id="customizationOptions" rows={3} maxLength={500} placeholder={"Cake message\nColour preference\nGift note"} value={draft.customizationOptions} onChange={e => setDraft(s => ({...s,customizationOptions:e.target.value}))} /><p className="mt-1 text-xs text-muted-foreground">Buyers can enter their preferences on the product page. Up to 6 prompts, each 80 characters. Custom requests do not change the displayed price automatically.</p></div><div><Label htmlFor="careInstructions">Ingredients, care or handling notes (optional)</Label><Textarea id="careInstructions" rows={2} maxLength={500} placeholder="Allergens, care guidance or storage instructions" value={draft.careInstructions} onChange={e => setDraft(s => ({...s,careInstructions:e.target.value}))} /></div><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.showPrice} onChange={e => setDraft(s => ({ ...s, showPrice: e.target.checked }))} />Show price publicly</label><div className="flex justify-end gap-3 pt-3"><Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button><Button type="submit" disabled={busy || !active}>{busy ? 'Saving…' : 'Save product'}</Button></div></form></div></div>}
+    <ConfirmActionDialog open={!!pendingDelete} onOpenChange={open=>{if(!open)setPendingDelete(null);}} title="Delete this product?" description={`${pendingDelete?.name || 'This product'} will be removed from your shop. This cannot be undone.`} confirmLabel="Delete product" pendingLabel="Deleting…" destructive busy={busy} error={deleteError} onConfirm={()=>pendingDelete?removeProduct(pendingDelete):undefined} />
+    {formOpen && <SellerProductEditor saveError={saveError} open={formOpen} editing={!!editing} busy={busy} enabled={active} draft={draft} setDraft={setDraft} categories={[...new Set((products ?? []).map(p => p.category))]} onClose={() => { if (!uploadingPhotos && !busy) { setFormOpen(false); setUploadProgress(''); } }} onSubmit={saveProduct} onUploadPhotos={uploadProductPhotos} uploading={uploadingPhotos} uploadProgress={uploadProgress} />}
   </div>;
 }
 

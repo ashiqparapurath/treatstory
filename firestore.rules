@@ -108,14 +108,10 @@ service cloud.firestore {
     // New multi-vendor collections are restricted until the corresponding
     // validated server workflows and emulator tests are ready.
     match /seller_applications/{applicationId} {
-      // Public applications may be submitted without an account. They remain
-      // pending and cannot grant seller privileges or set an owner UID.
-      allow create: if (
-        (isSignedIn() && applicationId == request.auth.uid &&
-          request.resource.data.ownerUid == request.auth.uid) ||
-        (request.resource.data.ownerUid == '' &&
-          applicationId.size() >= 20 && applicationId.size() <= 40)
-      ) &&
+      // Only an authenticated profile can request seller access.
+      // Applications are UID-scoped; submission never grants seller privileges.
+      allow create: if isSignedIn() && applicationId == request.auth.uid &&
+        request.resource.data.ownerUid == request.auth.uid &&
         request.resource.data.keys().hasOnly([
           'ownerUid', 'businessName', 'businessCategory',
           'contactEmail', 'contactPhone', 'description',
@@ -144,6 +140,29 @@ service cloud.firestore {
       allow get: if isAdmin() || (request.auth != null && applicationId == request.auth.uid);
       allow list, update, delete: if isAdmin();
     }
+    function validDeliveryPincodes(codes) {
+      return codes is list && codes.size() <= 10 &&
+        (codes.size() <= 0 || (codes[0] is string && codes[0].matches('^[0-9]{6}$'))) &&
+        (codes.size() <= 1 || (codes[1] is string && codes[1].matches('^[0-9]{6}$'))) &&
+        (codes.size() <= 2 || (codes[2] is string && codes[2].matches('^[0-9]{6}$'))) &&
+        (codes.size() <= 3 || (codes[3] is string && codes[3].matches('^[0-9]{6}$'))) &&
+        (codes.size() <= 4 || (codes[4] is string && codes[4].matches('^[0-9]{6}$'))) &&
+        (codes.size() <= 5 || (codes[5] is string && codes[5].matches('^[0-9]{6}$'))) &&
+        (codes.size() <= 6 || (codes[6] is string && codes[6].matches('^[0-9]{6}$'))) &&
+        (codes.size() <= 7 || (codes[7] is string && codes[7].matches('^[0-9]{6}$'))) &&
+        (codes.size() <= 8 || (codes[8] is string && codes[8].matches('^[0-9]{6}$'))) &&
+        (codes.size() <= 9 || (codes[9] is string && codes[9].matches('^[0-9]{6}$')));
+    }
+    function validDeliverySlots(slots) {
+      return slots is list && slots.size() <= 6 &&
+        (slots.size() <= 0 || (slots[0] is string && slots[0].size() > 0 && slots[0].size() <= 60)) &&
+        (slots.size() <= 1 || (slots[1] is string && slots[1].size() > 0 && slots[1].size() <= 60)) &&
+        (slots.size() <= 2 || (slots[2] is string && slots[2].size() > 0 && slots[2].size() <= 60)) &&
+        (slots.size() <= 3 || (slots[3] is string && slots[3].size() > 0 && slots[3].size() <= 60)) &&
+        (slots.size() <= 4 || (slots[4] is string && slots[4].size() > 0 && slots[4].size() <= 60)) &&
+        (slots.size() <= 5 || (slots[5] is string && slots[5].size() > 0 && slots[5].size() <= 60));
+    }
+
     match /sellers/{sellerId} {
       // A signed-in user may read their own UID document even if it does not yet
       // exist. This is needed for a reliable non-seller role lookup.
@@ -158,13 +177,34 @@ service cloud.firestore {
         resource.data.ownerUid == request.auth.uid &&
         resource.data.status == 'active' &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'description', 'contactPhone', 'isOpen', 'updatedAt'
+          'description', 'contactPhone', 'whatsappNumber', 'isOpen', 'updatedAt',
+          'deliveryMethods', 'deliveryPincodes', 'deliveryFee', 'pickupAddress',
+          'deliverySlots', 'dailyOrderCapacity', 'acceptanceHours'
         ]) &&
         request.resource.data.description is string &&
         request.resource.data.description.size() <= 2000 &&
         request.resource.data.contactPhone is string &&
         request.resource.data.contactPhone.size() <= 40 &&
+        (!('whatsappNumber' in request.resource.data) ||
+          (request.resource.data.whatsappNumber is string &&
+            (request.resource.data.whatsappNumber == '' ||
+              request.resource.data.whatsappNumber.matches('^[0-9]{8,15}$')))) &&
         request.resource.data.isOpen is bool &&
+        (!('deliveryMethods' in request.resource.data) ||
+          (request.resource.data.deliveryMethods is list &&
+           request.resource.data.deliveryMethods.size() >= 1 &&
+           request.resource.data.deliveryMethods.size() <= 2 &&
+           request.resource.data.deliveryMethods.hasOnly(['delivery','pickup']))) &&
+        (!('deliveryPincodes' in request.resource.data) || validDeliveryPincodes(request.resource.data.deliveryPincodes)) &&
+        (!('deliverySlots' in request.resource.data) || validDeliverySlots(request.resource.data.deliverySlots)) &&
+        (!('deliveryFee' in request.resource.data) ||
+          (request.resource.data.deliveryFee is number && request.resource.data.deliveryFee >= 0 && request.resource.data.deliveryFee <= 5000)) &&
+        (!('pickupAddress' in request.resource.data) ||
+          (request.resource.data.pickupAddress is string && request.resource.data.pickupAddress.size() <= 500)) &&
+        (!('dailyOrderCapacity' in request.resource.data) ||
+          (request.resource.data.dailyOrderCapacity is int && request.resource.data.dailyOrderCapacity >= 0 && request.resource.data.dailyOrderCapacity <= 100)) &&
+        (!('acceptanceHours' in request.resource.data) ||
+          (request.resource.data.acceptanceHours is int && request.resource.data.acceptanceHours >= 1 && request.resource.data.acceptanceHours <= 72)) &&
         request.resource.data.updatedAt == request.time
       );
     }
@@ -188,12 +228,67 @@ service cloud.firestore {
         (prompts.size() <= 5 || (prompts[5] is string && prompts[5].size() >= 1 && prompts[5].size() <= 80));
     }
 
-    function validMarketplaceProduct(p) {
+    function validWeightOption(w, previous) {
+      // Price-only edits inherit unchanged, previously stored variant metadata.
+      return (previous.keys().hasAll(['value','unit','price']) &&
+        w.diff(previous).affectedKeys().hasOnly(['price']) &&
+        w.price is number && w.price >= 0 && w.price <= 10000000) || (w is map && w.keys().hasOnly(['value','unit','price','stockQuantity']) &&
+        w.keys().hasAll(['value','unit','price']) &&
+        w.value is number && w.value > 0 && w.value <= 100000 &&
+        w.unit in ['g','kg','ml','l','pieces'] &&
+        w.price is number && w.price >= 0 && w.price <= 10000000 &&
+        (!('stockQuantity' in w) || (w.stockQuantity is int && w.stockQuantity >= 0 && w.stockQuantity <= 1000000)));
+    }
+    function validWeightOptions(options, previous) {
+      return options is list && options.size() <= 8 &&
+        (options.size() <= 0 || validWeightOption(options[0], previous.size() > 0 ? previous[0] : {})) &&
+        (options.size() <= 1 || validWeightOption(options[1], previous.size() > 1 ? previous[1] : {})) &&
+        (options.size() <= 2 || validWeightOption(options[2], previous.size() > 2 ? previous[2] : {})) &&
+        (options.size() <= 3 || validWeightOption(options[3], previous.size() > 3 ? previous[3] : {})) &&
+        (options.size() <= 4 || validWeightOption(options[4], previous.size() > 4 ? previous[4] : {})) &&
+        (options.size() <= 5 || validWeightOption(options[5], previous.size() > 5 ? previous[5] : {})) &&
+        (options.size() <= 6 || validWeightOption(options[6], previous.size() > 6 ? previous[6] : {})) &&
+        (options.size() <= 7 || validWeightOption(options[7], previous.size() > 7 ? previous[7] : {}));
+    }
+
+    function validFoodLabels(labels) {
+      return labels is list && labels.size() <= 12 &&
+        (labels.size() <= 0 || (labels[0] is string && labels[0].size() > 0 && labels[0].size() <= 40)) &&
+        (labels.size() <= 1 || (labels[1] is string && labels[1].size() > 0 && labels[1].size() <= 40)) &&
+        (labels.size() <= 2 || (labels[2] is string && labels[2].size() > 0 && labels[2].size() <= 40)) &&
+        (labels.size() <= 3 || (labels[3] is string && labels[3].size() > 0 && labels[3].size() <= 40)) &&
+        (labels.size() <= 4 || (labels[4] is string && labels[4].size() > 0 && labels[4].size() <= 40)) &&
+        (labels.size() <= 5 || (labels[5] is string && labels[5].size() > 0 && labels[5].size() <= 40)) &&
+        (labels.size() <= 6 || (labels[6] is string && labels[6].size() > 0 && labels[6].size() <= 40)) &&
+        (labels.size() <= 7 || (labels[7] is string && labels[7].size() > 0 && labels[7].size() <= 40)) &&
+        (labels.size() <= 8 || (labels[8] is string && labels[8].size() > 0 && labels[8].size() <= 40)) &&
+        (labels.size() <= 9 || (labels[9] is string && labels[9].size() > 0 && labels[9].size() <= 40)) &&
+        (labels.size() <= 10 || (labels[10] is string && labels[10].size() > 0 && labels[10].size() <= 40)) &&
+        (labels.size() <= 11 || (labels[11] is string && labels[11].size() > 0 && labels[11].size() <= 40));
+    }
+    function validImageUrl(url) {
+      return url is string && url.size() <= 2048 && url.matches('https://(res[.]cloudinary[.]com|firebasestorage[.]googleapis[.]com|images[.]unsplash[.]com|placehold[.]co|picsum[.]photos|lh3[.]googleusercontent[.]com)/.*');
+    }
+    function validProductImages(images) {
+      return images is list && images.size() <= 10 &&
+        (images.size() <= 0 || validImageUrl(images[0])) &&
+        (images.size() <= 1 || validImageUrl(images[1])) &&
+        (images.size() <= 2 || validImageUrl(images[2])) &&
+        (images.size() <= 3 || validImageUrl(images[3])) &&
+        (images.size() <= 4 || validImageUrl(images[4])) &&
+        (images.size() <= 5 || validImageUrl(images[5])) &&
+        (images.size() <= 6 || validImageUrl(images[6])) &&
+        (images.size() <= 7 || validImageUrl(images[7])) &&
+        (images.size() <= 8 || validImageUrl(images[8])) &&
+        (images.size() <= 9 || validImageUrl(images[9]));
+    }
+    function validMarketplaceProduct(p, changed, previousWeights) {
       return p.keys().hasOnly([
         'sellerId', 'name', 'description', 'price', 'category', 'imageUrls',
         'showPrice', 'availability', 'stockQuantity', 'preparationDays',
-        'minimumOrderQuantity', 'weightValue', 'weightUnit', 'customizationOptions',
-        'careInstructions', 'status', 'createdAt', 'updatedAt'
+        'minimumOrderQuantity', 'weightValue', 'weightUnit', 'weightOptions', 'customizationOptions',
+        'advancePaymentRequired', 'careInstructions', 'ingredients', 'allergens', 'dietaryTags', 'shelfLifeDays', 'storageInstructions',
+        'status', 'createdAt', 'updatedAt'
       ]) &&
       p.sellerId is string &&
       p.name is string && p.name.size() >= 2 && p.name.size() <= 120 &&
@@ -201,6 +296,7 @@ service cloud.firestore {
       p.category is string && p.category.size() > 0 && p.category.size() <= 80 &&
       p.price is number && p.price >= 0 && p.price <= 10000000 &&
       p.imageUrls is list && p.imageUrls.size() <= 10 &&
+      (!changed.hasAny(['imageUrls']) || validProductImages(p.imageUrls)) &&
       p.showPrice is bool &&
       p.availability in ['available', 'unavailable', 'made-to-order'] &&
       p.stockQuantity is int && p.stockQuantity >= 0 &&
@@ -209,9 +305,17 @@ service cloud.firestore {
       (!('minimumOrderQuantity' in p) || (p.minimumOrderQuantity is int && p.minimumOrderQuantity >= 1 && p.minimumOrderQuantity <= 99)) &&
       (!('weightValue' in p) || (p.weightValue is number && p.weightValue > 0 && p.weightValue <= 100000)) &&
       (!('weightUnit' in p) || p.weightUnit in ['g', 'kg', 'ml', 'l', 'pieces']) &&
+      (!changed.hasAny(['weightOptions']) || !('weightOptions' in p) || validWeightOptions(p.weightOptions, previousWeights)) &&
       (('weightValue' in p) == ('weightUnit' in p)) &&
+      (!('advancePaymentRequired' in p) || p.advancePaymentRequired is bool) &&
       (!('careInstructions' in p) || (p.careInstructions is string && p.careInstructions.size() <= 500)) &&
-      (!('customizationOptions' in p) || validCustomizationPrompts(p.customizationOptions)) &&
+      (!changed.hasAny(['customizationOptions']) || !('customizationOptions' in p) || validCustomizationPrompts(p.customizationOptions)) &&
+      (!('ingredients' in p) || (p.ingredients is string && p.ingredients.size() <= 1000)) &&
+      (!('storageInstructions' in p) || (p.storageInstructions is string && p.storageInstructions.size() <= 500)) &&
+      (!('shelfLifeDays' in p) || (p.shelfLifeDays is int && p.shelfLifeDays >= 0 && p.shelfLifeDays <= 365)) &&
+      (!changed.hasAny(['allergens']) || !('allergens' in p) || validFoodLabels(p.allergens)) &&
+      (!changed.hasAny(['dietaryTags']) || !('dietaryTags' in p) || validFoodLabels(p.dietaryTags)) &&
+
       p.createdAt is timestamp && p.updatedAt is timestamp;
     }
 
@@ -223,63 +327,47 @@ service cloud.firestore {
         resource.data.status == 'published';
       allow create: if sellerActive(request.resource.data.sellerId) &&
         request.resource.data.sellerId == request.auth.uid &&
-        validMarketplaceProduct(request.resource.data) &&
+        validMarketplaceProduct(request.resource.data, request.resource.data.keys().toSet(), []) &&
         request.resource.data.createdAt == request.time &&
         request.resource.data.updatedAt == request.time;
       allow update: if sellerActive(resource.data.sellerId) &&
         resource.data.sellerId == request.auth.uid &&
         request.resource.data.sellerId == resource.data.sellerId &&
         request.resource.data.createdAt == resource.data.createdAt &&
-        validMarketplaceProduct(request.resource.data) &&
+        validMarketplaceProduct(request.resource.data, request.resource.data.diff(resource.data).affectedKeys(), resource.data.get('weightOptions', [])) &&
         request.resource.data.updatedAt == request.time;
       allow delete: if sellerActive(resource.data.sellerId) &&
         resource.data.sellerId == request.auth.uid;
       allow create, update, delete: if isAdmin();
     }
-    // Each order is one verified seller listing. Client-provided prices
-    // and seller identities must match the current Firestore product.
-    function orderProduct(productId) {
-      return get(/databases/$(database)/documents/marketplace_products/$(productId)).data;
-    }
+    // Order creation is server-only. Direct client writes bypass transactional inventory checks.
 
-    function validNewOrder(d) {
-      return isSignedIn() &&
-        d.keys().hasOnly([
-          'buyerUid', 'sellerId', 'productId', 'productName', 'quantity',
-          'unitPrice', 'subtotal', 'status', 'customerName', 'customerPhone',
-          'deliveryAddress', 'customerNote', 'paymentMethod', 'createdAt', 'updatedAt'
-        ]) &&
-        d.keys().hasAll([
-          'buyerUid', 'sellerId', 'productId', 'productName', 'quantity',
-          'unitPrice', 'subtotal', 'status', 'customerName', 'customerPhone',
-          'deliveryAddress', 'customerNote', 'paymentMethod', 'createdAt', 'updatedAt'
-        ]) &&
-        d.buyerUid == request.auth.uid &&
-        d.productId is string &&
-        d.quantity is int && d.quantity >= 1 && d.quantity <= 99 &&
-        d.customerName is string && d.customerName.size() >= 2 && d.customerName.size() <= 120 &&
-        d.customerPhone is string && d.customerPhone.size() >= 5 && d.customerPhone.size() <= 40 &&
-        d.deliveryAddress is string && d.deliveryAddress.size() >= 10 && d.deliveryAddress.size() <= 1000 &&
-        d.customerNote is string && d.customerNote.size() <= 1000 &&
-        d.paymentMethod == 'cod' &&
-        d.status == 'pending' &&
-        d.createdAt == request.time && d.updatedAt == request.time &&
-        exists(/databases/$(database)/documents/marketplace_products/$(d.productId)) &&
-        orderProduct(d.productId).status == 'published' &&
-        orderProduct(d.productId).availability != 'unavailable' &&
-        orderProduct(d.productId).showPrice == true &&
-        d.sellerId == orderProduct(d.productId).sellerId &&
-        d.productName == orderProduct(d.productId).name &&
-        d.unitPrice == orderProduct(d.productId).price &&
-        (!('minimumOrderQuantity' in orderProduct(d.productId)) ||
-          d.quantity >= orderProduct(d.productId).minimumOrderQuantity) &&
-        d.subtotal == d.quantity * d.unitPrice &&
-        exists(/databases/$(database)/documents/sellers/$(d.sellerId)) &&
-        get(/databases/$(database)/documents/sellers/$(d.sellerId)).data.status == 'active' &&
-        get(/databases/$(database)/documents/sellers/$(d.sellerId)).data.isOpen == true &&
-        get(/databases/$(database)/documents/sellers/$(d.sellerId)).data.accessEndsAt > request.time;
+    match /product_reviews/{reviewId} {
+      allow get, list: if isAdmin() ||
+        resource.data.status == 'published' ||
+        (isSignedIn() && resource.data.buyerUid == request.auth.uid);
+      allow create, update, delete: if false;
     }
-
+    match /support_tickets/{ticketId} {
+      allow get, list: if isAdmin() ||
+        (isSignedIn() && resource.data.ownerUid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+    match /support_limits/{limitId} {
+      allow read, write: if false;
+    }
+    match /favorites/{uid}/items/{productId} {
+      allow get, list, delete: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['productId','title','imageUrl','createdAt']) &&
+        request.resource.data.keys().hasAll(['productId','title','imageUrl','createdAt']) &&
+        request.resource.data.productId == productId &&
+        request.resource.data.title is string &&
+        request.resource.data.title.size() >= 1 && request.resource.data.title.size() <= 120 &&
+        request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 2000 &&
+        request.resource.data.createdAt == request.time;
+      allow update: if false;
+    }
     match /customer_addresses/{uid} {
       allow get: if isSignedIn() && request.auth.uid == uid;
       allow list, delete: if false;
@@ -296,29 +384,35 @@ service cloud.firestore {
         request.resource.data.updatedAt == request.time;
     }
 
+    match /mail_outbox/{id} { allow read, write: if false; }
+    match /mail_limits/{id} { allow read, write: if false; }
+
+    match /checkout_limits/{id} { allow read, write: if false; }
     match /checkout_orders/{checkoutId} {
       allow read, write: if false;
     }
 
     match /seller_orders/{orderId} {
-      allow create: if validNewOrder(request.resource.data);
       allow get, list: if isAdmin() ||
         (isSignedIn() && resource.data.buyerUid == request.auth.uid) ||
         (isSignedIn() && resource.data.sellerId == request.auth.uid);
-      allow update: if isAdmin() || (
-        isSignedIn() &&
-        resource.data.sellerId == request.auth.uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) &&
-        request.resource.data.updatedAt == request.time &&
-        (
-          (resource.data.status == 'pending' && request.resource.data.status in ['accepted', 'rejected']) ||
-          (resource.data.status == 'accepted' && request.resource.data.status in ['preparing', 'cancelled']) ||
-          (resource.data.status == 'preparing' && request.resource.data.status in ['ready', 'cancelled']) ||
-          (resource.data.status == 'ready' && request.resource.data.status in ['out-for-delivery', 'completed']) ||
-          (resource.data.status == 'out-for-delivery' && request.resource.data.status == 'completed')
-        )
-      );
-      allow delete: if false;
+      allow create, update, delete: if false;
+    }
+    match /custom_quotes/{quoteId} {
+      allow get, list: if isAdmin() ||
+        (isSignedIn() && resource.data.buyerUid == request.auth.uid) ||
+        (isSignedIn() && resource.data.sellerId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+    match /quote_limits/{quotaId} {
+      allow read, write: if false;
+    }
+    match /seller_bookings/{bookingId} {
+      allow read, write: if false;
+    }
+    match /notifications/{uid}/items/{itemId} {
+      allow get, list: if isSignedIn() && request.auth.uid == uid;
+      allow create, update, delete: if false;
     }
     match /conversations/{conversationId}/{nested=**} {
       allow read, write: if false;

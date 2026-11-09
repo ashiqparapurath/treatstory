@@ -17,7 +17,7 @@ function NewArrivalsContent() {
   const productsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'products'), orderBy('createdAt', 'desc'), limit(4)) : null, [firestore]);
   const { data: newArrivals, isLoading, error, retry } = usePublicCatalog<Product>(productsQuery);
 
-  if (error) return <LoadError retry={retry} />;
+  if (error) return <LoadError retry={retry} error={error} />;
   if (isLoading) return <ProductGridSkeleton count={4} />;
   if (!newArrivals || newArrivals.length === 0) return <div className="rounded-3xl border border-dashed border-[#ded4c7] bg-white/60 px-5 py-20 text-center"><p className="text-sm text-muted-foreground">No new arrivals just yet. Check back soon for fresh finds.</p></div>;
   return <ProductGridContainer products={newArrivals} />;
