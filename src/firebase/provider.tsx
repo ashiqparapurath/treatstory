@@ -5,7 +5,7 @@ import { FirebaseApp } from 'firebase/app';
 import { Firestore, doc, collection, query, where, orderBy, limit, onSnapshot, type QueryDocumentSnapshot, type DocumentData } from 'firebase/firestore';
 import type { Seller } from '@/lib/marketplace-types';
 import type { OrderRecord } from '@/components/order-management';
-import type { DeliveryAddress } from '@/components/default-delivery-address';
+import type { AddressBook, DeliveryAddress } from '@/lib/addresses';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
@@ -30,12 +30,15 @@ type AccountDataState = {
   uid: string | null;
   address: DeliveryAddress | null;
   addressLoading: boolean;
+  addressBook: AddressBook | null;
+  addressBookLoading: boolean;
+  addressBookError: Error | null;
   buyerOrders: OrderRecord[] | null;
   buyerOrdersLoading: boolean;
   buyerOrdersError: Error | null;
   buyerOrdersCursor: QueryDocumentSnapshot<DocumentData> | null;
 };
-const emptyAccount: AccountDataState = { uid: null, address: null, addressLoading: false, buyerOrders: null, buyerOrdersLoading: false, buyerOrdersError: null, buyerOrdersCursor: null };
+const emptyAccount: AccountDataState = { uid: null, address: null, addressLoading: false, addressBook: null, addressBookLoading: false, addressBookError: null, buyerOrders: null, buyerOrdersLoading: false, buyerOrdersError: null, buyerOrdersCursor: null };
 const emptyRole: RoleState = { uid: null, role: null, loading: true, error: null, seller: null };
 
 // Combined state for the Firebase context
@@ -159,10 +162,13 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const uid = userAuthState.user?.uid;
     if (!uid || !firestore) { setAccountData(emptyAccount); return; }
     let live = true;
-    setAccountData({ ...emptyAccount, uid, addressLoading: true, buyerOrdersLoading: true });
+    setAccountData({ ...emptyAccount, uid, addressLoading: true, addressBookLoading: true, buyerOrdersLoading: true });
     const stopAddress = onSnapshot(doc(firestore, 'customer_addresses', uid),
       snapshot => { if (live) setAccountData(v => v.uid === uid ? { ...v, address: snapshot.exists() ? snapshot.data() as DeliveryAddress : null, addressLoading: false } : v); },
       () => { if (live) setAccountData(v => v.uid === uid ? { ...v, addressLoading: false } : v); });
+    const stopAddressBook = onSnapshot(doc(firestore, 'customer_address_books', uid),
+      snapshot => { if (live) setAccountData(v => v.uid === uid ? {...v, addressBook: snapshot.exists() ? snapshot.data() as AddressBook : null, addressBookLoading: false, addressBookError: null} : v); },
+      error => { if (live) setAccountData(v => v.uid === uid ? {...v, addressBookLoading: false, addressBookError: error} : v); });
     const start = performance.now();
     const recent = query(collection(firestore, 'seller_orders'), where('buyerUid', '==', uid), orderBy('createdAt', 'desc'), limit(20));
     const stopOrders = onSnapshot(recent,
@@ -176,7 +182,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         if (performance.getEntriesByName('TreatStory buyer recent orders').length === 0) performance.measure('TreatStory buyer recent orders', { start, end: performance.now() });
       },
       error => { if (live) setAccountData(v => v.uid === uid ? { ...v, buyerOrdersLoading: false, buyerOrdersError: error } : v); });
-    return () => { live = false; stopAddress(); stopOrders(); };
+    return () => { live = false; stopAddress(); stopAddressBook(); stopOrders(); };
   }, [firestore, userAuthState.user?.uid]);
 
   // Memoize the context value

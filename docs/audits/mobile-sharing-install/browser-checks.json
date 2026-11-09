@@ -1,0 +1,18 @@
+{
+  "checks": [
+    "uninstalled browser receives install notice",
+    "dismissal survives navigation and reload in the session",
+    "mobile 44px share icon sits in image top-right and opens sharing",
+    "mobile story image loads and matches cakes/handmade gifts",
+    "native prompt opens only from tap and accepted install stays hidden",
+    "standalone installed detection hides notice",
+    "related installed detection hides notice",
+    "iPhone receives Add to Home Screen instructions",
+    "race installed detection hides notice",
+    "remembered installed detection hides notice",
+    "buyer mobile Sell opens /become-a-seller",
+    "seller mobile Sell opens /seller/dashboard",
+    "admin mobile Sell opens /admin",
+    "desktop retains labelled share button"
+  ]
+}

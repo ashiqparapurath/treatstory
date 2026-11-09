@@ -15,7 +15,7 @@ function sharedModule(id) {
 function load(file, mocks = {}, globals = {}) {
   const output = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   const module = { exports: {} };
-  vm.runInNewContext(output, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id==='@/lib/server/request-body'?load('src/lib/server/request-body.ts',mocks):id==='@/lib/account-mail'?accountMailMock : ['@/lib/image-source','@/lib/document-id','@/lib/user-notices', '@/lib/order-feedback','@/lib/server/mail'].includes(id) ? sharedModule(id) : id === 'lucide-react' ? new Proxy({}, { get: () => () => null }) : require(id), console,
+  vm.runInNewContext(output, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id==='@/lib/server/request-body'?load('src/lib/server/request-body.ts',mocks):id==='@/lib/account-mail'?accountMailMock : ['@/lib/addresses','@/lib/image-source','@/lib/document-id','@/lib/user-notices', '@/lib/order-feedback','@/lib/server/mail'].includes(id) ? sharedModule(id) : id === 'lucide-react' ? new Proxy({}, { get: () => () => null }) : require(id), console,
     setTimeout: (...args) => { const timer = setTimeout(...args); timer.unref(); return timer; }, clearTimeout, AbortSignal, TextDecoder, URL, URLSearchParams, ...globals }, { filename: file });
   return module.exports;
 }

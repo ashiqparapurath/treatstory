@@ -14,7 +14,7 @@ export async function enqueueAccountEmail(db:Firestore,action:'reset-password'|'
     ?{template:'password_reset',title:'Reset your password',message:'Use the secure link below to choose a new password for your TreatStory account. If you did not request this, you can ignore this email.',href:'',label:'Reset password'}
     :action==='verify-email'
     ?{template:'verify_email',title:'Verify your email address',message:'Confirm this email address for your TreatStory account.',href:'',label:'Verify email address'}
-    :{template:'welcome',title:'Welcome to TreatStory',message:'Your account is ready. Discover handmade finds, keep your favourites and track your orders from your profile.',href:'/account',label:'Open your profile'};
+    :{template:'welcome',title:'Welcome to TreatStory',message:'Your account is ready. Discover handmade finds, build your wishlist and track your orders from your profile.',href:'/account',label:'Open your profile'};
   return db.runTransaction(async tx=>{
     const [own,global,existing]=await Promise.all([tx.get(ownRef),tx.get(globalRef),id?tx.get(db.collection('mail_outbox').doc(id)):Promise.resolve(null)]);
     if(existing?.exists)return id!;

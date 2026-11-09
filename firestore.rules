@@ -368,6 +368,11 @@ service cloud.firestore {
         request.resource.data.createdAt == request.time;
       allow update: if false;
     }
+    match /geocoding_limits/{id} { allow read, write: if false; }
+    match /customer_address_books/{uid} {
+      allow get: if isSignedIn() && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
     match /customer_addresses/{uid} {
       allow get: if isSignedIn() && request.auth.uid == uid;
       allow list, delete: if false;

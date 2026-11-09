@@ -14,6 +14,8 @@ export default function PrivacyPolicyPage() {
             </h1>
             <div className="space-y-6 text-muted-foreground">
               <p>At TreatStory, accessible from treatstory.in, one of our main priorities is the privacy of our visitors. This Privacy Policy document contains types of information that is collected and recorded by TreatStory and how we use it.</p>
+              <h2 className="mt-6 text-xl font-semibold">Optional delivery location</h2>
+              <p>When you choose Use my location and grant browser permission, we send your coordinates through our server to an OpenStreetMap Nominatim geocoding service to suggest your locality, district, state and PIN. We do not track your location continuously or store coordinates in your address book. Only address details you confirm and save are kept for delivery. You can decline location access and enter your address manually.</p>
               <p>If you have additional questions or require more information about our Privacy Policy, do not hesitate to contact us.</p>
               
               <h2 className="text-2xl font-bold text-foreground pt-4">Log Files</h2>

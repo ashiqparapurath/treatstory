@@ -5,6 +5,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState, type FormEvent } from 'react';
 import { SectionSkeleton } from '@/components/loading-states';
 import { CheckoutAddressDialog } from '@/components/checkout-address-dialog';
+import { savedAddressOptions } from '@/lib/addresses';
 import { addressText } from '@/components/default-delivery-address';
 import { useAccountData, useFirestore, useUser } from '@/firebase';
 import { useCart } from '@/context/cart-context';
@@ -18,7 +19,8 @@ import { Banknote, CreditCard, MapPin, ShieldCheck, Truck, CheckCircle2, Clipboa
 export function CreatorCheckout({ variant = 'card', onlyProductId, onlyLineId, initialNote = '', direct = false, onComplete }: { variant?: 'card' | 'page'; onlyProductId?: string; onlyLineId?: string; initialNote?: string; direct?: boolean; onComplete?: () => void }) {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
-  const { address: savedAddress } = useAccountData();
+  const { address: savedAddress, addressBook, addressBookLoading } = useAccountData();
+  const [addressChoice,setAddressChoice] = useState<{uid:string|null;id:string|null;awaiting?:boolean}|null>(null);
   const { cartItems, directItem, clearDirectCheckout, updateDirectPrice, removeFromCart, updateLinePrice } = useCart();
   const { toast } = useToast();
   const [editingAddress, setEditingAddress] = useState(false);
@@ -45,7 +47,17 @@ export function CreatorCheckout({ variant = 'card', onlyProductId, onlyLineId, i
   const sourceItems = direct ? (directItem ? [directItem] : []) : cartItems;
   const pendingKey = direct ? 'treatstory-direct-checkout-id' : 'treatstory-pending-checkout';
   const items = sourceItems.filter(i => i.id.startsWith('seller:') && (!onlyProductId || i.id === 'seller:' + onlyProductId) && (!onlyLineId || i.lineId === onlyLineId));
-  useEffect(() => { if (!savedAddress) return; setAddress(addressText(savedAddress));setPincode(savedAddress.pincode || '');setName(savedAddress.recipient || '');setPhone(savedAddress.phone || ''); }, [savedAddress]);
+  useEffect(() => {
+    const uid=user?.uid??null;
+    const choice=addressChoice?.uid===uid?addressChoice:null;
+    if(choice&&choice.id===null)return; // Deliberate one-order edit stays selected.
+    const options=savedAddressOptions(addressBook,savedAddress);
+    const selected=choice?.id?options.find(a=>a.id===choice.id):addressBook?options.find(a=>a.id===addressBook.defaultId):savedAddress;
+    if(choice?.id&&!selected&&(addressBookLoading||choice.awaiting))return;
+    if(selected&&choice?.awaiting)setAddressChoice({...choice,awaiting:false});
+    if(choice?.id&&!selected){setAddressChoice(null);return;}
+    setAddress(selected?addressText(selected):'');setPincode(selected?.pincode||'');setName(selected?.recipient||'');setPhone(selected?.phone||'');
+  }, [savedAddress,addressBook,addressBookLoading,addressChoice,user?.uid]);
   const productKey = JSON.stringify([...new Set(items.map(i => i.id.slice('seller:'.length)))]);
   useEffect(() => {
     if (!db) return;
@@ -126,7 +138,7 @@ export function CreatorCheckout({ variant = 'card', onlyProductId, onlyLineId, i
   if (!items.length && !result.length) return null;
   return <section className={variant === 'page' ? 'space-y-4 rounded-2xl border border-[#e8e0d5] bg-white p-5 shadow-[0_14px_45px_rgba(51,39,24,0.04)] sm:p-8 lg:p-10' : 'mt-7 space-y-6 rounded-3xl border border-[#e8e0d5] bg-[#faf8f4] p-5 sm:p-7'}>
     <div className="border-b border-[#e8e0d5] pb-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a68a64]">Step 02 · Secure checkout</p><h3 className="mt-2 text-2xl font-medium tracking-tight">Delivery & payment</h3><p className="mt-2 text-xs leading-5 text-muted-foreground">Order handmade favourites from independent creators. Your seller confirms the order before fulfillment.</p></div>
-    <CheckoutAddressDialog open={editingAddress} onOpenChange={setEditingAddress} value={{name, phone, address, pincode}} onSave={v => {setName(v.name);setPhone(v.phone);setAddress(v.address);setPincode(v.pincode);}} />
+    <CheckoutAddressDialog open={editingAddress} onOpenChange={setEditingAddress} value={{name, phone, address, pincode}} selectedId={addressChoice&&addressChoice.uid===(user?.uid??null)?addressChoice.id:addressBook?.defaultId??(savedAddress?'legacy':null)} onSave={(v,id) => {setAddressChoice({uid:user?.uid??null,id:id??null,awaiting:!!id&&!savedAddressOptions(addressBook,savedAddress).some(a=>a.id===id)});setName(v.name);setPhone(v.phone);setAddress(v.address);setPincode(v.pincode);}} />
     {result.length > 0 && <div role="status" aria-live="polite" className="rounded-3xl border border-[#e1d7c8] bg-[#f8f5ee] p-6 text-center sm:p-9"><CheckCircle2 className="mx-auto h-12 w-12 text-[#668657]"/><p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#a68a64]">Order received</p><h2 className="mt-2 text-2xl font-semibold sm:text-3xl">Thank you for ordering!</h2><p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#71685e]">We've received your TreatStory order request. Your seller will review and confirm preparation and delivery details. No payment was collected online.</p><div className="mx-auto mt-5 max-w-lg space-y-2 rounded-2xl border bg-white p-4 text-left"><p className="mb-2 text-xs font-semibold text-[#796b58]">Your order {result.length === 1 ? 'ID' : 'IDs'}</p>{result.map(id => <div key={id} className="flex items-center justify-between gap-2 rounded-lg bg-[#f7f5f1] px-3 py-2"><code className="min-w-0 break-all text-xs font-semibold text-[#29251f]">{id}</code><button type="button" aria-label={`Copy order ID ${id}`} className="shrink-0 rounded-full border p-2" onClick={() => { if (navigator.clipboard) void navigator.clipboard.writeText(id); }}><ClipboardCopy className="h-4 w-4"/></button></div>)}</div><Link href="/orders" className="mt-5 inline-flex min-h-11 items-center rounded-full bg-[#29251f] px-6 text-sm font-semibold text-white">Track your orders</Link></div>}
     {isUserLoading ? <SectionSkeleton /> : !user ? <div className="rounded-2xl bg-white p-5"><p className="text-sm">Sign in to continue to checkout.</p><Link href={`/login?next=${encodeURIComponent(returnToCheckout)}`} className="editorial-button mt-4">Sign in</Link></div> : items.length > 0 && <form onSubmit={submit} className="space-y-4 sm:space-y-6">
       <div className="space-y-4"><p className="flex items-center gap-2 text-sm font-semibold"><MapPin className="h-4 w-4 text-[#a68a64]" />Contact & delivery details</p>
