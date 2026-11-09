@@ -1,3 +1,4 @@
+import { orderEmail, orderReference, type OrderEmailSnapshot } from '@/lib/server/order-email';
 import { queueMail } from '@/lib/server/mail';
 import { orderFeedback } from '@/lib/order-feedback';
 import { createHash } from 'node:crypto';
@@ -164,7 +165,7 @@ export async function placeAtomicCheckout(db: Firestore, uid: string, input: Che
       itemSubtotal += amount;
       const id = uid + '_' + input.checkoutId + '_' + idx;
       orders.push({ refId: id, record: {
-        buyerUid: uid, sellerId: p.sellerId, checkoutId: input.checkoutId, productId: line.productId,
+        orderReference:orderReference(id),buyerUid: uid, sellerId: p.sellerId, checkoutId: input.checkoutId, productId: line.productId,
         productName: p.name, quantity: line.quantity, unitPrice: price, subtotal: amount,
         selectedWeight: choice ? { value: choice.value, unit: choice.unit } : null,
         stockReserved: source !== 'none', stockSource: source,
@@ -213,9 +214,8 @@ export async function placeAtomicCheckout(db: Firestore, uid: string, input: Che
       const buyerMessage=orderFeedback('placed',order.record.productName as string,order.record.deliveryMode as string,'buyer');
       const sellerMessage=orderFeedback('placed',order.record.productName as string,order.record.deliveryMode as string,'seller');
       tx.create(buyerAlert,{title:buyerMessage.title,message:buyerMessage.description,kind:'order',href:'/orders',orderId:order.refId,createdAt:now,read:false});
-      const emailDetails=[{label:'Product',value:String(order.record.productName).slice(0,200)},{label:'Quantity',value:String(order.record.quantity)},{label:'Fulfilment',value:order.record.deliveryMode==='pickup'?'Pickup':'Delivery'},{label:'Payment terms',value:order.record.advancePaymentRequired?'Advance arranged with seller':'Cash on delivery'}];
-      queueMail(tx,db,uid,{details:emailDetails,template:'order_received',title:buyerMessage.title,message:buyerMessage.description,href:'/orders'});
-      queueMail(tx,db,sellerId,{details:emailDetails,template:'new_order',title:sellerMessage.title,message:sellerMessage.description,href:'/orders'});
+      queueMail(tx,db,uid,{...orderEmail(order.refId,order.record as unknown as OrderEmailSnapshot,'buyer'),template:'order_received',title:buyerMessage.title,message:buyerMessage.description});
+      queueMail(tx,db,sellerId,{...orderEmail(order.refId,order.record as unknown as OrderEmailSnapshot,'seller'),template:'new_order',title:sellerMessage.title,message:sellerMessage.description});
       tx.create(sellerAlert,{title:sellerMessage.title,message:sellerMessage.description,kind:'order',href:'/orders',orderId:order.refId,createdAt:now,read:false});
     }
     tx.create(checkoutRef, { buyerUid: uid, requestHash, orderIds: orders.map(x => x.refId),

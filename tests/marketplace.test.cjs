@@ -638,3 +638,21 @@ test('category save announces success only after the actual write and keeps fail
   await act(async()=>{rejectWrite({code:'permission-denied'});await pending;});assert.equal(notices.at(-1).variant,'destructive');assert.equal(finished,0);
   act(()=>{pending=tree.root.findByType('form').props.onSubmit();});await act(async()=>{resolveWrite();await pending;});assert.equal(notices.at(-1).title,'Category Added');assert.equal(finished,1);act(()=>tree.unmount());
 });
+
+test('email deep links open an older authorized order and stay closed after dismissing the dialog',()=>{
+  let receive,stopped=0;const db={},toast=()=>{};
+  const order={buyerUid:'buyer',sellerId:'seller',productName:'Cake',orderReference:'TS-A1B2C3D4E5F6',quantity:1,unitPrice:450,subtotal:450,status:'pending',customerName:'Buyer',customerPhone:'9876543210',deliveryAddress:'Sample address',customerNote:'',deliveryMode:'delivery'};
+  const {OrderManagement}=load('src/components/order-management.tsx',{
+    '@/firebase':{useFirestore:()=>db,useUser:()=>({user:{uid:'buyer'}}),useAccountData:()=>({buyerOrders:[],buyerOrdersLoading:false,buyerOrdersError:null})},
+    'firebase/firestore':{doc:(_db,_collection,id)=>({id}),onSnapshot:(_ref,next)=>{receive=next;return()=>stopped++;}},
+    '@/components/loading-states':{SectionSkeleton:()=>null},'@/components/ui/button':{Button:'button'},'@/components/ui/input':{Input:'input'},'@/components/ui/textarea':{Textarea:'textarea'},
+    '@/hooks/use-toast':{useToast:()=>({toast})},'@/lib/order-api':{sendOrderAction:async()=>{}},
+  },{window:{location:{search:'?order=older-order'}}});
+  let tree;act(()=>{tree=create(React.createElement(OrderManagement,{mode:'customer'}));});
+  const snapshot=data=>({id:'older-order',exists:()=>true,data:()=>data});
+  act(()=>receive(snapshot({...order,buyerUid:'someone-else'})));assert.equal(tree.root.findAllByProps({role:'dialog'}).length,0);
+  act(()=>receive(snapshot(order)));assert.equal(tree.root.findAllByProps({role:'dialog'}).length,1);assert.match(JSON.stringify(tree.toJSON()),/TS-A1B2C3D4E5F6/);
+  act(()=>tree.root.findByProps({'aria-label':'Close order details'}).props.onClick());
+  act(()=>receive(snapshot({...order,status:'accepted'})));assert.equal(tree.root.findAllByProps({role:'dialog'}).length,0);
+  act(()=>tree.unmount());assert.equal(stopped,1);
+});

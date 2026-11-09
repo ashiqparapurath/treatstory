@@ -128,7 +128,9 @@ async function run() {
   const mails=await db.collection('mail_outbox').where('uid','==','buyer-advance').get();
   assert.equal(mails.size,1,'an order and its email are committed together');
   assert.equal(mails.docs[0].data().template,'order_received');
-  assert.equal(mails.docs[0].data().details.find((row:{label:string})=>row.label==='Payment terms').value,'Advance arranged with seller');
+  assert.equal(mails.docs[0].data().reference,advanceOrder.orderReference);
+  assert.match(mails.docs[0].data().reference,/^TS-[A-F0-9]{12}$/);
+  assert.equal(mails.docs[0].data().details.find((row:{label:string})=>row.label==='Payment').value,'Advance arranged with seller');
   await placeAtomicCheckout(db,'buyer-advance',advance);
   assert.equal((await db.collection('mail_outbox').where('uid','==','buyer-advance').get()).size,1,'idempotent checkout does not queue duplicate emails');
   console.log('PASS Firestore transactions: stock race, retry, capacity, price acceptance, cancellation restoration and simultaneous different-size pricing');

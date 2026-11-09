@@ -48,18 +48,18 @@ function accountFixture(){
   const request=(body,origin='https://treatstory.vercel.app')=>POST({url:'https://treatstory.vercel.app/api/email/account',headers:new Headers({origin}),text:async()=>JSON.stringify(body)});
   return {request,jobs,get queued(){return queued;},set existing(v){existing=v;},set authenticated(v){authenticated=v;},set known(v){known=v;},set limited(v){limited=v;},set disabled(v){disabled=v;}};
 }
-test('welcome and verification require a session, reject overrides, and generate private account links',async()=>{
+test('welcome and verification require a session and queue private intents before account lookup',async()=>{
   const f=accountFixture();f.authenticated=false;assert.equal((await f.request({action:'welcome'})).status,401);
   f.authenticated=true;assert.equal((await f.request({action:'welcome',to:'attacker@example.com'})).status,400);
   assert.equal((await f.request({action:'welcome'})).status,200);assert.equal(f.queued,1);assert.equal(f.jobs[0][3].template,'welcome');
   f.existing=true;await f.request({action:'welcome'});assert.equal(f.queued,1);f.existing=false;
-  await f.request({action:'verify-email'});assert.equal(f.jobs.at(-1)[2],'buyer');assert.equal(f.jobs.at(-1)[3].template,'verify_email');assert.match(f.jobs.at(-1)[3].href,/oobCode=verify/);assert.equal(f.jobs.at(-1)[5],true);assert.equal(f.jobs.at(-1)[6],'buyer@example.com');
+  await f.request({action:'verify-email'});assert.equal(f.jobs.at(-1)[2],'buyer');assert.equal(f.jobs.at(-1)[3].template,'verify_email');assert.equal(f.jobs.at(-1)[3].href,'');assert.equal(f.jobs.at(-1)[5],true);assert.equal(f.jobs.at(-1)[6],undefined);
 });
 test('password reset gives identical responses for known, missing, disabled and rate-limited accounts',async()=>{
   const f=accountFixture();const body=await (await f.request({action:'reset-password',email:'buyer@example.com'})).json();assert.equal(f.jobs[0][3].template,'password_reset');assert.equal(f.jobs[0][5],true);
   f.known=false;assert.deepEqual(await (await f.request({action:'reset-password',email:'missing@example.com'})).json(),body);
   f.known=true;f.disabled=true;assert.deepEqual(await (await f.request({action:'reset-password',email:'buyer@example.com'})).json(),body);
-  f.disabled=false;f.limited=true;assert.deepEqual(await (await f.request({action:'reset-password',email:'buyer@example.com'})).json(),body);assert.equal(f.queued,1);
+  f.disabled=false;f.limited=true;assert.deepEqual(await (await f.request({action:'reset-password',email:'buyer@example.com'})).json(),body);assert.equal(f.queued,3);
   assert.equal((await f.request({action:'reset-password',email:'buyer@example.com'},'https://evil.example')).status,403);
 });
 
@@ -87,4 +87,14 @@ test('retry worker rejects missing or incorrect cron credentials',async()=>{
   },{process:{env:{CRON_SECRET:'fixture-only-secret'}}});
   assert.equal((await GET({headers:new Headers()})).status,401);assert.equal((await GET({headers:new Headers({authorization:'Bearer wrong'})})).status,401);assert.equal(calls,0);
   assert.equal((await GET({headers:new Headers({authorization:'Bearer fixture-only-secret'})})).status,200);assert.equal(calls,1);
+});
+
+test('order email snapshots preserve amount precision and delivery details while keeping a stable display ID',()=>{
+  const {orderEmail,orderReference}=load('src/lib/server/order-email.ts');
+  const order={productName:'Cake',quantity:2,subtotal:1000.5,deliveryFee:50,deliveryMode:'delivery',deliveryAddress:'Sample address',requestedDate:'2026-11-15',requestedSlot:'10–12',advancePaymentRequired:true,status:'pending',customerName:'Buyer',customerPhone:'9876543210',selectedWeight:{value:500,unit:'g'}};
+  const buyer=orderEmail('private-buyer_checkout_0',order,'buyer'),seller=orderEmail('private-buyer_checkout_0',order,'seller');
+  assert.equal(buyer.reference,seller.reference);assert.equal(buyer.reference,orderReference('private-buyer_checkout_0'));assert.notEqual(buyer.reference,orderReference('private-buyer_checkout_1'));assert.doesNotMatch(buyer.reference,/private-buyer/);
+  assert.match(buyer.details.find(row=>row.label==='Order total').value,/1,050.50/);assert.equal(buyer.details.find(row=>row.label==='Delivery address').value,'Sample address');assert.equal(buyer.details.find(row=>row.label==='Payment').value,'Advance arranged with seller');assert.match(buyer.details.find(row=>row.label==='Product').value,/500 g/);
+  assert.equal(buyer.details.some(row=>row.label==='Contact phone'),false);assert.equal(seller.details.find(row=>row.label==='Contact phone').value,'9876543210');assert.match(seller.href,/section=orders/);assert.ok(seller.details.length<=12);
+  const pickup=orderEmail('pickup',{...order,deliveryMode:'pickup',paymentStatus:'collected'},'buyer');assert.equal(pickup.details.some(row=>row.label==='Delivery fee'||row.label==='Delivery address'),false);assert.match(pickup.details.find(row=>row.label==='Payment').value,/Seller recorded/);
 });

@@ -8,7 +8,10 @@ async function run(){
   if(!process.env.FIRESTORE_EMULATOR_HOST)throw Error('Refusing mail tests outside emulator');
   const db=getFirestore(initializeApp({projectId:'demo-treatstory'},'mail-tests'));
   process.env.APPS_SCRIPT_MAIL_SECRET='fixture-secret-that-is-at-least-32-characters';process.env.APPS_SCRIPT_MAIL_URL='https://script.google.com/macros/s/fixture/exec';process.env.APP_URL='https://shop.example.com';
-  let email='buyer@example.com';const auth={getUser:async()=>({email,disabled:false})} as unknown as Auth;
+  let email='buyer@example.com',accountState='ok',generated=0;
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID='fixture';
+  const account=()=>({uid:'buyer',email,disabled:accountState==='disabled'});
+  const auth={getUser:async()=>account(),getUserByEmail:async()=>{if(accountState==='lookup-error')throw {code:'auth/insufficient-permission'};if(accountState==='missing')throw {code:'auth/user-not-found'};return account();},generatePasswordResetLink:async()=>{if(accountState==='link-error')throw {code:'auth/internal-error'};generated++;return 'https://fixture.firebaseapp.com/__/auth/action?oobCode=private';}} as unknown as Auth;
   const original=global.fetch;const calls:{id:string;payload:string}[]=[];let responseCode='TEMPORARILY_UNAVAILABLE';
   global.fetch=async(url,options)=>{
     assert.equal(url,process.env.APPS_SCRIPT_MAIL_URL);const envelope=JSON.parse(String(options?.body));calls.push({id:envelope.id,payload:envelope.payload});
@@ -30,6 +33,18 @@ async function run(){
     assert.equal(await deliverMailJob(db,auth,failed),'failed');assert.equal((await db.collection('mail_outbox').doc(failed).get()).data()?.payload,undefined);
     let uncertain='';await db.runTransaction(async tx=>{uncertain=queueMail(tx,db,'buyer',{title:'Update',message:'Hello',href:'/orders'},randomUUID());});responseCode='DELIVERY_UNCERTAIN';
     assert.equal(await deliverMailJob(db,auth,uncertain),'review');assert.equal((await db.collection('mail_outbox').doc(uncertain).get()).data()?.status,'review');
+    const reset=async()=>{let ref='';await db.runTransaction(async tx=>{ref=queueMail(tx,db,'',{template:'password_reset',title:'Reset password',message:'Choose your new password',href:''},undefined,true,'buyer@example.com');});return ref;};
+    const retryNow=async(id:string)=>db.collection('mail_outbox').doc(id).update({nextAttemptAt:Timestamp.fromMillis(0)});
+    const resetId=await reset();assert.equal((await db.collection('mail_outbox').doc(resetId).get()).exists,true,'reset intent exists before any account lookup');
+    const beforeReset=calls.length;
+    accountState='lookup-error';assert.equal(await deliverMailJob(db,auth,resetId),'retry');
+    let resetJob=(await db.collection('mail_outbox').doc(resetId).get()).data()!;assert.equal(resetJob.lastError,'auth/insufficient-permission');assert.equal(resetJob.lastStage,'account-lookup');assert.equal(calls.length,beforeReset);
+    accountState='link-error';await retryNow(resetId);assert.equal(await deliverMailJob(db,auth,resetId),'retry');resetJob=(await db.collection('mail_outbox').doc(resetId).get()).data()!;assert.equal(resetJob.lastStage,'link-generation');
+    accountState='ok';responseCode='AUTH_HOST_NOT_CONFIGURED';await retryNow(resetId);assert.equal(await deliverMailJob(db,auth,resetId),'retry');resetJob=(await db.collection('mail_outbox').doc(resetId).get()).data()!;assert.equal(resetJob.lastError,'AUTH_HOST_NOT_CONFIGURED');assert.equal(resetJob.lastStage,'relay');assert.equal(generated,1);
+    responseCode='OK';await retryNow(resetId);assert.equal(await deliverMailJob(db,auth,resetId),'accepted');assert.equal(generated,1,'reuse the frozen secure link on relay retry');resetJob=(await db.collection('mail_outbox').doc(resetId).get()).data()!;assert.equal(resetJob.lastError,undefined);assert.equal(resetJob.payload,undefined);assert.equal(resetJob.recipient,undefined);
+    accountState='missing';const missingId=await reset();assert.equal(await deliverMailJob(db,auth,missingId),'skipped');assert.equal((await db.collection('mail_outbox').doc(missingId).get()).data()?.recipient,undefined);
+    accountState='disabled';const disabledId=await reset();assert.equal(await deliverMailJob(db,auth,disabledId),'skipped');
+    console.log('PASS reset intent persistence, permission/link failure recovery, auth-host retry, stable secure-link payload and private unknown-account cleanup');
     console.log('PASS mail outbox: concurrency leases, transient retry, frozen payload/idempotency, expiry, cleanup and permanent failure; no live email sent');
   }finally{global.fetch=original;await db.terminate();}
 }

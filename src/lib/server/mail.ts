@@ -12,9 +12,9 @@ export const MAIL_TEMPLATES = [
   'seller_application_new','seller_access_updated','update',
 ] as const;
 export type MailTemplate = typeof MAIL_TEMPLATES[number];
-export type MailContent = { title:string; message:string; href:string; label?:string; template?:MailTemplate; details?:Array<{label:string;value:string}> };
+export type MailContent = { title:string; message:string; href:string; label?:string; reference?:string; template?:MailTemplate; details?:Array<{label:string;value:string}> };
 type MailJob = MailContent & {uid:string; createdAt:Timestamp; expiresAt:Timestamp; nextAttemptAt:Timestamp; attempts:number; status:string; recipient?:string; payload?:MailPayload};
-export type MailPayload = {to:string[];template:MailTemplate;data:{title:string;message:string;href:string;label?:string;details?:Array<{label:string;value:string}>};reply_to?:string};
+export type MailPayload = {to:string[];template:MailTemplate;data:{title:string;message:string;href:string;label?:string;reference?:string;details?:Array<{label:string;value:string}>};reply_to?:string};
 const collection='mail_outbox';
 export function mailConfig() {
   const secret=process.env.APPS_SCRIPT_MAIL_SECRET?.trim();
@@ -31,12 +31,13 @@ export function mailConfig() {
 export function renderMail(content:MailContent,origin:string) {
   const url=new URL(content.href,origin);
   const account=content.template==='verify_email'||content.template==='password_reset';
-  const authHost=`${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebaseapp.com`;
-  const allowedAuth=account&&url.hostname===authHost&&url.pathname==='/__/auth/action'&&!url.username&&!url.password&&!url.port;
-  if(url.protocol!=='https:'||(url.origin!==new URL(origin).origin&&!allowedAuth))throw new Error('Invalid mail link');
+  const project=process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const hosts=[`${project}.firebaseapp.com`,`${project}.web.app`,process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim().replace(/^https:\/\//,'').replace(/\/$/,'').toLowerCase()];
+  const allowedAuth=account&&hosts.includes(url.hostname)&&url.pathname==='/__/auth/action'&&!url.username&&!url.password&&!url.port;
+  if(url.protocol!=='https:'||(url.origin!==new URL(origin).origin&&!allowedAuth))throw new MailSendError(503,account?'AUTH_ACTION_HOST_MISMATCH':'INVALID_MESSAGE_LINK');
   return {template:content.template||'update' as MailTemplate,data:{
     title:content.title.replace(/[\r\n]/g,' ').slice(0,160),message:content.message,href:url.href,
-    ...(content.label?{label:content.label}:{}),...(content.details?{details:content.details}:{}),
+    ...(content.label?{label:content.label}:{}),...(content.reference?{reference:content.reference}:{}),...(content.details?{details:content.details}:{}),
   }};
 }
 export const mailId=(event:string)=>createHash('sha256').update(event).digest('hex');
@@ -76,30 +77,45 @@ export async function deliverMailJob(db:Firestore,auth:Auth,id:string) {
     tx.update(ref,{lease,nextAttemptAt:Timestamp.fromMillis(now+120_000),attempts:data.attempts+1});return data;
   });
   if(!job)return 'skipped';
+  let stage='account-lookup';
   try {
     let payload=job.payload;
     if(!payload) {
-      const user=await auth.getUser(job.uid);
+      const account=job.template==='password_reset'||job.template==='verify_email';
+      const user=job.template==='password_reset'&&!job.uid&&job.recipient
+        ?await auth.getUserByEmail(job.recipient):await auth.getUser(job.uid);
       if(!user.email||user.disabled) {
         await ref.update({status:'skipped',nextAttemptAt:FieldValue.delete(),payload:FieldValue.delete(),href:FieldValue.delete(),recipient:FieldValue.delete()});return 'skipped';
       }
-      payload={to:[job.recipient||user.email],...renderMail(job,config.origin),...(config.replyTo?{reply_to:config.replyTo}:{})};
+      let href=job.href;
+      // Queue the intent before any account lookup/link generation, so failures remain retryable.
+      if(account&&!href){
+        stage='link-generation';
+        href=job.template==='password_reset'
+          ?await auth.generatePasswordResetLink(user.email,{url:`${config.origin}/login`})
+          :await auth.generateEmailVerificationLink(user.email,{url:`${config.origin}/account`});
+      }
+      stage='prepare-message';
+      payload={to:[account?user.email:job.recipient||user.email],...renderMail({...job,href},config.origin),...(config.replyTo?{reply_to:config.replyTo}:{})};
       // Persist before sending: retries must use exactly the same recipient, sender and content.
-      await ref.update({payload});
+      await ref.update({payload,...(account?{uid:user.uid}:{} )});
     }
+    stage='relay';
     const providerId=await sendAppsScript(payload,config,id);
-    await ref.update({status:'accepted',nextAttemptAt:FieldValue.delete(),providerId,acceptedAt:Timestamp.now(),payload:FieldValue.delete(),href:FieldValue.delete(),recipient:FieldValue.delete(),lease:FieldValue.delete()});
+    await ref.update({status:'accepted',lastError:FieldValue.delete(),lastStage:FieldValue.delete(),nextAttemptAt:FieldValue.delete(),providerId,acceptedAt:Timestamp.now(),payload:FieldValue.delete(),href:FieldValue.delete(),recipient:FieldValue.delete(),lease:FieldValue.delete()});
     return 'accepted'; // MailApp accepted is not proof of inbox delivery.
   } catch(error) {
     const status=error instanceof MailSendError?error.status:0;
-    const code=error instanceof MailSendError?error.code:'DELIVERY_UNAVAILABLE';
+    const authCode=(error as {code?:unknown})?.code;
+    const code=error instanceof MailSendError?error.code:typeof authCode==='string'&&/^auth\/[a-z-]+$/.test(authCode)?authCode:'DELIVERY_UNAVAILABLE';
+    const skipped=code==='auth/user-not-found';
     const review=['DELIVERY_UNCERTAIN','ID_CONFLICT'].includes(code);
-    const permanent=review||(status>=400&&status<500&&![408,409,429].includes(status))||(error as {code?:string})?.code==='auth/user-not-found';
+    const permanent=skipped||review||(status>=400&&status<500&&![408,409,429].includes(status));
     await db.runTransaction(async tx=>{const snap=await tx.get(ref);if(snap.data()?.lease!==lease)return;
-      tx.update(ref,{status:review?'review':permanent?'failed':'pending',lastError:code,lease:FieldValue.delete(),
+      tx.update(ref,{status:skipped?'skipped':review?'review':permanent?'failed':'pending',lastError:code,lastStage:stage,lease:FieldValue.delete(),
         nextAttemptAt:permanent?FieldValue.delete():Timestamp.fromMillis(Date.now()+Math.min(3600_000,60_000*2**Math.min(job.attempts,6))),
         ...(permanent?{payload:FieldValue.delete(),href:FieldValue.delete(),recipient:FieldValue.delete()}:{})});});
-    return review?'review':permanent?'failed':'retry';
+    return skipped?'skipped':review?'review':permanent?'failed':'retry';
   }
 }
 export async function processMailQueue(db:Firestore,auth:Auth,limit=10) {

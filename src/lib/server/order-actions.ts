@@ -1,3 +1,4 @@
+import { orderEmail, orderReference } from '@/lib/server/order-email';
 import { queueMail, type MailTemplate } from '@/lib/server/mail';
 import { orderFeedback } from '@/lib/order-feedback';
 import { Timestamp, type Firestore, type Transaction } from 'firebase-admin/firestore';
@@ -15,7 +16,7 @@ const allowed: Record<string, string[]> = {
   completed: [], rejected: [], cancelled: [],
 };
 type OrderInfo = {
-  buyerUid: string; sellerId: string; productId: string; status: string; productName?: string; deliveryMode?: string;
+  buyerUid: string; sellerId: string; productId: string; status: string; orderReference?:string; subtotal?:number; deliveryFee?:number; deliveryAddress?:string; requestedSlot?:string; customerName?:string; customerPhone?:string; advancePaymentRequired?:boolean; productName?: string; deliveryMode?: string;
   quantity: number; stockSource?: 'product' | 'option' | 'none';
   stockReserved?: boolean; stockReleasedAt?: Timestamp; bookingReleasedAt?: Timestamp;
   selectedWeight?: {value: number; unit: string}|null;
@@ -43,7 +44,7 @@ export async function applyOrderAction(db: Firestore, uid: string, orderId: stri
     const notify = (receiver: string, event: string) => {
       const text=orderFeedback(event,order.productName,order.deliveryMode,receiver===order.buyerUid?'buyer':'seller');
       const templates:Record<string,MailTemplate>={accepted:'order_accepted',preparing:'order_preparing',ready:order.deliveryMode==='pickup'?'order_ready_pickup':'order_ready_delivery','out-for-delivery':'order_out_for_delivery',completed:order.deliveryMode==='pickup'?'order_collected':'order_delivered',rejected:'order_declined',cancelled:'order_cancelled','request-cancellation':'order_cancel_requested','decline-cancellation':'order_cancel_declined','cod-collected':'payment_recorded'};
-      queueMail(tx,db,receiver,{template:templates[event]||'update',title:text.title,message:text.description,href:'/orders'});
+      queueMail(tx,db,receiver,{...orderEmail(orderId,{...order,status:['request-cancellation','decline-cancellation','cod-collected'].includes(event)?order.status:event,paymentStatus:event==='cod-collected'?'collected':order.paymentStatus},receiver===order.buyerUid?'buyer':'seller'),template:templates[event]||'update',title:text.title,message:text.description});
       const ref = db.collection('notifications').doc(receiver).collection('items').doc();
       tx.create(ref, {title:text.title,message:text.description,kind:'order',href:'/orders',orderId,createdAt:now,read:false});
     };
@@ -53,14 +54,14 @@ export async function applyOrderAction(db: Firestore, uid: string, orderId: stri
         throw new ApiError(409, 'This order cannot be cancelled through a request.');
       if (reason.trim().length < 5 || reason.trim().length > 300) throw new ApiError(400, 'Provide a reason between 5 and 300 characters.');
       if (order.cancellationRequest) throw new ApiError(409, 'You already requested cancellation.');
-      tx.update(orderRef, { cancellationRequest: { reason: reason.trim(), requestedAt: now }, updatedAt: now, history });
+      tx.update(orderRef, {orderReference:order.orderReference||orderReference(orderId), cancellationRequest: { reason: reason.trim(), requestedAt: now }, updatedAt: now, history });
       notify(order.sellerId, 'request-cancellation');
       return { status: order.status, action, orderId };
     }
     if (action === 'decline-cancellation') {
       if (!isSeller && !isAdmin) throw new ApiError(403, 'Only the seller can respond to cancellation requests.');
       if (!order.cancellationRequest) throw new ApiError(409, 'No cancellation request is pending.');
-      tx.update(orderRef, { cancellationRequest: null, updatedAt: now, history });
+      tx.update(orderRef, {orderReference:order.orderReference||orderReference(orderId), cancellationRequest: null, updatedAt: now, history });
       notify(order.buyerUid, 'decline-cancellation');
       return { status: order.status, action, orderId };
     }
@@ -68,7 +69,7 @@ export async function applyOrderAction(db: Firestore, uid: string, orderId: stri
       if (!isSeller && !isAdmin) throw new ApiError(403, 'Only a seller or administrator can record payment.');
       if (order.status !== 'completed') throw new ApiError(409, 'Complete the order before recording COD collection.');
       if (order.paymentStatus === 'collected') return { status: order.status, action, orderId };
-      tx.update(orderRef, { paymentStatus: 'collected', paymentCollectedAt: now, updatedAt: now, history });
+      tx.update(orderRef, {orderReference:order.orderReference||orderReference(orderId), paymentStatus: 'collected', paymentCollectedAt: now, updatedAt: now, history });
       notify(order.buyerUid, 'cod-collected');
       return { status: order.status, action, orderId };
     }
@@ -108,7 +109,7 @@ export async function applyOrderAction(db: Firestore, uid: string, orderId: stri
       tx.update(bookingRef, { count: Math.max(0, (booked || 0) - 1), updatedAt: now });
     }
 
-    tx.update(orderRef, {
+    tx.update(orderRef, {orderReference:order.orderReference||orderReference(orderId),
       status: action,
       updatedAt: now,
       history,

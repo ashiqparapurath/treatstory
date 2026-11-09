@@ -153,3 +153,26 @@ Order/quote/support jobs commit atomically with their business transactions; che
 Google mail delivery and receipt storage cannot commit atomically. If execution fails during an ambiguous send, the queue stops with `DELIVERY_UNCERTAIN` for review rather than risking automatic duplicate messages. Do not delete receipts or replace event IDs to blindly retry. Check the recipient or available account audit tools before sending a replacement. There is no incoming-email inbox or bounce webhook. Choose an appropriate private retention/TTL policy for old outbox/quota metadata.
 
 Official references: [Apps Script web apps](https://developers.google.com/apps-script/guides/web), [MailApp](https://developers.google.com/apps-script/reference/mail/mail-app), [quotas](https://developers.google.com/apps-script/guides/services/quotas), [Firebase-generated secure action links](https://firebase.google.com/docs/auth/admin/email-action-links).
+
+## Order summaries and password-reset troubleshooting
+
+Order messages now include the same `TS-…` reference shown in the app, plus product/size, quantity, status, precise item/delivery/total amounts, requested date/slot, fulfilment and payment terms. Delivery addresses appear only for delivery orders; customer contact details are included for seller recipients. Each message's button opens that particular order, including orders outside the first list page. Existing records keep their original document IDs; the display reference does not change access permissions.
+
+Replace your **entire Code.gs** with the updated file, then use **Deploy → Manage deployments → Edit → New version → Deploy**. Deploy the matching app branch to Vercel as well. Merely saving the script editor does not update `/exec`. Existing frozen/previously sent emails are not regenerated or sent again.
+
+Password-reset requests are persisted **before** looking up an account or generating a link. Account-service errors therefore leave a retryable private job instead of disappearing before the outbox is written. Unknown/disabled accounts are skipped without sending mail, and public responses remain neutral. The job's `lastStage` identifies the failing step; `lastError` contains a code without raw addresses or action links. Errors are cleared after a successful send.
+
+| Outbox stage/code | What to check |
+| --- | --- |
+| No new `password_reset` job after a fresh request | Confirm the latest app is deployed, inspect `/api/email/account` in browser Network, and check server email configuration. A reached request should queue unless configuration, quota or the outbox write prevented it. |
+| `account-lookup` / `auth/insufficient-permission` | The service account can access orders but may lack Authentication permissions. In Google Cloud IAM for this Firebase project, verify this service account has the appropriate Firebase Authentication Admin role (or equivalent least-privilege read/link-generation permissions). Do not grant project Owner just for mail. |
+| `link-generation` / `auth/unauthorized-continue-uri` or `auth/invalid-continue-uri` | Add `treatstory.vercel.app` to Firebase Authentication authorized domains and verify `APP_URL=https://treatstory.vercel.app`. |
+| `relay` / `AUTH_HOST_NOT_CONFIGURED` | Set `AUTH_ACTION_HOST` in Apps Script to the correct project host, such as `your-project.firebaseapp.com`. |
+| `relay` / `AUTH_HOST_MISMATCH`, or `prepare-message` / `AUTH_ACTION_HOST_MISMATCH` | Compare the Firebase project ID/auth domain with the script property. Only the exact configured action host is allowed. |
+| `relay` / `INVALID_REQUEST` | Redeploy the latest complete Code.gs; older scripts do not understand the new order reference/summary fields. |
+| `relay` / `QUOTA_EXCEEDED` | Google sending quota is exhausted; the job retries within its expiry window. Request a fresh reset email when quota recovers if the old job expires. |
+| `accepted` | MailApp accepted the message. Check inbox/spam; this does not guarantee delivery. |
+
+The auth-host check now tolerates a copied HTTPS host or a quoted SDK configuration value, while still requiring the exact approved Firebase host. Both `.firebaseapp.com` and `.web.app` project hosts are supported. Fix the configuration and let the retry trigger run, or request a fresh link if the job has expired. Never share `recipient`, `payload`, or reset URLs when requesting help—only the template, status, stage and error code.
+
+Reference: [Firebase Authentication IAM roles and permissions](https://cloud.google.com/iam/docs/roles-permissions/firebaseauth). Grant only the access the server needs; do not share or publish the service-account private key.

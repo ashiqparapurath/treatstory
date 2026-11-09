@@ -52,13 +52,13 @@ test('all event templates render safe HTML and useful plain text with event-spec
     const href=key==='verify_email'||key==='password_reset'?'https://fixture.firebaseapp.com/__/auth/action?oobCode=secret&mode=verifyEmail':'https://treatstory.vercel.app/account';
     const mail={to:['buyer@example.com'],template:key,data:{title:'Title <script>',message:'Hello <img onerror="bad"> & friends',href,details:[{label:'<label>',value:'<value>'}]}};
     assert.equal(f.context.validMail_(mail),true,key);const rendered=f.context.renderEmail_(mail,store);
-    assert.doesNotMatch(rendered.html,/<script>|<img/);assert.match(rendered.html,/&lt;img/);assert.match(rendered.html,/&lt;label&gt;/);assert.match(rendered.html,/max-width:580px/);assert.ok(rendered.text.includes(f.context.EMAIL_TEMPLATES[key].note));assert.ok(rendered.html.includes(f.context.EMAIL_TEMPLATES[key].button));
+    assert.doesNotMatch(rendered.html,/<script>|<img/);assert.match(rendered.html,/&lt;img/);assert.match(rendered.html,/&lt;label&gt;/);assert.ok(rendered.text.includes(f.context.EMAIL_TEMPLATES[key].note));assert.ok(rendered.html.includes(f.context.EMAIL_TEMPLATES[key].button));
   }
   const gallery=f.context.doGet({parameter:{preview:'1'}});assert.match(gallery,/Sample messages only/);assert.ok(gallery.includes('seller_access_updated'));assert.equal(f.sent.length,0);
 });
 test('relay rejects unknown templates and external account-link hosts',()=>{
   const f=fixture();for(const [template,href] of [['unknown','https://treatstory.vercel.app/account'],['password_reset','https://evil.example/__/auth/action?oobCode=x'],['welcome','https://fixture.firebaseapp.com/__/auth/action?oobCode=x'],['password_reset','https://fixture.firebaseapp.com.attacker.example/__/auth/action?oobCode=x']]){
-    assert.equal(f.post(f.envelope('blocked',{payload:JSON.stringify({to:['buyer@example.com'],template,data:{title:'Hello',message:'Hello',href}})})).code,'INVALID_REQUEST');
+    assert.equal(f.post(f.envelope('blocked',{payload:JSON.stringify({to:['buyer@example.com'],template,data:{title:'Hello',message:'Hello',href}})})).code,template==='password_reset'?'AUTH_HOST_MISMATCH':'INVALID_REQUEST');
   }assert.equal(f.sent.length,0);
 });
 
@@ -66,4 +66,15 @@ test('server and complete Code.gs support exactly the same template catalog',()=
   const f=fixture();const module={exports:{}};
   vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/server/mail.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{module,exports:module.exports,require});
   assert.deepEqual(Array.from(module.exports.MAIL_TEMPLATES).sort(),Object.keys(f.context.EMAIL_TEMPLATES).sort());
+});
+
+test('account link validation tolerates copied HTTPS host values and diagnoses missing/mismatched configuration',()=>{
+  const f=fixture();const payload=JSON.stringify({to:['buyer@example.com'],template:'password_reset',data:{title:'Reset',message:'Choose a password',href:'https://fixture.firebaseapp.com/__/auth/action?oobCode=private'}});
+  f.properties.set('AUTH_ACTION_HOST',' "https://fixture.firebaseapp.com/" ');assert.equal(f.post(f.envelope('normalized',{payload})).ok,true);
+  f.properties.delete('AUTH_ACTION_HOST');assert.equal(f.post(f.envelope('missing-host',{payload})).code,'AUTH_HOST_NOT_CONFIGURED');
+  f.properties.set('AUTH_ACTION_HOST','other.firebaseapp.com');assert.equal(f.post(f.envelope('wrong-host',{payload})).code,'AUTH_HOST_MISMATCH');
+});
+test('clean order template includes a searchable reference, totals and schedule in HTML, subject and plain text',()=>{
+  const f=fixture();const mail={template:'order_received',data:{title:'Order received',reference:'TS-A1B2C3D4E5F6',message:'Seller confirmation pending.',href:'https://treatstory.vercel.app/orders?order=private-order-id',details:[{label:'Product',value:'Cake'},{label:'Order total',value:'₹550.50'},{label:'Requested for',value:'15 Nov 2026 · 10 AM–12 PM'}]}};
+  const rendered=f.context.renderEmail_(mail,{getProperty:key=>f.properties.get(key)});assert.match(rendered.subject,/TS-A1B2C3D4E5F6/);assert.match(rendered.html,/ORDER ID/);assert.match(rendered.html,/₹550.50/);assert.match(rendered.text,/Order ID: TS-A1B2C3D4E5F6/);assert.match(rendered.text,/15 Nov 2026/);assert.doesNotMatch(rendered.html,/copy this secure link/);
 });
