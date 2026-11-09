@@ -55,7 +55,7 @@ const fixture = JSON.parse(
   const bounds = await share.boundingBox(),
     photo = await p
       .getByAltText("Audit Cake 0001 photo 1", { exact: true })
-      .boundingBox();
+      .evaluate(image=>{const r=image.closest(".group").getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height};});
   assert.ok(
     bounds.x >= photo.x + photo.width - 65 &&
       bounds.y >= photo.y &&

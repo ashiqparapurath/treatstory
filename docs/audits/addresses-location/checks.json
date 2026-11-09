@@ -1,0 +1,17 @@
+{
+  "checks": [
+    "unauthenticated, forged-owner and invalid-PIN mutations rejected",
+    "legacy default preserved and repeat saves do not duplicate addresses",
+    "concurrent adds preserve both addresses",
+    "setting/removing default atomically updates the compatible default document",
+    "address book bounded at 10 entries",
+    "actual rules permit owner reads and reject foreign reads/direct writes",
+    "location endpoint validates coordinates, rate-limits provider calls and does not store coordinates",
+    "granted location suggests area/PIN and preserves house/street and edits made during lookup",
+    "mobile profile shows Wishlist and saves an additional address in a popup",
+    "permission denial leaves manual address entry available",
+    "checkout switches name/phone/address/PIN without changing the saved default",
+    "one-order override survives live default changes",
+    "removing last address clears default safely"
+  ]
+}

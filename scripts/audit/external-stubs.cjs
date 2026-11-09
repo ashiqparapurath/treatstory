@@ -32,6 +32,7 @@ global.fetch = async (input, options) => {
     const envelope = JSON.parse(String(options.body));
     return Response.json({ ok: true, id: envelope.id });
   }
+  if (url.hostname === "nominatim.openstreetmap.org") return Response.json({address:{country_code:"in",suburb:"Audit Town",county:"Kozhikode",state:"Kerala",postcode:"673001"}});
   if (url.hostname === "api.cloudinary.com") {
     counts.upload++;
     return Response.json({
