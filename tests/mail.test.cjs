@@ -40,13 +40,14 @@ function accountFixture(){
   const db={collection:name=>({doc:id=>({path:`${name}/${id}`})}),runTransaction:async fn=>fn({get:async ref=>ref.path.startsWith('mail_limits/')?{data:()=>({count:limited?3:0})}:{exists:existing},set(){}})};
   const user=()=>({uid:'buyer',email:'buyer@example.com',disabled,emailVerified:false});
   const auth={getUser:async()=>user(),getUserByEmail:async()=>{if(!known)throw {code:'auth/user-not-found'};return user();},generatePasswordResetLink:async()=> 'https://fixture.firebaseapp.com/__/auth/action?oobCode=reset',generateEmailVerificationLink:async()=> 'https://fixture.firebaseapp.com/__/auth/action?oobCode=verify'};
-  const {POST}=load('src/app/api/email/account/route.ts',{
-    'next/server':{after(){}},'firebase-admin/firestore':{Timestamp:{now:()=>0}},
-    '@/lib/server/firebase-admin':{ApiError,verifiedUser:async()=>{if(!authenticated)throw new ApiError(401,'Sign in');return {uid:'buyer',db,auth};},getServerFirebase:()=>({db,auth}),safeResponse:e=>Response.json({error:e.message},{status:e.status||503})},
-    '@/lib/server/mail':{mailConfig:()=>({origin:'https://treatstory.vercel.app'}),mailId:s=>s,queueMail:(...args)=>{jobs.push(args);queued++;return 'job-id';},deliverMailJob(){}},
+  const firebaseMock={ApiError,verifiedUser:async()=>{if(!authenticated)throw new ApiError(401,'Sign in');return {uid:'buyer',db,auth};},getServerFirebase:()=>({db,auth}),safeResponse:e=>Response.json({error:e.message},{status:e.status||503})};
+  const mailMock={mailConfig:()=>({origin:'https://treatstory.vercel.app'}),mailId:s=>s,queueMail:(...args)=>{jobs.push(args);queued++;return 'job-id';},deliverMailJob(){}};
+  const queue=load('src/lib/server/account-email.ts',{'firebase-admin/firestore':{Timestamp:{now:()=>0}},'@/lib/server/firebase-admin':firebaseMock,'@/lib/server/mail':mailMock});
+  const {POST,GET}=load('src/app/api/email/account/route.ts',{
+    'next/server':{after(){}},'@/lib/server/firebase-admin':firebaseMock,'@/lib/server/mail':mailMock,'@/lib/server/account-email':queue,
   });
   const request=(body,origin='https://treatstory.vercel.app')=>POST({url:'https://treatstory.vercel.app/api/email/account',headers:new Headers({origin}),text:async()=>JSON.stringify(body)});
-  return {request,jobs,get queued(){return queued;},set existing(v){existing=v;},set authenticated(v){authenticated=v;},set known(v){known=v;},set limited(v){limited=v;},set disabled(v){disabled=v;}};
+  return {request,health:GET,jobs,get queued(){return queued;},set existing(v){existing=v;},set authenticated(v){authenticated=v;},set known(v){known=v;},set limited(v){limited=v;},set disabled(v){disabled=v;}};
 }
 test('welcome and verification require a session and queue private intents before account lookup',async()=>{
   const f=accountFixture();f.authenticated=false;assert.equal((await f.request({action:'welcome'})).status,401);
@@ -55,11 +56,11 @@ test('welcome and verification require a session and queue private intents befor
   f.existing=true;await f.request({action:'welcome'});assert.equal(f.queued,1);f.existing=false;
   await f.request({action:'verify-email'});assert.equal(f.jobs.at(-1)[2],'buyer');assert.equal(f.jobs.at(-1)[3].template,'verify_email');assert.equal(f.jobs.at(-1)[3].href,'');assert.equal(f.jobs.at(-1)[5],true);assert.equal(f.jobs.at(-1)[6],undefined);
 });
-test('password reset gives identical responses for known, missing, disabled and rate-limited accounts',async()=>{
+test('password reset preserves account privacy and reports throttling instead of false success',async()=>{
   const f=accountFixture();const body=await (await f.request({action:'reset-password',email:'buyer@example.com'})).json();assert.equal(f.jobs[0][3].template,'password_reset');assert.equal(f.jobs[0][5],true);
   f.known=false;assert.deepEqual(await (await f.request({action:'reset-password',email:'missing@example.com'})).json(),body);
   f.known=true;f.disabled=true;assert.deepEqual(await (await f.request({action:'reset-password',email:'buyer@example.com'})).json(),body);
-  f.disabled=false;f.limited=true;assert.deepEqual(await (await f.request({action:'reset-password',email:'buyer@example.com'})).json(),body);assert.equal(f.queued,3);
+  f.disabled=false;f.limited=true;const limited=await f.request({action:'reset-password',email:'buyer@example.com'});assert.equal(limited.status,429);assert.match((await limited.json()).error,/wait/);assert.equal(f.queued,3);
   assert.equal((await f.request({action:'reset-password',email:'buyer@example.com'},'https://evil.example')).status,403);
 });
 
@@ -97,4 +98,15 @@ test('order email snapshots preserve amount precision and delivery details while
   assert.match(buyer.details.find(row=>row.label==='Order total').value,/1,050.50/);assert.equal(buyer.details.find(row=>row.label==='Delivery address').value,'Sample address');assert.equal(buyer.details.find(row=>row.label==='Payment').value,'Advance arranged with seller');assert.match(buyer.details.find(row=>row.label==='Product').value,/500 g/);
   assert.equal(buyer.details.some(row=>row.label==='Contact phone'),false);assert.equal(seller.details.find(row=>row.label==='Contact phone').value,'9876543210');assert.match(seller.href,/section=orders/);assert.ok(seller.details.length<=12);
   const pickup=orderEmail('pickup',{...order,deliveryMode:'pickup',paymentStatus:'collected'},'buyer');assert.equal(pickup.details.some(row=>row.label==='Delivery fee'||row.label==='Delivery address'),false);assert.match(pickup.details.find(row=>row.label==='Payment').value,/Seller recorded/);
+});
+
+test('account client rejects HTTP-200 HTML and malformed success bodies',async()=>{
+  class ActionError extends Error{constructor(message,status){super(message);this.status=status;}}
+  let mode='html';
+  const {requestAccountMail}=load('src/lib/account-mail.ts',{'@/lib/user-notices':{ActionError}},{fetch:async()=>mode==='html'?new Response('<html>Sign in</html>'):Response.json({})});
+  await assert.rejects(()=>requestAccountMail('reset-password',{email:'buyer@example.com'}),e=>e.status===503);
+  mode='json';await assert.rejects(()=>requestAccountMail('reset-password',{email:'buyer@example.com'}),e=>e.status===503);
+});
+test('read-only account endpoint reports the deployed queue flow without touching account data',async()=>{
+  const f=accountFixture();const response=await f.health();assert.deepEqual(await response.json(),{ok:true,flow:'outbox-v2'});assert.equal(response.headers.get('X-TreatStory-Email-Flow'),'outbox-v2');assert.equal(f.queued,0);
 });

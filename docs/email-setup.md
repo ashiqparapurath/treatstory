@@ -148,7 +148,7 @@ Google's sending, runtime, trigger and property-storage quotas apply. This setup
 
 The server signs exact UTF-8 bytes with HMAC-SHA256. Apps Script checks the signature, a five-minute timestamp window, the template, single recipient and approved link host. Script locks and 72-hour private hashed receipts suppress duplicates. The public preview contains only fake data. Keep project editors, Script Properties, queued action links and service-account credentials private.
 
-Order/quote/support jobs commit atomically with their business transactions; checkout retries do not duplicate them. Seller application/access writes are followed by a separate authorized queue request, with a separate warning if queuing fails. Welcome is limited to one job per account. Account requests are limited to three per identity/hour and 100 globally/hour; password-reset responses stay neutral for known, missing, disabled and rate-limited accounts.
+Order/quote/support jobs commit atomically with their business transactions; checkout retries do not duplicate them. Seller application/access writes are followed by a separate authorized queue request, with a separate warning if queuing fails. Welcome is limited to one job per account. Account requests are limited to three per identity/hour and 100 globally/hour; password-reset responses stay neutral for known, missing and disabled accounts. Rate-limited requests return an explicit 429 error for every address, independent of whether it is registered.
 
 Google mail delivery and receipt storage cannot commit atomically. If execution fails during an ambiguous send, the queue stops with `DELIVERY_UNCERTAIN` for review rather than risking automatic duplicate messages. Do not delete receipts or replace event IDs to blindly retry. Check the recipient or available account audit tools before sending a replacement. There is no incoming-email inbox or bounce webhook. Choose an appropriate private retention/TTL policy for old outbox/quota metadata.
 
@@ -176,3 +176,18 @@ Password-reset requests are persisted **before** looking up an account or genera
 The auth-host check now tolerates a copied HTTPS host or a quoted SDK configuration value, while still requiring the exact approved Firebase host. Both `.firebaseapp.com` and `.web.app` project hosts are supported. Fix the configuration and let the retry trigger run, or request a fresh link if the job has expired. Never share `recipient`, `payload`, or reset URLs when requesting help—only the template, status, stage and error code.
 
 Reference: [Firebase Authentication IAM roles and permissions](https://cloud.google.com/iam/docs/roles-permissions/firebaseauth). Grant only the access the server needs; do not share or publish the service-account private key.
+
+
+### If the outbox still contains only order emails
+
+Open <https://treatstory.vercel.app/api/email/account> in a browser. The updated app returns:
+
+```json
+{"ok":true,"flow":"outbox-v2"}
+```
+
+This is a read-only version marker: it does not send email or inspect accounts. If it returns 405, HTML, or a different value, deploy the latest PR app commit to **Production**; replacing Code.gs does not update the Vercel API. The response header `X-TreatStory-Email-Flow: outbox-v2` also identifies the flow on POST responses.
+
+The older reset flow returned “Check your inbox” after reaching three requests without creating a job. The fixed flow returns 429 with visible wait/retry guidance instead. Quota and the outbox job now commit in one transaction, so failed writes do not use attempts. Versioned quota counters avoid carrying over the older flow's attempts that may have failed before queuing. The request limit remains three per identity/hour and 100 globally/hour. The client also rejects HTTP-200 HTML or JSON without `ok: true`, preventing a redirect/login page from producing a false success.
+
+After confirming `outbox-v2`, submit one fresh reset request. A successful response follows a committed private intent. If no job appears, inspect only the status/response JSON for `/api/email/account` in browser Network; do not share its request body, email address, credentials or action links. A 429 means wait for the rate-limit window; a 503/configuration error needs the corresponding Vercel/server configuration investigated. This update is in the website API/client; the prior Apps Script deployment can remain in place.

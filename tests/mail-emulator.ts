@@ -3,7 +3,8 @@ import {randomUUID} from 'node:crypto';
 import {initializeApp} from 'firebase-admin/app';
 import {getFirestore,Timestamp} from 'firebase-admin/firestore';
 import type {Auth} from 'firebase-admin/auth';
-import {queueMail,deliverMailJob} from '@/lib/server/mail';
+import {queueMail,deliverMailJob,mailId} from '@/lib/server/mail';
+import {enqueueAccountEmail} from '@/lib/server/account-email';
 async function run(){
   if(!process.env.FIRESTORE_EMULATOR_HOST)throw Error('Refusing mail tests outside emulator');
   const db=getFirestore(initializeApp({projectId:'demo-treatstory'},'mail-tests'));
@@ -44,6 +45,20 @@ async function run(){
     responseCode='OK';await retryNow(resetId);assert.equal(await deliverMailJob(db,auth,resetId),'accepted');assert.equal(generated,1,'reuse the frozen secure link on relay retry');resetJob=(await db.collection('mail_outbox').doc(resetId).get()).data()!;assert.equal(resetJob.lastError,undefined);assert.equal(resetJob.payload,undefined);assert.equal(resetJob.recipient,undefined);
     accountState='missing';const missingId=await reset();assert.equal(await deliverMailJob(db,auth,missingId),'skipped');assert.equal((await db.collection('mail_outbox').doc(missingId).get()).data()?.recipient,undefined);
     accountState='disabled';const disabledId=await reset();assert.equal(await deliverMailJob(db,auth,disabledId),'skipped');
+    const limitedEmail=`quota-${randomUUID()}@example.com`;
+    for(let attempt=0;attempt<3;attempt++)await enqueueAccountEmail(db,'reset-password','',limitedEmail);
+    await assert.rejects(()=>enqueueAccountEmail(db,'reset-password','',limitedEmail),(error:unknown)=>(error as {status?:number}).status===429,'fourth attempt is an explicit error, not a false inbox success');
+    assert.equal((await db.collection('mail_outbox').where('recipient','==',limitedEmail).get()).size,3);
+    const rolledBack=`rollback-${randomUUID()}@example.com`;
+    const failedDb={collection:db.collection.bind(db),runTransaction:(fn:Parameters<typeof db.runTransaction>[0])=>db.runTransaction(async tx=>{await fn(tx);throw Error('Simulated commit failure');})} as unknown as typeof db;
+    await assert.rejects(()=>enqueueAccountEmail(failedDb,'reset-password','',rolledBack),/Simulated commit failure/);
+    assert.equal((await db.collection('mail_outbox').where('recipient','==',rolledBack).get()).size,0);
+    assert.equal((await db.collection('mail_limits').doc(`account_v2_${mailId(rolledBack)}_${Math.floor(Date.now()/3600_000)}`).get()).exists,false,'failed outbox transaction must not consume quota');
+    const migratedEmail=`migration-${randomUUID()}@example.com`;
+    await db.collection('mail_limits').doc(`${mailId(migratedEmail)}_${Math.floor(Date.now()/3600_000)}`).set({count:3});
+    await db.collection('mail_limits').doc(`account_global_${Math.floor(Date.now()/3600_000)}`).set({count:100});
+    const migratedJob=await enqueueAccountEmail(db,'reset-password','',migratedEmail);assert.equal((await db.collection('mail_outbox').doc(migratedJob).get()).exists,true,'old pre-queue failures must not block the fixed flow');
+    console.log('PASS atomic account quota/job commit, rollback, explicit rate limiting and old quota migration');
     console.log('PASS reset intent persistence, permission/link failure recovery, auth-host retry, stable secure-link payload and private unknown-account cleanup');
     console.log('PASS mail outbox: concurrency leases, transient retry, frozen payload/idempotency, expiry, cleanup and permanent failure; no live email sent');
   }finally{global.fetch=original;await db.terminate();}
