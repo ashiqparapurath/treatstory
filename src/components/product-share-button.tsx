@@ -12,9 +12,11 @@ import { errorToast } from "@/lib/user-notices";
 export function ProductShareButton({
   productRoute,
   title,
+  iconOnly = false,
 }: {
   productRoute: string;
   title: string;
+  iconOnly?: boolean;
 }) {
   const [url, setUrl] = useState(""),
     [open, setOpen] = useState(false),
@@ -74,7 +76,11 @@ export function ProductShareButton({
           variant="outline"
           disabled={!url || busy}
           aria-label={`Share ${title}`}
-          className="h-11 shrink-0 rounded-full bg-white px-4 text-xs"
+          className={
+            iconOnly
+              ? "h-11 w-11 shrink-0 rounded-full border-white/60 bg-white/85 p-0 text-[#29251f] shadow-sm backdrop-blur-xl hover:bg-white"
+              : "h-11 shrink-0 rounded-full bg-white px-4 text-xs"
+          }
           onClick={(event) => {
             if (typeof navigator.share === "function") {
               event.preventDefault();
@@ -83,7 +89,7 @@ export function ProductShareButton({
           }}
         >
           <Share2 className="h-4 w-4" />
-          Share
+          {iconOnly ? <span className="sr-only">Share</span> : "Share"}
         </Button>
       </PopoverTrigger>
       <PopoverContent

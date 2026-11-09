@@ -14,8 +14,8 @@ export default function AboutPage() {
             <h1 className="mt-5 text-5xl font-medium leading-[1.02] tracking-[-0.06em] sm:text-7xl">Every find has a <span className="font-serif italic font-normal text-[#a68a64]">story.</span></h1>
             <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-muted-foreground sm:text-lg">TreatStory is a place for thoughtful discoveries — a growing collection of pieces for everyday life, meaningful moments and everything in between.</p>
           </div>
-          <div className="relative mt-12 aspect-[16/9] overflow-hidden rounded-[26px] bg-[#e8dfd2] sm:mt-16">
-            <Image src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1800&q=85" alt="Carefully curated lifestyle and fashion pieces" fill sizes="100vw" className="object-cover" />
+          <div className="relative mt-12 aspect-[4/3] sm:aspect-[16/9] overflow-hidden rounded-[26px] bg-[#e8dfd2] sm:mt-16">
+            <Image src="/img/landing-hero.webp" alt="Homemade cakes, cookies and handmade gifts from independent makers" fill sizes="(max-width: 639px) calc(100vw - 32px), (max-width: 1023px) calc(100vw - 48px), (max-width: 1439px) calc(100vw - 80px), 1360px" className="object-cover object-[35%_center] sm:object-center" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
             <p className="absolute bottom-5 left-5 text-sm font-medium text-white sm:bottom-8 sm:left-8 sm:text-lg">Made for the moments that make a day.</p>
           </div>

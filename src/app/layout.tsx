@@ -2,6 +2,7 @@ import type {Metadata, Viewport} from 'next';
 import{siteSocialMetadata}from'@/lib/social-metadata';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { AppInstallNotice } from '@/components/app-install-notice';
 import { Toaster } from "@/components/ui/toaster"
 import { cn } from '@/lib/utils';
 import { CartProvider } from '@/context/cart-context';
@@ -43,6 +44,7 @@ export default function RootLayout({
             {children}
           </CartProvider>
         </FirebaseClientProvider>
+        <AppInstallNotice />
         <Toaster />
       </body>
     </html>

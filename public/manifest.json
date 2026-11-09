@@ -27,5 +27,13 @@
   "scope": "/",
   "display": "standalone",
   "theme_color": "#faf8f3",
-  "background_color": "#faf8f3"
+  "background_color": "#faf8f3",
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://treatstory.vercel.app/manifest.json",
+      "id": "https://treatstory.vercel.app/"
+    }
+  ]
 }
