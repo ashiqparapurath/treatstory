@@ -32,3 +32,13 @@ TREATSTORY_AUDIT=local-only FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 node scripts/
 ```
 
 The browser transport uses `/usr/bin/chromium`. Sharing is mocked; no WhatsApp messages are sent. Evidence JSON in this directory contains only synthetic public data and loopback URLs.
+
+## Product-page 500 follow-up
+
+Vercel logs confirmed `ERR_REQUIRE_ESM`: `jwks-rsa@4.1.0` uses CommonJS `require('jose')`, but `jose@6.2.16` is ESM-only. The Vercel loader rejected it while initializing product pages and `/api/email/process`. Local Node 24 permits require(ESM) by default, which explains why the earlier build and browser tests missed this runtime incompatibility. Reproduced the exact failure locally with `node --no-experimental-require-module -e 'require("firebase-admin/auth")'`.
+
+A scoped npm override selects dual CommonJS/ESM `jose@5.10.0` only beneath `jwks-rsa`; the Admin SDK and its auth checks remain in place. A regression subprocess disables require(ESM), imports the actual Admin authentication module and converts RSA/EC/EdDSA public JWKs through the actual JWKS library. Genuine signatures verify and tampered payloads fail. Dependency audit reports zero vulnerabilities.
+
+Optional metadata enrichment also imports the server SDK inside its fallback boundary and stops waiting after 2.5 seconds. Module initialization, credential, lookup or stalled-read failures return a generic branded preview. This is a fresh generic fallback, not cached product data. The SDK may finish an already-started read in the background; the response deadline does not cancel its underlying transport. New regression cases cover these failures.
+
+Follow-up validation: production build and all **69 tests** passed with the compatibility regression included; build/runtime tested with require(ESM) disabled. Ten isolated production-server probes passed: literal/encoded seller IDs and a seeded public product returned 200 for browser, crawler and RSC requests; the seeded product's crawler metadata contained its current name. Unauthenticated email processing returned the expected 401, without processing or sending any mail. See `runtime-compatibility.json`. The protected Vercel preview still requires authenticated manual verification after redeployment.

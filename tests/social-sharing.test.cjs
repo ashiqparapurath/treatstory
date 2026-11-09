@@ -22,6 +22,8 @@ function load(file, mocks = {}, globals = {}) {
       require: (id) => (id in mocks ? mocks[id] : require(id)),
       URL,
       console,
+      setTimeout,
+      clearTimeout,
       process: { env: { APP_URL: "https://treatstory.vercel.app" } },
       ...globals,
     },
@@ -244,4 +246,81 @@ test("native sharing sends the product data and cancellation is quiet", async ()
     assert.equal(f.notices.length, 0);
     act(() => f.tree.unmount());
   }
+});
+
+test("optional preview SDK and database failures cannot reject the product route", async () => {
+  for (const failure of ["module", "credentials", "read"]) {
+    const admin = {};
+    Object.defineProperty(admin, "getServerFirebase", {
+      enumerable: true,
+      get() {
+        if (failure === "module")
+          throw Error("SDK module initialization failed");
+        return () => {
+          if (failure === "credentials") throw Error("Invalid credentials");
+          return {
+            db: {
+              collection: () => ({
+                doc: () => ({
+                  get: async () => {
+                    throw Error("Database unavailable");
+                  },
+                }),
+              }),
+            },
+          };
+        };
+      },
+    });
+    const resolver = load("src/lib/server/product-social-metadata.ts", {
+      "@/lib/social-metadata": social,
+      "@/lib/document-id": load("src/lib/document-id.ts"),
+      "@/lib/server/firebase-admin": admin,
+    });
+    const metadata = await resolver.getProductSocialMetadata(
+      "seller:Ctp2u3hCWjj4NZLcePI8",
+    );
+    assert.equal(metadata.openGraph.siteName, "TreatStory");
+    assert.doesNotMatch(
+      JSON.stringify(metadata),
+      /Invalid credentials|SDK module|Database unavailable/,
+    );
+  }
+});
+
+test("stalled preview reads return a generic preview within the response deadline", async () => {
+  let delay,
+    cleared = false;
+  const resolver = load(
+    "src/lib/server/product-social-metadata.ts",
+    {
+      "@/lib/social-metadata": social,
+      "@/lib/document-id": load("src/lib/document-id.ts"),
+      "@/lib/server/firebase-admin": {
+        getServerFirebase: () => ({
+          db: {
+            collection: () => ({
+              doc: () => ({ get: () => new Promise(() => {}) }),
+            }),
+          },
+        }),
+      },
+    },
+    {
+      setTimeout: (callback, ms) => {
+        delay = ms;
+        queueMicrotask(callback);
+        return 1;
+      },
+      clearTimeout: () => {
+        cleared = true;
+      },
+    },
+  );
+  const metadata = await resolver.getProductSocialMetadata(
+    "seller:Ctp2u3hCWjj4NZLcePI8",
+  );
+  assert.equal(metadata.openGraph.siteName, "TreatStory");
+  assert.equal(delay, 2500);
+  assert.equal(cleared, true);
 });
