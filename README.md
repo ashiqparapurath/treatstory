@@ -27,4 +27,4 @@ Instagram: [@mrashiq._](https://www.instagram.com/mrashiq._)
 
 ## Transactional email
 
-Welcome, order, quote, support and seller updates use a signed Google Apps Script relay, sent from the deploying Google account. Verification/password reset use Firebase’s built-in account emails. See [email setup](docs/email-setup.md) and the complete [Code.gs](apps-script/Code.gs) for deployment, environment variables and the included retry trigger. No custom email domain is required; no secrets are stored in this repository.
+All app emails, including verification/password reset, use a signed Google Apps Script relay with 31 branded HTML/plain-text templates. Firebase generates and validates secure account links; Apps Script sends the messages from the deploying Google account. See [email setup](docs/email-setup.md) and the complete [Code.gs](apps-script/Code.gs) for deployment, environment variables and the included retry trigger. No custom email domain is required; no secrets are stored in this repository.

@@ -4,6 +4,7 @@
  *   MAIL_WEBHOOK_SECRET: same 64-character random value as APPS_SCRIPT_MAIL_SECRET in Vercel
  *   APP_URL: https://treatstory.vercel.app
  *   CRON_SECRET: same separate random value as CRON_SECRET in Vercel
+ *   AUTH_ACTION_HOST: your Firebase project auth domain, e.g. your-project.firebaseapp.com
  * Optional: MAIL_SENDER_NAME (defaults to TreatStory).
  * Run authorizeMail once, then deploy as a Web app: Execute as Me, access Anyone.
  * Use its /exec URL for APPS_SCRIPT_MAIL_URL in Vercel. Never put secrets in source code.
@@ -12,7 +13,8 @@ var RECEIPT_PREFIX = 'mail_receipt_';
 var RECEIPT_RETENTION_MS = 72 * 60 * 60 * 1000;
 var REQUEST_WINDOW_MS = 5 * 60 * 1000;
 
-function doGet() {
+function doGet(e) {
+  if(e && e.parameter && e.parameter.preview === '1') return HtmlService.createHtmlOutput(templateGallery_(PropertiesService.getScriptProperties())).setTitle('TreatStory email templates');
   return jsonResponse_({ok: true, service: 'TreatStory mail relay'});
 }
 
@@ -35,6 +37,8 @@ function doPost(e) {
     var mail;
     try { mail = JSON.parse(request.payload); } catch (_) { return failure_('INVALID_REQUEST'); }
     if (!validMail_(mail)) return failure_('INVALID_REQUEST');
+    var rendered;
+    try { rendered = renderEmail_(mail, properties); } catch (_) { return failure_('INVALID_REQUEST'); }
     var hash = sha256_(request.payload);
     var receiptKey = RECEIPT_PREFIX + sha256_(request.id);
     lock = LockService.getScriptLock();
@@ -45,7 +49,7 @@ function doPost(e) {
       var receipt = JSON.parse(stored);
       if (receipt.hash !== hash) return failure_('ID_CONFLICT');
       if (receipt.state === 'sent') return jsonResponse_({ok: true, id: request.id, duplicate: true});
-      // A crash may happen after MailApp sends but before the receipt is saved. Never blindly resend.
+      // A crash may happen after MailApp sends but before the receipt is saved. Never blindly send again.
       return failure_('DELIVERY_UNCERTAIN');
     }
     if (MailApp.getRemainingDailyQuota() < 1) return failure_('QUOTA_EXCEEDED');
@@ -54,9 +58,9 @@ function doPost(e) {
     try {
       var message = {
         to: mail.to[0],
-        subject: mail.subject,
-        body: mail.text,
-        htmlBody: mail.html,
+        subject: rendered.subject,
+        body: rendered.text,
+        htmlBody: rendered.html,
         name: properties.getProperty('MAIL_SENDER_NAME') || 'TreatStory'
       };
       if (mail.reply_to) message.replyTo = mail.reply_to;
@@ -84,12 +88,31 @@ function validEnvelope_(request) {
 
 function validMail_(mail) {
   if (!mail || typeof mail !== 'object' || Array.isArray(mail)) return false;
-  if (Object.keys(mail).some(function (key) { return ['to', 'subject', 'text', 'html', 'reply_to'].indexOf(key) < 0; })) return false;
-  return Array.isArray(mail.to) && mail.to.length === 1 && validEmail_(mail.to[0]) &&
-    typeof mail.subject === 'string' && mail.subject.length > 0 && mail.subject.length <= 200 && !/[\r\n]/.test(mail.subject) &&
-    typeof mail.text === 'string' && mail.text.length > 0 && mail.text.length <= 10000 &&
-    typeof mail.html === 'string' && mail.html.length > 0 && mail.html.length <= 20000 &&
-    (mail.reply_to === undefined || validEmail_(mail.reply_to));
+  if (Object.keys(mail).some(function (key) { return ['to', 'template', 'data', 'reply_to'].indexOf(key) < 0; })) return false;
+  if (!Array.isArray(mail.to) || mail.to.length !== 1 || !validEmail_(mail.to[0])) return false;
+  if (typeof mail.template !== 'string' || !Object.prototype.hasOwnProperty.call(EMAIL_TEMPLATES,mail.template)) return false;
+  var data = mail.data;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
+  if (Object.keys(data).some(function (key) { return ['title','message','href','label','details'].indexOf(key) < 0; })) return false;
+  if (typeof data.title !== 'string' || data.title.length < 1 || data.title.length > 160 || /[\r\n]/.test(data.title)) return false;
+  if (typeof data.message !== 'string' || data.message.length < 1 || data.message.length > 6000) return false;
+  if (typeof data.href !== 'string' || data.href.length > 4096 || !validActionUrl_(data.href,mail.template)) return false;
+  if (data.label !== undefined && (typeof data.label !== 'string' || data.label.length > 80)) return false;
+  if (data.details !== undefined && (!Array.isArray(data.details) || data.details.length > 8 || data.details.some(function (row) {
+    return !row || typeof row.label !== 'string' || row.label.length > 80 || typeof row.value !== 'string' || row.value.length > 200;
+  }))) return false;
+  return mail.reply_to === undefined || validEmail_(mail.reply_to);
+}
+
+function validActionUrl_(url,template) {
+  var properties = PropertiesService.getScriptProperties();
+  var origin = validatedAppUrl_(properties);
+  if (/[\s<>"']/.test(url)) return false;
+  if (url.indexOf(origin + '/') === 0) return true;
+  // Secure hosted authentication links are generated by the server, not accepted from the browser.
+  if (template !== 'verify_email' && template !== 'password_reset') return false;
+  var authHost = properties.getProperty('AUTH_ACTION_HOST');
+  return !!authHost && /^[a-zA-Z0-9-]+\.firebaseapp\.com$/.test(authHost) && url.indexOf('https://' + authHost + '/__/auth/action?') === 0;
 }
 
 function validEmail_(value) {
@@ -165,4 +188,86 @@ function validatedAppUrl_(properties) {
   // Restrict the retry secret to this application's actual origin.
   if (origin !== 'https://treatstory.vercel.app') throw new Error('APP_URL must be https://treatstory.vercel.app. Update this check if you move domains.');
   return origin;
+}
+
+/** Edit these entries to customize each situation. All outgoing mail uses this catalog. */
+var EMAIL_TEMPLATES = {
+  welcome: {tag:'A lovely beginning',heading:'Welcome to TreatStory',button:'Explore your account',note:'Find your favourites, meet independent makers, and keep every order in one place.'},
+  verify_email: {tag:'Account security',heading:'Confirm your email address',button:'Verify email address',note:'If you did not create this account, ignore this message. Never share this link with anyone.'},
+  password_reset: {tag:'Account security',heading:'Reset your password',button:'Choose a new password',note:'If you did not request a reset, ignore this message. Your password stays unchanged until you complete the reset.'},
+  order_received: {tag:'Your order request',heading:'Your request is with the maker',button:'View your order',note:'This is an order request. Your seller will confirm availability, preparation, delivery and any payment arrangements.'},
+  new_order: {tag:'For your seller studio',heading:'A new order request arrived',button:'Review order request',note:'Check the selected product, requested date, stock and payment terms before accepting.'},
+  order_accepted: {tag:'Order update',heading:'Your order is accepted',button:'View order details',note:'Your maker has accepted the request. Check your order for agreed preparation and delivery details.',tone:'green'},
+  order_preparing: {tag:'Made with care',heading:'Preparation has started',button:'Follow your order',note:'Your creation is being prepared. Contact the seller through the app if you need help.'},
+  order_ready_pickup: {tag:'Ready for you',heading:'Ready for collection',button:'View pickup details',note:'Confirm the collection location and time with your maker before travelling.',tone:'green'},
+  order_ready_delivery: {tag:'Almost there',heading:'Ready for delivery',button:'View delivery details',note:'Your seller handles delivery arrangements. Review your order for the latest details.',tone:'green'},
+  order_out_for_delivery: {tag:'On its way',heading:'Your order is out for delivery',button:'View your order',note:'Keep your phone available for delivery updates from the seller.'},
+  order_collected: {tag:'A story completed',heading:'Your order was marked collected',button:'Review your order',note:'Collection was recorded as complete. Contact your maker if this does not match your experience.',tone:'green'},
+  order_delivered: {tag:'A story completed',heading:'Your order was marked delivered',button:'Review your order',note:'Delivery was recorded as complete. Contact your maker if you still need help.',tone:'green'},
+  order_cancel_requested: {tag:'Cancellation update',heading:'A cancellation needs review',button:'View cancellation request',note:'A cancellation request does not cancel the order automatically. The seller must review it.',tone:'amber'},
+  order_cancel_declined: {tag:'Cancellation update',heading:'Cancellation request declined',button:'Review your order',note:'The order continues. Contact the seller if you need to discuss the next steps.',tone:'amber'},
+  order_cancelled: {tag:'Order update',heading:'Your order is cancelled',button:'View cancelled order',note:'Any advance-payment refund must be arranged directly with the seller. No automatic refund is recorded here.',tone:'amber'},
+  order_declined: {tag:'Order update',heading:'This order was declined',button:'View order details',note:'Contact the seller about any advance payment already made, or explore another maker.',tone:'amber'},
+  payment_recorded: {tag:'Payment update',heading:'The seller recorded a payment',button:'View payment record',note:'This is a seller-entered payment record. TreatStory did not process an online charge.',tone:'green'},
+  quote_requested: {tag:'A custom creation',heading:'A new custom request arrived',button:'Review custom request',note:'Review the buyer’s preferences, reference image, budget and requested date before quoting.'},
+  quote_ready: {tag:'Made just for you',heading:'Your custom quote is ready',button:'Review your quote',note:'Check the price and what is included. Accepting a quote does not place an order or collect payment.'},
+  quote_accepted: {tag:'Custom quote update',heading:'Your custom quote was accepted',button:'Open custom request',note:'Agree on the final order, preparation and payment arrangements directly with the buyer.',tone:'green'},
+  quote_declined: {tag:'Custom quote update',heading:'This custom request was declined',button:'View custom request',note:'This maker cannot take the request. You can explore other makers for your creation.',tone:'amber'},
+  support_received: {tag:'We are here to help',heading:'Your support request is received',button:'Track support request',note:'Keep the conversation in your support request so the TreatStory team has the details together.'},
+  support_reply: {tag:'A reply from TreatStory',heading:'There is a reply to your request',button:'Read the response',note:'Open your support request to read the response and review the next steps.'},
+  support_closed: {tag:'Support update',heading:'Your support request was closed',button:'View support request',note:'If you still need help, you can open a new support request.',tone:'green'},
+  support_new: {tag:'For the TreatStory team',heading:'A new support request arrived',button:'Open support inbox',note:'Sign in to the admin workspace to review the customer’s details.'},
+  seller_application_received: {tag:'Your maker journey',heading:'Your seller application is received',button:'View your application',note:'Your application is awaiting review. We will send an update when its status changes.'},
+  seller_application_approved: {tag:'Welcome, maker',heading:'Your seller application is approved',button:'Open seller studio',note:'Review your access plan and expiry in your seller studio before publishing products.',tone:'green'},
+  seller_application_declined: {tag:'Application update',heading:'Your seller application was declined',button:'View your application',note:'Contact TreatStory support if you need help understanding the next steps.',tone:'amber'},
+  seller_application_new: {tag:'For the TreatStory team',heading:'A maker wants to join TreatStory',button:'Review application',note:'Review the business details before granting seller access.'},
+  seller_access_updated: {tag:'Seller access',heading:'Your seller access has changed',button:'Review seller access',note:'Check the current plan, status and expiry in your seller studio. This update does not collect a payment.'},
+  update: {tag:'Your TreatStory update',heading:'Something new in your story',button:'View update',note:'Sign in to TreatStory to see the latest details.'}
+};
+
+function escapeHtml_(value) {
+  return String(value).replace(/[&<>"']/g, function (character) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character];
+  });
+}
+
+/** A table layout and inline styles keep the email readable in Gmail, Outlook and mobile mail apps. */
+function renderEmail_(mail, properties) {
+  var template = EMAIL_TEMPLATES[mail.template];
+  var data = mail.data;
+  var title = template.heading || data.title;
+  var label = data.label || template.button;
+  var origin = validatedAppUrl_(properties);
+  var palette = template.tone === 'green' ? ['#eaf4ed','#2f6544'] : template.tone === 'amber' ? ['#fff3df','#805d24'] : ['#f3ecdf','#80643f'];
+  var details = (data.details || []).map(function (row) {
+    return '<tr><td style="padding:10px 12px;color:#7a7065;border-bottom:1px solid #eee7dd;font-size:13px">' + escapeHtml_(row.label) + '</td><td style="padding:10px 12px;text-align:right;border-bottom:1px solid #eee7dd;font-size:13px;font-weight:bold">' + escapeHtml_(row.value) + '</td></tr>';
+  }).join('');
+  var html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + escapeHtml_(title) + '</title></head>' +
+    '<body style="margin:0;padding:0;background:#f7f4ee;font-family:Arial,Helvetica,sans-serif;color:#302b25">' +
+    '<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;overflow:hidden;opacity:0">' + escapeHtml_(data.message.slice(0,160)) + '</div>' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f4ee"><tr><td align="center" style="padding:28px 12px">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:white;border:1px solid #e9e0d3;border-radius:20px;overflow:hidden">' +
+    '<tr><td style="padding:30px 26px 22px;border-bottom:1px solid #eee7dd"><a href="' + escapeHtml_(origin) + '" style="font-family:Georgia,serif;font-size:32px;letter-spacing:-1px;color:#302b25;text-decoration:none">TreatStory<span style="color:#ad8a58">.</span></a>' +
+    '<p style="margin:7px 0 0;font-size:10px;letter-spacing:2px;color:#96816a;text-transform:uppercase">Little finds. Lovely stories.</p></td></tr>' +
+    '<tr><td style="padding:28px 26px"><span style="display:inline-block;padding:7px 11px;background:' + palette[0] + ';color:' + palette[1] + ';border-radius:20px;font-size:10px;font-weight:bold;letter-spacing:1px;text-transform:uppercase">' + escapeHtml_(template.tag) + '</span>' +
+    '<h1 style="margin:20px 0 14px;font-family:Georgia,serif;font-size:28px;line-height:1.25;font-weight:normal">' + escapeHtml_(title) + '</h1>' +
+    '<p style="margin:0 0 22px;font-size:15px;line-height:1.8;color:#6e6255;overflow-wrap:anywhere">' + escapeHtml_(data.message).replace(/\n/g,'<br>') + '</p>' +
+    (details ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 24px;background:#fcfaf6;border:1px solid #eee7dd;border-radius:10px">' + details + '</table>' : '') +
+    '<table role="presentation" cellpadding="0" cellspacing="0"><tr><td bgcolor="#302b25" style="border-radius:28px"><a href="' + escapeHtml_(data.href) + '" style="display:inline-block;padding:15px 23px;font-size:13px;line-height:18px;font-weight:bold;color:white;text-decoration:none">' + escapeHtml_(label) + ' &rarr;</a></td></tr></table>' +
+    '<p style="margin:25px 0 0;padding:15px;background:#faf7f1;border-left:3px solid #c4a16c;font-size:12px;line-height:1.8;color:#7d6c58">' + escapeHtml_(template.note) + '</p>' +
+    '<p style="margin:22px 0 0;font-size:11px;line-height:1.8;color:#918577">Button not opening? Copy this link into your browser:<br><a href="' + escapeHtml_(data.href) + '" style="color:#80643f;word-break:break-all">' + escapeHtml_(data.href) + '</a></p></td></tr>' +
+    '<tr><td style="padding:20px 26px;background:#fcfaf6;border-top:1px solid #eee7dd"><p style="margin:0;font-size:11px;line-height:1.8;color:#968776">Sent for your TreatStory account or activity. Please use the app for order and support details.<br>&copy; ' + new Date().getUTCFullYear() + ' TreatStory &middot; Made with heart.</p></td></tr></table></td></tr></table></body></html>';
+  var detailText = (data.details || []).map(function (row) { return row.label + ': ' + row.value; }).join('\n');
+  return {subject:'TreatStory · ' + title,html:html,text:title + '\n\n' + data.message + (detailText ? '\n\n' + detailText : '') + '\n\n' + label + ': ' + data.href + '\n\n' + template.note + '\n\nTreatStory · Little finds, lovely stories.'};
+}
+
+/** Public previews contain only sample text and no account records, recipients, tokens or secrets. */
+function templateGallery_(properties) {
+  var origin = validatedAppUrl_(properties);
+  var cards = Object.keys(EMAIL_TEMPLATES).map(function (key) {
+    var template = EMAIL_TEMPLATES[key];
+    var rendered = renderEmail_({template:key,data:{title:template.heading,message:'This is a sample ' + key.replace(/_/g,' ') + ' message. Real emails include the details for your activity.',href:origin + '/account',details:[{label:'Preview',value:'Sample data only'}]}},properties);
+    return '<section><h2 style="font:15px Arial;color:#6e6255">' + escapeHtml_(key) + '</h2><iframe title="' + escapeHtml_(key) + '" style="width:100%;height:780px;border:1px solid #e9e0d3;border-radius:20px" srcdoc="' + escapeHtml_(rendered.html) + '"></iframe></section>';
+  }).join('');
+  return '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>TreatStory email templates</title></head><body style="margin:0;background:#f7f4ee;padding:24px"><h1 style="font:32px Georgia;color:#302b25">TreatStory email previews</h1><p style="font:14px Arial;color:#7d6c58">Sample messages only. Opening this page does not send email.</p><main style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:24px">' + cards + '</main></body></html>';
 }

@@ -1,4 +1,4 @@
-import { queueMail } from '@/lib/server/mail';
+import { queueMail, type MailTemplate } from '@/lib/server/mail';
 import { orderFeedback } from '@/lib/order-feedback';
 import { Timestamp, type Firestore, type Transaction } from 'firebase-admin/firestore';
 import { ApiError } from '@/lib/server/firebase-admin';
@@ -42,7 +42,8 @@ export async function applyOrderAction(db: Firestore, uid: string, orderId: stri
     const history = [...(order.history || []).slice(-29), event];
     const notify = (receiver: string, event: string) => {
       const text=orderFeedback(event,order.productName,order.deliveryMode,receiver===order.buyerUid?'buyer':'seller');
-      queueMail(tx,db,receiver,{title:text.title,message:text.description,href:'/orders'});
+      const templates:Record<string,MailTemplate>={accepted:'order_accepted',preparing:'order_preparing',ready:order.deliveryMode==='pickup'?'order_ready_pickup':'order_ready_delivery','out-for-delivery':'order_out_for_delivery',completed:order.deliveryMode==='pickup'?'order_collected':'order_delivered',rejected:'order_declined',cancelled:'order_cancelled','request-cancellation':'order_cancel_requested','decline-cancellation':'order_cancel_declined','cod-collected':'payment_recorded'};
+      queueMail(tx,db,receiver,{template:templates[event]||'update',title:text.title,message:text.description,href:'/orders'});
       const ref = db.collection('notifications').doc(receiver).collection('items').doc();
       tx.create(ref, {title:text.title,message:text.description,kind:'order',href:'/orders',orderId,createdAt:now,read:false});
     };

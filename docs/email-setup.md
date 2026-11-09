@@ -1,80 +1,155 @@
-# Google Apps Script email setup for TreatStory
+# TreatStory: complete Google Apps Script email setup
 
-No custom domain is needed. Welcome, order, quote, support and seller-update emails use Google Apps Script `MailApp`, sent from the Google account that owns the deployment. The display name is TreatStory. Password-reset and verification emails use Firebase Authentication's built-in email delivery, keeping account action codes out of the relay.
+All email delivery uses your Google Apps Script deployment: welcome, verification, password reset, order stages, custom quotes, support, seller applications and seller access. Firebase still authenticates users and generates/validates secure account links; it does not send these app-triggered messages. No custom domain, SMTP password or separate email provider is required.
 
-## 1. Create your Apps Script
+The full [Code.gs](../apps-script/Code.gs) contains the signed relay, **31 custom HTML/plain-text templates**, a preview gallery, and the automatic retry trigger. There are no separate HTML files to paste. Sender address is the Google account that deploys the script; its display name defaults to TreatStory.
 
-1. Open <https://script.google.com/> while signed into the Google account you want to send from. Create a new project named **TreatStory Mail**.
-2. Replace the editor's `Code.gs` with the **entire** [apps-script/Code.gs](../apps-script/Code.gs) file in this repository. It contains the mail relay and optional retry trigger; no snippets are missing.
-3. In **Project Settings**, enable **Show appsscript.json manifest file in editor**. Replace its contents with [apps-script/appsscript.json](../apps-script/appsscript.json). This enables V8 and requests only mail-sending, HTTP-request and trigger permissions.
-4. Generate **two different random secrets**, each at least 32 characters. A password manager can generate them. Alternatively run `openssl rand -hex 32` twice in a terminal. These are new application secrets, **not** your Gmail password or a Firebase key.
-5. In **Project Settings → Script Properties**, add:
+## Step 1 — Find your existing Firebase project ID
 
-| Script property | Value |
+1. Open <https://console.firebase.google.com/> and select the project used by TreatStory.
+2. Go to **Project Settings → General → Project ID**. This is the same value as your existing `NEXT_PUBLIC_FIREBASE_PROJECT_ID` in Vercel.
+3. Your standard account action host is `YOUR_PROJECT_ID.firebaseapp.com`. For example, a project ID of `my-shop-123` gives `my-shop-123.firebaseapp.com`. This Google-provided host does not require buying a domain.
+4. Under **Authentication → Settings → Authorized domains**, add `treatstory.vercel.app`. Keep Email/Password sign-in enabled and Firebase's hosted email action handler configured; verification/reset buttons open that handler and return to your website.
+
+## Step 2 — Create the script and paste the complete files
+
+1. Sign into the Google account whose address should send the emails. Open <https://script.google.com/> and choose **New project**. Name it **TreatStory Mail**.
+2. Open the repository's [full Code.gs](../apps-script/Code.gs), copy **the entire file**, and replace all contents of the editor's `Code.gs`. Save.
+3. Open **Project Settings** and enable **Show appsscript.json manifest file in editor**.
+4. Replace that manifest with the complete [appsscript.json](../apps-script/appsscript.json) in this repository:
+
+```json
+{
+  "timeZone": "Etc/UTC",
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/script.send_mail",
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/script.scriptapp"
+  ]
+}
+```
+
+## Step 3 — Create two secrets and add Script Properties
+
+Generate two different random secrets of at least 32 characters using a password manager. Alternatively, run this command twice in a terminal:
+
+```sh
+openssl rand -hex 32
+```
+
+Call the first value **SECRET_A** and the second **SECRET_B**. These are new application secrets, not your Google account password or a Firebase private key. Do not paste them into chat or the code file.
+
+In **Apps Script → Project Settings → Script Properties → Add script property**, enter:
+
+| Property | Value |
 | --- | --- |
-| `MAIL_WEBHOOK_SECRET` | First random secret |
-| `CRON_SECRET` | Second random secret |
+| `MAIL_WEBHOOK_SECRET` | SECRET_A |
+| `CRON_SECRET` | SECRET_B |
 | `APP_URL` | `https://treatstory.vercel.app` |
+| `AUTH_ACTION_HOST` | `YOUR_PROJECT_ID.firebaseapp.com` from Step 1 |
 | `MAIL_SENDER_NAME` | `TreatStory` (optional; already the default) |
 
-6. Select **authorizeMail** in the function dropdown and click **Run**. Review and authorize the permissions for your own script. This checks the remaining sending quota; it does not send a test email. Do not run `doPost` manually: it needs an HTTP request body.
-7. Choose **Deploy → New deployment → Web app**. Set **Execute as: Me**, **Who has access: Anyone**, then deploy. Authentication is enforced by the signed request in `Code.gs`; Vercel must be able to call the endpoint without a Google login. If your organization blocks this deployment option, use an account that permits it or contact its administrator.
-8. Copy the Web app URL ending in `/exec`, for example `https://script.google.com/macros/s/DEPLOYMENT_ID/exec`. Use neither the editor URL nor `/dev`.
+Do not include `https://` or a path in `AUTH_ACTION_HOST`. Values must match exactly across Apps Script and Vercel.
 
-Emails use the deploying Google account's real email address. `MAIL_SENDER_NAME` changes only the display name; no `FROM_EMAIL` variable, SMTP password or domain verification is needed.
+## Step 4 — Authorize and deploy the web app
 
-## 2. Add Vercel environment variables
+1. In the script editor's function dropdown, select **authorizeMail** and click **Run**. Review and authorize the permissions for your own script. This checks quota and sends no email. Do not run `doPost` manually: it needs a signed HTTP request.
+2. Click **Deploy → New deployment → Select type → Web app**.
+3. Choose **Execute as: Me** and **Who has access: Anyone**, then click **Deploy**. The script verifies server signatures before sending; Vercel needs to reach it without a Google login. If your organization disallows this deployment option, contact its administrator or use an account that permits it.
+4. Copy the **Web app URL** ending in `/exec`. Example: `https://script.google.com/macros/s/DEPLOYMENT_ID/exec`. Do not use the editor URL or `/dev`.
+5. Open that URL in a browser. It should return a small JSON health response. This checks access, not secret matching or live delivery.
 
-Open **Vercel → TreatStory project → Settings → Environment Variables** and add these server-only values to the intended deployment environment:
+## Step 5 — Set Vercel environment variables
+
+Open **Vercel → TreatStory project → Settings → Environment Variables**. Add these to the environment where you will deploy the app:
 
 ```env
 APP_URL=https://treatstory.vercel.app
 APPS_SCRIPT_MAIL_URL=https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec
-APPS_SCRIPT_MAIL_SECRET=YOUR_FIRST_RANDOM_SECRET
-CRON_SECRET=YOUR_SECOND_RANDOM_SECRET
+APPS_SCRIPT_MAIL_SECRET=SECRET_A
+CRON_SECRET=SECRET_B
 ```
 
-`APPS_SCRIPT_MAIL_SECRET` must exactly match the script's `MAIL_WEBHOOK_SECRET`. `CRON_SECRET` must exactly match the script's `CRON_SECRET`. Do not add `NEXT_PUBLIC_` to secret variables. Optional values:
+`APPS_SCRIPT_MAIL_SECRET` must equal the script's `MAIL_WEBHOOK_SECRET`. `CRON_SECRET` must match in both places. Keep all secrets server-only; never add `NEXT_PUBLIC_` to their names.
+
+Optional:
 
 ```env
 MAIL_REPLY_TO=your-monitored-address@gmail.com
 MAIL_SUPPORT_EMAIL=your-team-address@gmail.com
 ```
 
-`MAIL_SUPPORT_EMAIL` receives new support-ticket and seller-application alerts. Customers still receive their own updates. Leave these optional values unset if not needed.
+The optional team address receives new support-ticket and seller-application alerts. No sender-address environment variable is needed: mail comes from the Google account selected in Step 4.
 
-Keep the existing `FIREBASE_SERVICE_ACCOUNT_JSON` and `NEXT_PUBLIC_FIREBASE_PROJECT_ID` configured: the secure order/quote APIs and mail worker still need server access to the same Firebase project. The JSON comes from **Firebase Console → Project Settings → Service accounts → Generate new private key**; paste the entire downloaded JSON into the private Vercel variable, not its filename. Do not put it in Apps Script.
+Keep the existing `NEXT_PUBLIC_FIREBASE_PROJECT_ID` and private `FIREBASE_SERVICE_ACCOUNT_JSON` values configured. The secure APIs, account-link generation and mail queue require them. To obtain the JSON, open **Firebase Project Settings → Service accounts → Generate new private key**; paste the **entire downloaded JSON** as the private Vercel variable's value, not the filename. Its project ID must match the client project. Do not put this credential in Apps Script.
 
-The old `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_REPLY_TO` and `RESEND_SUPPORT_EMAIL` variables are no longer used; remove them from Vercel once this change is deployed. Redeploy after saving environment variables. Publish the matching Firestore rules if you have not already; `mail_outbox` and `mail_limits` must remain private to the server.
+Redeploy Vercel after saving the variables. Publish this PR's matching Firestore rules if not already applied; `mail_outbox` and `mail_limits` must deny client reads/writes. No credentials or live Firebase publication are included in the PR.
 
-## 3. Configure account email and automatic retries
+## Step 6 — Install automatic retries
 
-1. In **Firebase Authentication → Settings → Authorized domains**, add `treatstory.vercel.app`. Keep Email/Password sign-in enabled. Verification and reset templates use Firebase's default sender, configured under **Authentication → Templates**; no Resend or Apps Script configuration is involved in those security emails.
-2. After the Vercel update is deployed, return to Apps Script and run **installRetryTrigger** once. Authorize trigger/HTTP permissions if prompted. It installs one time trigger calling **processEmailQueue** every five minutes; running it again replaces its existing trigger without duplicating it.
-3. Check **Apps Script → Triggers** for that trigger and **Executions** for failures. The retry endpoint must be publicly reachable at `https://treatstory.vercel.app/api/email/process`; Vercel preview SSO protection will block the trigger if used instead. The trigger sends `CRON_SECRET` in an HTTPS authorization header and refuses redirects, keeping it away from login/other domains.
+After the Vercel update is deployed, return to Apps Script and run **installRetryTrigger** once. Approve trigger/HTTP permissions if prompted.
 
-No separate paid/external scheduler is required with this trigger. New business events also receive a bounded background processing attempt after the API responds. The timed trigger recovers due jobs after transient errors or quota resets. Each worker invocation processes up to three jobs.
+- It installs one **processEmailQueue** trigger running every five minutes. Running the installer again replaces its trigger without creating duplicates.
+- Check **Apps Script → Triggers** and **Executions** for results/errors.
+- It calls `https://treatstory.vercel.app/api/email/process` with SECRET_B in an authorization header. The script refuses redirects; use the production address, not an SSO-protected preview.
+- New account emails get a targeted background attempt. Business events also receive immediate background attempts. The timed trigger retries due jobs after network failures or quota resets.
 
-## 4. Verify deployment
+No external scheduler is needed when this trigger is installed. The worker processes up to three due jobs per call.
 
-- Open the Apps Script `/exec` URL in a browser. It should return a small JSON health response. This confirms public access, not sending authorization or matching secrets.
-- In staging, request email verification and a password reset for an account you control; those messages should come through the existing account email service.
-- Exercise an order/quote/support event with test accounts and controlled recipient mailboxes. Check the recipient inbox/spam folder, Apps Script Executions and the private Firestore `mail_outbox` status. No production test email is sent by the setup functions.
-- For code changes later, use **Deploy → Manage deployments → Edit → New version → Deploy**. Saving the editor file alone does not update the deployed `/exec` version. Keep the existing deployment URL where possible.
-- If you later change the site domain, update both `APP_URL` values, Firebase authorized domains, and the explicit origin check in `validatedAppUrl_` in `Code.gs`, then redeploy the script and website.
+## Step 7 — Preview and customize every template
 
-## Delivery limits, retries and migration
+Open your deployed script URL with `?preview=1` appended:
 
-Google's account-specific Apps Script sending/runtime/trigger quotas apply. `MailApp.getRemainingDailyQuota()` is checked before sending; quota exhaustion keeps the job pending with backoff. Operational jobs expire after 47 hours, allowing recovery across a daily quota reset. Sender reputation, spam filtering and delivery are not guaranteed. No incoming-mail inbox or bounce webhook is provided. This is intended for low-volume transactional mail, not newsletters.
+```text
+https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec?preview=1
+```
 
-Order/quote/support mail jobs commit atomically with their business transactions. Checkout retries do not duplicate them. Seller application/access changes remain acknowledged browser writes followed by a separate authorized queue request; a failed queue request is reported separately without undoing a successful save. Welcome requests require a signed-in session and create only one job per account. Built-in password resets retain neutral account-existence feedback; SDK errors/rate limits are handled in the existing UI.
+The gallery displays all 31 templates using sample data. It does not send mail, show real recipients, reveal secrets or expose account links.
 
-Vercel signs the exact request bytes with HMAC-SHA256. Apps Script checks the signature and a five-minute timestamp window, validates a single recipient, and uses a script lock plus 72-hour private receipt records. Receipts contain hashes/state/timestamps, not message bodies or recipient addresses. Payload changes under the same event ID are rejected. Do not delete receipts or change event IDs to blindly retry a send.
+In `Code.gs`, edit the **EMAIL_TEMPLATES** object:
 
-Apps Script cannot atomically commit a receipt with Google's mail delivery. If an execution fails between recording a send attempt and confirming its result, the outbox records `status: review` with `DELIVERY_UNCERTAIN` rather than sending again. Check the outcome with the recipient or available account mail audit tools before deciding whether to send a replacement. Provider acceptance is recorded as `accepted`; this is not proof of inbox delivery.
+- `heading`: email heading and subject.
+- `tag`: the small category badge.
+- `button`: default action-button wording.
+- `note`: event-specific guidance.
+- `tone`: optional `green` or `amber` status styling.
 
-Jobs already attempted through the old provider (identified by a frozen payload with a `from` field) stop with `MIGRATION_REVIEW` to avoid an ambiguous duplicate during migration. Accepted jobs remain accepted; no historical emails are backfilled. Old pending account-link jobs are not relayed to Google. If migrating an already-running deployment, inspect its pending/failed/review jobs rather than automatically requeueing them. New password reset/verification requests use built-in delivery.
+Edit **renderEmail_** to change shared colors, spacing, wordmark, footer and HTML layout. It uses inline styles, table layout, a mobile viewport and a plain-text alternative. It escapes dynamic text rather than inserting raw user HTML. Do not remove escaping or signature/URL validation. The secure account buttons must retain the generated action link.
 
-Keep Vercel secrets and Apps Script properties private, and restrict project editors. Do not paste secrets into chat, source files or public logs. Private outbox data is cleaned up after processing; choose an appropriate retention/TTL policy for old metadata. Use a new verified-domain email service when volume outgrows this setup.
+Some server events deliberately supply a specific button label; that takes precedence over the template's default. Product/quantity/payment-term rows, quoted prices and seller-access details are supplied by the server when relevant. No automatic payment/refund is claimed.
 
-Official references: [Apps Script web apps](https://developers.google.com/apps-script/guides/web), [MailApp](https://developers.google.com/apps-script/reference/mail/mail-app), [quotas](https://developers.google.com/apps-script/guides/services/quotas), [Firebase account emails](https://firebase.google.com/docs/auth/web/manage-users).
+| Situation | Template keys |
+| --- | --- |
+| Account | `welcome`, `verify_email`, `password_reset` |
+| Order request and preparation | `order_received`, `new_order`, `order_accepted`, `order_preparing` |
+| Pickup/delivery | `order_ready_pickup`, `order_ready_delivery`, `order_out_for_delivery`, `order_collected`, `order_delivered` |
+| Cancellation/payment | `order_cancel_requested`, `order_cancel_declined`, `order_cancelled`, `order_declined`, `payment_recorded` |
+| Custom quotes | `quote_requested`, `quote_ready`, `quote_accepted`, `quote_declined` |
+| Support | `support_received`, `support_reply`, `support_closed`, `support_new` |
+| Seller applications | `seller_application_received`, `seller_application_approved`, `seller_application_declined`, `seller_application_new` |
+| Seller access/general | `seller_access_updated`, `update` |
+
+After any Apps Script code change, choose **Deploy → Manage deployments → Edit → New version → Deploy**. Saving the editor alone does not update `/exec`. Keep the existing deployment URL where possible.
+
+## Step 8 — Check live delivery using your own test accounts
+
+1. Request verification and password reset for an account you control. Both should arrive from your deploying Google account using the custom template. Check inbox/spam.
+2. Follow each generated link to confirm its secure hosted action page works and returns to TreatStory. If account emails fail with `INVALID_REQUEST`, check `AUTH_ACTION_HOST` against the actual Firebase project ID and ensure the deployed script is the latest version.
+3. Exercise order/quote/support events using controlled test accounts/mailboxes. Check **Apps Script → Executions** and private Firestore **mail_outbox** records.
+4. `accepted` means MailApp accepted the send; it does not prove inbox delivery. `pending` retries automatically. `failed` needs configuration/input investigation; `review` needs outcome investigation before sending a replacement.
+5. If the retry trigger receives 401, compare SECRET_B in both places. If sending reports `UNAUTHORIZED`, compare SECRET_A and redeploy the script. If the app shows an email-service error, verify the `/exec` URL and all server variables.
+
+The setup/preview functions send no test email automatically. No Google deployment, secret configuration or live sending is performed by this repository change.
+
+## Limits and privacy
+
+Google's sending, runtime, trigger and property-storage quotas apply. This setup is for low-volume transactional mail, not newsletters. Daily recipient quota is checked before sending. Operational jobs expire after 47 hours; account-link jobs expire after 45 minutes. Those are queue retry windows, not a change to Firebase action-code lifetimes. Request a fresh account email if its queued attempt expires.
+
+The server signs exact UTF-8 bytes with HMAC-SHA256. Apps Script checks the signature, a five-minute timestamp window, the template, single recipient and approved link host. Script locks and 72-hour private hashed receipts suppress duplicates. The public preview contains only fake data. Keep project editors, Script Properties, queued action links and service-account credentials private.
+
+Order/quote/support jobs commit atomically with their business transactions; checkout retries do not duplicate them. Seller application/access writes are followed by a separate authorized queue request, with a separate warning if queuing fails. Welcome is limited to one job per account. Account requests are limited to three per identity/hour and 100 globally/hour; password-reset responses stay neutral for known, missing, disabled and rate-limited accounts.
+
+Google mail delivery and receipt storage cannot commit atomically. If execution fails during an ambiguous send, the queue stops with `DELIVERY_UNCERTAIN` for review rather than risking automatic duplicate messages. Do not delete receipts or replace event IDs to blindly retry. Check the recipient or available account audit tools before sending a replacement. There is no incoming-email inbox or bounce webhook. Choose an appropriate private retention/TTL policy for old outbox/quota metadata.
+
+Official references: [Apps Script web apps](https://developers.google.com/apps-script/guides/web), [MailApp](https://developers.google.com/apps-script/reference/mail/mail-app), [quotas](https://developers.google.com/apps-script/guides/services/quotas), [Firebase-generated secure action links](https://firebase.google.com/docs/auth/admin/email-action-links).

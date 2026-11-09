@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
           referenceUrl:data.referenceUrl,status:'requested',quotedPrice:null,quotedNote:'',createdAt:now,updatedAt:now});
         tx.set(limitRef,{buyerUid:uid,count:count+1,updatedAt:now});
         queueNotification(tx,db,data.sellerId,
-          {title:'New custom-order request',message:`${productSnap?.data()?.name || data.occasion}: review the buyer’s preferences, budget and requested date.`,kind:'quote',href:'/custom-orders',orderId:'',createdAt:now,read:false});
+          {template:'quote_requested',title:'New custom-order request',message:`${productSnap?.data()?.name || data.occasion}: review the buyer’s preferences, budget and requested date.`,kind:'quote',href:'/custom-orders',orderId:'',createdAt:now,read:false});
         return {id:ref.id,status:'requested'};
       });
       after(async()=>{try{await processMailQueue(db,auth,3);}catch{console.error('Mail queue processing unavailable');}});
@@ -78,13 +78,13 @@ export async function POST(request: NextRequest) {
         const expiresAt=Timestamp.fromMillis(now.toMillis()+7*86400000);
         tx.update(ref,{status:'quoted',quotedPrice:data.price,quotedNote:data.note,quotedAt:now,expiresAt,updatedAt:now});
         queueNotification(tx,db,q.buyerUid,
-          {title:'Your custom quote is ready',message:`${q.productName || q.occasion}: review the seller’s price and included details before accepting.`,kind:'quote',href:'/custom-orders',orderId:'',createdAt:now,read:false});
+          {template:'quote_ready',details:[{label:'Quoted price',value:`₹${data.price.toLocaleString('en-IN')}`}],title:'Your custom quote is ready',message:`${q.productName || q.occasion}: review the seller’s price and included details before accepting.`,kind:'quote',href:'/custom-orders',orderId:'',createdAt:now,read:false});
         return {id:data.id,status:'quoted'};
       }
       if(data.action==='decline'){
         if(q.sellerId!==uid||q.status!=='requested')throw new ApiError(403,'Only the seller may decline an open request.');
         tx.update(ref,{status:'declined',updatedAt:now});
-        queueNotification(tx,db,q.buyerUid,{title:'Custom request declined',message:`${q.productName || q.occasion}: this creator cannot take the request. You can ask another creator.`,kind:'quote',href:'/custom-orders',orderId:'',createdAt:now,read:false});
+        queueNotification(tx,db,q.buyerUid,{template:'quote_declined',title:'Custom request declined',message:`${q.productName || q.occasion}: this creator cannot take the request. You can ask another creator.`,kind:'quote',href:'/custom-orders',orderId:'',createdAt:now,read:false});
         return {id:data.id,status:'declined'};
       }
       if(q.buyerUid!==uid)throw new ApiError(403,'Only the buyer can accept a quote.');
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
         throw new ApiError(409,'This quote has expired or is no longer available.');
       tx.update(ref,{status:'accepted',acceptedAt:now,updatedAt:now});
       queueNotification(tx,db,q.sellerId,
-        {title:'Buyer accepted your custom quote',message:`${q.productName || q.occasion}: agree on the final order and payment arrangements. Quote acceptance does not place an order.`,kind:'quote',href:'/custom-orders',orderId:'',createdAt:now,read:false});
+        {template:'quote_accepted',title:'Buyer accepted your custom quote',message:`${q.productName || q.occasion}: agree on the final order and payment arrangements. Quote acceptance does not place an order.`,kind:'quote',href:'/custom-orders',orderId:'',createdAt:now,read:false});
       return {id:data.id,status:'accepted'};
     });
     after(async()=>{try{await processMailQueue(db,auth,3);}catch{console.error('Mail queue processing unavailable');}});

@@ -213,8 +213,9 @@ export async function placeAtomicCheckout(db: Firestore, uid: string, input: Che
       const buyerMessage=orderFeedback('placed',order.record.productName as string,order.record.deliveryMode as string,'buyer');
       const sellerMessage=orderFeedback('placed',order.record.productName as string,order.record.deliveryMode as string,'seller');
       tx.create(buyerAlert,{title:buyerMessage.title,message:buyerMessage.description,kind:'order',href:'/orders',orderId:order.refId,createdAt:now,read:false});
-      queueMail(tx,db,uid,{title:buyerMessage.title,message:buyerMessage.description,href:'/orders'});
-      queueMail(tx,db,sellerId,{title:sellerMessage.title,message:sellerMessage.description,href:'/orders'});
+      const emailDetails=[{label:'Product',value:String(order.record.productName).slice(0,200)},{label:'Quantity',value:String(order.record.quantity)},{label:'Fulfilment',value:order.record.deliveryMode==='pickup'?'Pickup':'Delivery'},{label:'Payment terms',value:order.record.advancePaymentRequired?'Advance arranged with seller':'Cash on delivery'}];
+      queueMail(tx,db,uid,{details:emailDetails,template:'order_received',title:buyerMessage.title,message:buyerMessage.description,href:'/orders'});
+      queueMail(tx,db,sellerId,{details:emailDetails,template:'new_order',title:sellerMessage.title,message:sellerMessage.description,href:'/orders'});
       tx.create(sellerAlert,{title:sellerMessage.title,message:sellerMessage.description,kind:'order',href:'/orders',orderId:order.refId,createdAt:now,read:false});
     }
     tx.create(checkoutRef, { buyerUid: uid, requestHash, orderIds: orders.map(x => x.refId),

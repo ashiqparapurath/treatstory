@@ -72,7 +72,7 @@ export default function LoginPage() {
     if(emailError){setFormError(emailError);toast({variant:'destructive',title:emailError.title,description:emailError.description});return;}
     if(!auth){showError({code:'app/service-unavailable'},true);return;}
     setIsLoading(true);
-    try {await requestAccountMail('reset-password',{email:email.trim(),auth});resetSuccess();}
+    try {await requestAccountMail('reset-password',{email:email.trim()});resetSuccess();}
     catch(error) {if((error as {code?:string})?.code==='auth/user-not-found')resetSuccess();else showError(error,true);}
     finally {setIsLoading(false);}
   };

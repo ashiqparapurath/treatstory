@@ -2,11 +2,20 @@ import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { Timestamp, FieldValue, type Firestore, type Transaction } from 'firebase-admin/firestore';
 import type { Auth } from 'firebase-admin/auth';
 
-export type MailContent = { title:string; message:string; href:string; label?:string };
+export const MAIL_TEMPLATES = [
+  'welcome','verify_email','password_reset','order_received','new_order','order_accepted',
+  'order_preparing','order_ready_pickup','order_ready_delivery','order_out_for_delivery',
+  'order_collected','order_delivered','order_cancel_requested','order_cancel_declined',
+  'order_cancelled','order_declined','payment_recorded','quote_requested','quote_ready',
+  'quote_accepted','quote_declined','support_received','support_reply','support_closed','support_new',
+  'seller_application_received','seller_application_approved','seller_application_declined',
+  'seller_application_new','seller_access_updated','update',
+] as const;
+export type MailTemplate = typeof MAIL_TEMPLATES[number];
+export type MailContent = { title:string; message:string; href:string; label?:string; template?:MailTemplate; details?:Array<{label:string;value:string}> };
 type MailJob = MailContent & {uid:string; createdAt:Timestamp; expiresAt:Timestamp; nextAttemptAt:Timestamp; attempts:number; status:string; recipient?:string; payload?:MailPayload};
-export type MailPayload = {from?:string;to:string[];subject:string;html:string;text:string;reply_to?:string};
+export type MailPayload = {to:string[];template:MailTemplate;data:{title:string;message:string;href:string;label?:string;details?:Array<{label:string;value:string}>};reply_to?:string};
 const collection='mail_outbox';
-const escapeHtml=(value:string)=>value.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
 export function mailConfig() {
   const secret=process.env.APPS_SCRIPT_MAIL_SECRET?.trim();
   const endpoint=process.env.APPS_SCRIPT_MAIL_URL?.trim();
@@ -18,14 +27,17 @@ export function mailConfig() {
   return {secret,endpoint,origin:url.origin,replyTo:process.env.MAIL_REPLY_TO?.trim()};
 }
 
+/** Send structured event data; the complete HTML/plain-text templates live in Code.gs. */
 export function renderMail(content:MailContent,origin:string) {
   const url=new URL(content.href,origin);
-  // Account action links use built-in authentication delivery, never the mail relay.
-  if(url.protocol!=='https:'||url.origin!==new URL(origin).origin)throw new Error('Invalid mail link');
-  const title=content.title.replace(/[\r\n]/g,' ').slice(0,160);
-  const label=content.label||'View update';
-  return {subject:`TreatStory · ${title}`,text:`${title}\n\n${content.message}\n\n${label}: ${url.href}\n\nTreatStory · Little finds, lovely stories.`,
-    html:`<!doctype html><html><body style="margin:0;background:#f8f6f2;font-family:Arial,sans-serif;color:#29251f"><div style="max-width:560px;margin:32px auto;padding:28px;background:#ffffff;border:1px solid #e5dacb;border-radius:20px"><p style="font-size:26px;margin:0 0 28px">TreatStory</p><h1 style="font-size:22px">${escapeHtml(title)}</h1><p style="font-size:15px;line-height:1.7;white-space:pre-line">${escapeHtml(content.message)}</p><a href="${escapeHtml(url.href)}" style="display:inline-block;margin:16px 0;padding:14px 22px;border-radius:28px;background:#29251f;color:#ffffff;text-decoration:none">${escapeHtml(label)}</a><p style="font-size:12px;color:#756b60">Little finds, lovely stories.</p></div></body></html>`};
+  const account=content.template==='verify_email'||content.template==='password_reset';
+  const authHost=`${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebaseapp.com`;
+  const allowedAuth=account&&url.hostname===authHost&&url.pathname==='/__/auth/action'&&!url.username&&!url.password&&!url.port;
+  if(url.protocol!=='https:'||(url.origin!==new URL(origin).origin&&!allowedAuth))throw new Error('Invalid mail link');
+  return {template:content.template||'update' as MailTemplate,data:{
+    title:content.title.replace(/[\r\n]/g,' ').slice(0,160),message:content.message,href:url.href,
+    ...(content.label?{label:content.label}:{}),...(content.details?{details:content.details}:{}),
+  }};
 }
 export const mailId=(event:string)=>createHash('sha256').update(event).digest('hex');
 /** Queue inside the same transaction as the business event. No network call in a transaction. */
@@ -42,7 +54,7 @@ export class MailSendError extends Error {
 export async function sendAppsScript(payload:MailPayload,config:ReturnType<typeof mailConfig>,id:string) {
   // Payload is a string so Apps Script verifies the exact UTF-8 bytes that were signed.
   const timestamp=Date.now();
-  const body=JSON.stringify({to:payload.to,subject:payload.subject,html:payload.html,text:payload.text,...(payload.reply_to?{reply_to:payload.reply_to}:{})});
+  const body=JSON.stringify({to:payload.to,template:payload.template,data:payload.data,...(payload.reply_to?{reply_to:payload.reply_to}:{})});
   const signature=createHmac('sha256',config.secret).update(`${timestamp}.${id}.${body}`).digest('hex');
   const response=await fetch(config.endpoint,{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({version:1,timestamp,id,payload:body,signature}),redirect:'follow',signal:AbortSignal.timeout(20_000)});
@@ -75,15 +87,13 @@ export async function deliverMailJob(db:Firestore,auth:Auth,id:string) {
       // Persist before sending: retries must use exactly the same recipient, sender and content.
       await ref.update({payload});
     }
-    // Do not resend an ambiguous job attempted through the previous provider.
-    if(payload.from)throw new MailSendError(409,'MIGRATION_REVIEW');
     const providerId=await sendAppsScript(payload,config,id);
     await ref.update({status:'accepted',nextAttemptAt:FieldValue.delete(),providerId,acceptedAt:Timestamp.now(),payload:FieldValue.delete(),href:FieldValue.delete(),recipient:FieldValue.delete(),lease:FieldValue.delete()});
     return 'accepted'; // MailApp accepted is not proof of inbox delivery.
   } catch(error) {
     const status=error instanceof MailSendError?error.status:0;
     const code=error instanceof MailSendError?error.code:'DELIVERY_UNAVAILABLE';
-    const review=['DELIVERY_UNCERTAIN','MIGRATION_REVIEW','ID_CONFLICT'].includes(code);
+    const review=['DELIVERY_UNCERTAIN','ID_CONFLICT'].includes(code);
     const permanent=review||(status>=400&&status<500&&![408,409,429].includes(status))||(error as {code?:string})?.code==='auth/user-not-found';
     await db.runTransaction(async tx=>{const snap=await tx.get(ref);if(snap.data()?.lease!==lease)return;
       tx.update(ref,{status:review?'review':permanent?'failed':'pending',lastError:code,lease:FieldValue.delete(),
@@ -101,8 +111,9 @@ export async function processMailQueue(db:Firestore,auth:Auth,limit=10) {
   return {configured:true,processed};
 }
 
-export function queueNotification(tx:Transaction,db:Firestore,uid:string,notice:{title:string;message:string;href:string;[key:string]:unknown}) {
+export function queueNotification(tx:Transaction,db:Firestore,uid:string,notice:{title:string;message:string;href:string;template?:MailTemplate;details?:MailContent['details'];[key:string]:unknown}) {
   const ref=db.collection('notifications').doc(uid).collection('items').doc();
-  tx.create(ref,notice);
-  queueMail(tx,db,uid,{title:notice.title,message:notice.message,href:notice.href},ref.id);
+  const {template,details,...notification}=notice;
+  tx.create(ref,notification);
+  queueMail(tx,db,uid,{title:notice.title,message:notice.message,href:notice.href,...(template?{template}:{}),...(details?{details}:{})},ref.id);
 }

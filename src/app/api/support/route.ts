@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
         tx.create(ref,{ownerUid:uid,subject:data.subject,category:data.category,
           orderId:data.orderId,message:data.message,status:'open',response:'',createdAt:now,updatedAt:now});
         tx.set(quotaRef,{ownerUid:uid,date,count:(quota.data()?.count||0)+1,updatedAt:now});
-        if(process.env.MAIL_SUPPORT_EMAIL)queueMail(tx,db,uid,{title:'New support request',message:`A customer submitted “${data.subject}”. Open the support inbox to review it.`,href:'/admin'},undefined,false,process.env.MAIL_SUPPORT_EMAIL);
-        queueNotification(tx,db,uid,{title:'Support request received',message:`We received “${data.subject}”. Open your support requests to track our response.`,href:'/support',kind:'support',createdAt:now,read:false});
+        if(process.env.MAIL_SUPPORT_EMAIL)queueMail(tx,db,uid,{template:'support_new',title:'New support request',message:`A customer submitted “${data.subject}”. Open the support inbox to review it.`,href:'/admin'},undefined,false,process.env.MAIL_SUPPORT_EMAIL);
+        queueNotification(tx,db,uid,{template:'support_received',title:'Support request received',message:`We received “${data.subject}”. Open your support requests to track our response.`,href:'/support',kind:'support',createdAt:now,read:false});
         return {ticketId:ref.id,status:'open'};
       });
       after(async()=>{try{await processMailQueue(db,auth,3);}catch{console.error('Mail queue processing unavailable');}});
@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
       tx.update(ticketRef,{status:data.action==='close'?'closed':'responded',
         ...(data.action==='reply'?{response:data.message,respondedBy:uid}:{}),updatedAt:now});
       queueNotification(tx,db,previous.ownerUid,{
+        template:data.action==='close'?'support_closed':'support_reply',
         title:data.action==='close'?'Your support request has been closed':'TreatStory support replied to your request',
         message:data.action==='close'?`“${previous.subject}” was marked closed. You can open a new request if you need more help.`:`There is a response to “${previous.subject}”. Open your support request to read it.`,kind:'support',href:'/support',
         orderId:previous.orderId||'',createdAt:now,read:false,

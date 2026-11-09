@@ -603,7 +603,7 @@ test('sign-in validates fields before requesting authentication and preserves pa
   const {default:Login}=load('src/app/login/page.tsx',{
     'next/navigation':{useRouter:()=>({replace(){}})},'next/link':'a',
     '@/firebase':{useAuth:()=>({}),useUser:()=>({user:null,isUserLoading:false})},
-    'firebase/auth':{signInWithEmailAndPassword:async(...values)=>{attempts++;args=values;throw {code,message:'Firebase private diagnostic'};},sendPasswordResetEmail:async()=>{throw {code:'auth/user-not-found'};}},
+    'firebase/auth':{signInWithEmailAndPassword:async(...values)=>{attempts++;args=values;throw {code,message:'Firebase private diagnostic'};}},
     '@/components/ui/toast':{ToastAction:'button'},'@/components/ui/button':{Button:'button'},
     '@/components/ui/input':{Input:React.forwardRef((props,ref)=>React.createElement('input',{...props,ref}))},'@/components/ui/label':{Label:'label'},
     '@/hooks/use-toast':{useToast:()=>({toast:n=>notices.push(n)})},
