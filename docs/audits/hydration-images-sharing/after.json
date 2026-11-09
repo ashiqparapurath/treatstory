@@ -1,0 +1,166 @@
+{
+  "conditions": {
+    "origin": "loopback demo emulators",
+    "mobile": {
+      "latencyMs": 150,
+      "downMbps": 1.6,
+      "cpuSlowdown": 4,
+      "dpr": 2
+    },
+    "desktop": {
+      "width": 1440,
+      "dpr": 1
+    },
+    "concurrentLoad": false
+  },
+  "results": [
+    {
+      "path": "/",
+      "mobile": false,
+      "run": 0,
+      "elapsedMs": 2963,
+      "lcpMs": 1084,
+      "hero": {
+        "url": "http://127.0.0.1:9030/img/hero/home-desktop-768-2f0332f51f2c.avif",
+        "complete": true,
+        "naturalWidth": 693,
+        "width": 685,
+        "bytes": 37622,
+        "transferBytes": 37922
+      },
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/products",
+      "mobile": false,
+      "run": 0,
+      "elapsedMs": 1405,
+      "lcpMs": 596,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/product/seller:audit-product-0001",
+      "mobile": false,
+      "run": 0,
+      "elapsedMs": 2201,
+      "lcpMs": 1364,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/",
+      "mobile": false,
+      "run": 1,
+      "elapsedMs": 2024,
+      "lcpMs": 752,
+      "hero": {
+        "url": "http://127.0.0.1:9030/img/hero/home-desktop-768-2f0332f51f2c.avif",
+        "complete": true,
+        "naturalWidth": 693,
+        "width": 685,
+        "bytes": 37622,
+        "transferBytes": 37922
+      },
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/products",
+      "mobile": false,
+      "run": 1,
+      "elapsedMs": 1768,
+      "lcpMs": 1132,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/product/seller:audit-product-0001",
+      "mobile": false,
+      "run": 1,
+      "elapsedMs": 1310,
+      "lcpMs": 628,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/",
+      "mobile": true,
+      "run": 0,
+      "elapsedMs": 5211,
+      "lcpMs": 1352,
+      "hero": {
+        "url": "http://127.0.0.1:9030/img/hero/home-mobile-768-0981bd3f268f.avif",
+        "complete": true,
+        "naturalWidth": 358,
+        "width": 358,
+        "bytes": 36692,
+        "transferBytes": 36992
+      },
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/products",
+      "mobile": true,
+      "run": 0,
+      "elapsedMs": 2607,
+      "lcpMs": 1664,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/product/seller:audit-product-0001",
+      "mobile": true,
+      "run": 0,
+      "elapsedMs": 1935,
+      "lcpMs": 1444,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/",
+      "mobile": true,
+      "run": 1,
+      "elapsedMs": 4949,
+      "lcpMs": 1320,
+      "hero": {
+        "url": "http://127.0.0.1:9030/img/hero/home-mobile-768-0981bd3f268f.avif",
+        "complete": true,
+        "naturalWidth": 358,
+        "width": 358,
+        "bytes": 36692,
+        "transferBytes": 36992
+      },
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/products",
+      "mobile": true,
+      "run": 1,
+      "elapsedMs": 2974,
+      "lcpMs": 1844,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/product/seller:audit-product-0001",
+      "mobile": true,
+      "run": 1,
+      "elapsedMs": 2120,
+      "lcpMs": 1532,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "checks": [
+    "only visible and adjacent banners mounted initially",
+    "next slide requests next adjacent banner",
+    "broken banner uses local fallback",
+    "updated banner URL recovers live without reload",
+    "next product gallery photo loads"
+  ]
+}

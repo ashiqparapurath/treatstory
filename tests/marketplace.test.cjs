@@ -15,7 +15,7 @@ function sharedModule(id) {
 function load(file, mocks = {}, globals = {}) {
   const output = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   const module = { exports: {} };
-  vm.runInNewContext(output, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id==='@/lib/server/request-body'?load('src/lib/server/request-body.ts',mocks):id==='@/lib/account-mail'?accountMailMock : ['@/lib/document-id','@/lib/user-notices', '@/lib/order-feedback','@/lib/server/mail'].includes(id) ? sharedModule(id) : id === 'lucide-react' ? new Proxy({}, { get: () => () => null }) : require(id), console,
+  vm.runInNewContext(output, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id==='@/lib/server/request-body'?load('src/lib/server/request-body.ts',mocks):id==='@/lib/account-mail'?accountMailMock : ['@/lib/image-source','@/lib/document-id','@/lib/user-notices', '@/lib/order-feedback','@/lib/server/mail'].includes(id) ? sharedModule(id) : id === 'lucide-react' ? new Proxy({}, { get: () => () => null }) : require(id), console,
     setTimeout: (...args) => { const timer = setTimeout(...args); timer.unref(); return timer; }, clearTimeout, AbortSignal, TextDecoder, URL, URLSearchParams, ...globals }, { filename: file });
   return module.exports;
 }
@@ -679,4 +679,29 @@ test('catalog search tolerates missing imported metadata and excludes malformed 
  assert.equal(matchesProductSearch({name:'Cake',category:undefined},'0999'),false);
  assert.equal(matchesProductSearch({name:{bad:true},category:'Cake'},'cake'),false);
  assert.equal(matchesProductSearch({name:'Gift',description:'Chocolate'},'chocolate',true),true);
+});
+
+test('public catalog hydration keeps the server snapshot stable when the SDK becomes ready first',()=>{
+ const{renderToString}=require('react-dom/server');
+ const{usePublicCatalog}=load('src/firebase/firestore/use-public-catalog.ts',{'firebase/firestore':{queryEqual:(a,b)=>a===b,onSnapshot(){throw Error('server must not subscribe');}},'@/firebase/provider':{useUser:()=>({user:null})}});
+ function Probe({target}){const result=usePublicCatalog(target);return React.createElement('span',null,result.isLoading?'loading':result.data?'products':'waiting');}
+ const server=renderToString(React.createElement(Probe,{target:null}));
+ const delayed=renderToString(React.createElement(Probe,{target:{path:'products'}}));
+ assert.equal(delayed,server,'deferred hydration cannot reinterpret server HTML as a loading skeleton');
+});
+
+test('image failures use a local fallback and a changed URL recovers immediately',()=>{
+ const source=load('src/lib/image-source.ts');const onError=[];
+ const{OptimizedImage}=load('src/components/optimized-image.tsx',{'next/image':{__esModule:true,default:'img'},'@/lib/image-source':source,'@/lib/image-loader':load('src/lib/image-loader.ts')});
+ let tree;act(()=>{tree=create(React.createElement(OptimizedImage,{src:'https://res.cloudinary.com/shop/image/upload/broken.jpg',alt:'Cake',onError:()=>onError.push(1)}));});
+ act(()=>tree.root.findByType('img').props.onError({}));assert.equal(tree.root.findByType('img').props.src,'/img/product-placeholder.svg');assert.equal(onError.length,1);
+ act(()=>tree.update(React.createElement(OptimizedImage,{src:'https://res.cloudinary.com/shop/image/upload/new.jpg',alt:'Cake'})));assert.match(tree.root.findByType('img').props.src,/new.jpg$/);
+ act(()=>tree.update(React.createElement(OptimizedImage,{src:'javascript:alert(1)',alt:'Cake'})));assert.equal(tree.root.findByType('img').props.src,'/img/product-placeholder.svg');act(()=>tree.unmount());
+ assert.deepEqual(Array.from(source.productPhotos([null,123,{url:'x'},'/img/a.jpg\n/img/b.jpg'])),['/img/a.jpg','/img/b.jpg']);
+ assert.equal(source.safeImageSource(null),'/img/product-placeholder.svg');assert.equal(source.safeImageSource('https://merchant.example/photo.jpg'),'https://merchant.example/photo.jpg');assert.equal(source.canOptimizeImage('https://merchant.example/photo.jpg'),false);
+});
+
+test('responsive hero files match their content hashes and declared dimensions',async()=>{
+ const{createHash}=require('node:crypto'),sharp=require('sharp');const{heroImages}=load('src/lib/hero-images.ts');
+ for(const[layout,formats]of Object.entries(heroImages))for(const[format,files]of Object.entries(formats))for(const file of files){const bytes=fs.readFileSync('public'+file.src),hash=createHash('sha256').update(bytes).digest('hex').slice(0,12),meta=await sharp(bytes).metadata();assert.ok(file.src.includes(hash));assert.equal(bytes.length,file.bytes);assert.equal(meta.width,file.width);assert.equal(meta.format,format==='avif'?'heif':format);const ratio=layout==='mobile'?1.3:layout==='tablet'?1.18:1.4;assert.ok(Math.abs(meta.width/meta.height-ratio)<.004);}
 });

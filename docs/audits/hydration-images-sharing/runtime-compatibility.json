@@ -1,0 +1,56 @@
+{
+  "nodeRequireEsmDisabled": true,
+  "isolatedDemoOnly": true,
+  "results": [
+    {
+      "id": "seller:Ctp2u3hCWjj4NZLcePI8",
+      "kind": "browser",
+      "status": 200
+    },
+    {
+      "id": "seller:Ctp2u3hCWjj4NZLcePI8",
+      "kind": "crawler",
+      "status": 200
+    },
+    {
+      "id": "seller:Ctp2u3hCWjj4NZLcePI8",
+      "kind": "rsc",
+      "status": 200
+    },
+    {
+      "id": "seller%3ACtp2u3hCWjj4NZLcePI8",
+      "kind": "browser",
+      "status": 200
+    },
+    {
+      "id": "seller%3ACtp2u3hCWjj4NZLcePI8",
+      "kind": "crawler",
+      "status": 200
+    },
+    {
+      "id": "seller%3ACtp2u3hCWjj4NZLcePI8",
+      "kind": "rsc",
+      "status": 200
+    },
+    {
+      "id": "seller:audit-product-0001",
+      "kind": "browser",
+      "status": 200
+    },
+    {
+      "id": "seller:audit-product-0001",
+      "kind": "crawler",
+      "status": 200
+    },
+    {
+      "id": "seller:audit-product-0001",
+      "kind": "rsc",
+      "status": 200
+    },
+    {
+      "route": "/api/email/process",
+      "unauthenticated": true,
+      "status": 401
+    }
+  ]
+}

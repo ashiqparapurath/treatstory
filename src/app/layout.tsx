@@ -1,4 +1,5 @@
 import type {Metadata, Viewport} from 'next';
+import{siteSocialMetadata}from'@/lib/social-metadata';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
@@ -9,6 +10,7 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
+  ...siteSocialMetadata(),
   title: {
     default: 'TreatStory — Little finds, lovely stories',
     template: '%s | TreatStory',

@@ -49,7 +49,9 @@ export function usePublicCatalog<T>(target: Query<DocumentData> | null | undefin
       entry.expiry = setTimeout(() => entries.delete(entry), 30_000);
     };
   }, [entry]);
-  const snapshot = useSyncExternalStore(subscribe, () => entry?.snapshot ?? empty, () => target ? loading : empty);
+  // The SDK can initialize before a deferred Suspense boundary hydrates. Its server
+  // snapshot must still describe the original SDK-less HTML, never the new query.
+  const snapshot = useSyncExternalStore(subscribe, () => entry?.snapshot ?? empty, () => empty);
   const retry = useCallback(() => {
     if (!entry) return;
     entry.stop?.();

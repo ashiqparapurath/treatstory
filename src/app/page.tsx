@@ -5,17 +5,18 @@ import { Header } from '@/components/header';
 import { SellerStorefrontProducts } from '@/components/seller-storefront-products';
 import { ProductGridContainer } from '@/components/product-grid';
 import Link from 'next/link';
-import Image from 'next/image';
+import {HeroImage}from'@/components/hero-image';
+import{BANNER_IMAGE_SIZES}from'@/lib/image-source';
 import { OptimizedImage } from '@/components/optimized-image';
 import { ArrowRight, Sparkles } from 'lucide-react';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
 import type { Product, Banner } from '@/lib/products';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 
 function HomePageContent() {
   const firestore = useFirestore();
@@ -32,6 +33,8 @@ function HomePageContent() {
 }
 
 function BannerCarousel() {
+  const[api,setApi]=useState<CarouselApi>(),[active,setActive]=useState(0),[firstLoaded,setFirstLoaded]=useState(false),[requested,setRequested]=useState(()=>new Set([0]));
+  useEffect(()=>{if(!api)return;const select=()=>setActive(api.selectedScrollSnap());select();api.on('select',select);api.on('reInit',select);return()=>{api.off('select',select);api.off('reInit',select);};},[api]);
   const firestore = useFirestore();
   const bannersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -39,17 +42,19 @@ function BannerCarousel() {
   }, [firestore]);
   const { data: banners, isLoading } = usePublicCatalog<Banner>(bannersQuery);
 
+  useEffect(()=>{if(!firstLoaded||!banners?.length)return;setRequested(previous=>new Set([...previous,active,(active+1)%banners.length]));},[active,firstLoaded,banners?.length]);
+
   if (isLoading) return <Skeleton className="h-56 w-full rounded-[24px] md:h-72" />;
   if (!banners || banners.length === 0) return null;
 
   return (
-    <Carousel className="w-full" opts={{ align: "start", loop: true }}>
+    <Carousel setApi={setApi} className="w-full" opts={{ align: "start", loop: true }}>
       <CarouselContent>
-        {banners.map((banner) => (
+        {banners.map((banner,index) => (
           <CarouselItem key={banner.id}>
             <Card className="overflow-hidden rounded-[24px] border-0 shadow-none">
               <CardContent className="relative flex min-h-72 items-center justify-center p-0 sm:min-h-0 sm:h-64 md:h-72 lg:h-[340px]">
-                <OptimizedImage src={banner.imageUrl} alt={banner.title} fill sizes="(max-width: 1280px) 100vw, 1200px" quality={75} className="object-cover" />
+                <div className="absolute inset-0 bg-[#e8dfd2]"/>{(requested.has(index)||index===active)&&<OptimizedImage src={banner.imageUrl} alt={banner.title} fill sizes={BANNER_IMAGE_SIZES} quality={75} loading="lazy" fetchPriority={index===active?'auto':'low'} onLoad={()=>{if(index===active)setFirstLoaded(true);}} className="object-cover"/>}
                 <div className="absolute inset-0 bg-black/40" />
                 <div className="relative max-w-2xl px-5 py-6 text-center text-white sm:px-10">
                   <p className="eyebrow text-white/80">The TreatStory edit</p>
@@ -103,14 +108,7 @@ export default function Home() {
             </div>
             <div className="relative order-1 md:order-2">
               <div className="relative aspect-[1.3/1] overflow-hidden rounded-[22px] bg-[#e8dfd2] md:aspect-[1.18/1] lg:aspect-[1.4/1]">
-                <Image
-                  src="/img/landing-hero.webp"
-                  alt="Artisanal cakes and homemade treats alongside embroidered crafts, handmade gifts and candles"
-                  fill
-                  priority
-                  sizes="(max-width: 767px) 100vw, 55vw"
-                  className="object-cover"
-                />
+                <HeroImage alt="Artisanal cakes and homemade treats alongside embroidered crafts, handmade gifts and candles"/>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
                 <div className="absolute bottom-5 left-5 rounded-full border border-white/40 bg-white/80 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#3e342b] backdrop-blur-md sm:bottom-7 sm:left-7">
                   Curated with a little extra love
