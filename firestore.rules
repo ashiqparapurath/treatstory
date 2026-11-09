@@ -367,6 +367,9 @@ service cloud.firestore {
         request.resource.data.updatedAt == request.time;
     }
 
+    match /mail_outbox/{id} { allow read, write: if false; }
+    match /mail_limits/{id} { allow read, write: if false; }
+
     match /checkout_orders/{checkoutId} {
       allow read, write: if false;
     }

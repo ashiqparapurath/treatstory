@@ -125,6 +125,10 @@ async function run() {
   assert.equal(advanceOrder.advancePaymentRequired, true);
   assert.equal(advanceOrder.paymentMethod, 'seller-arranged-advance');
   assert.equal(advanceOrder.paymentStatus, 'pending');
+  const mails=await db.collection('mail_outbox').where('uid','==','buyer-advance').get();
+  assert.equal(mails.size,1,'an order and its email are committed together');
+  await placeAtomicCheckout(db,'buyer-advance',advance);
+  assert.equal((await db.collection('mail_outbox').where('uid','==','buyer-advance').get()).size,1,'idempotent checkout does not queue duplicate emails');
   console.log('PASS Firestore transactions: stock race, retry, capacity, price acceptance, cancellation restoration and simultaneous different-size pricing');
 }
 run().catch(e=>{ console.error(e);process.exitCode=1;});

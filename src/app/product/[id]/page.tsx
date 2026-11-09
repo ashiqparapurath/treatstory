@@ -7,6 +7,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useCart, cartLineId } from '@/context/cart-context';
 import { useToast } from '@/hooks/use-toast';
+import { ActionError, getErrorNotice } from '@/lib/user-notices';
 import { MobileBuyBar } from '@/components/mobile-buy-bar';
 import { useScrollToTop } from '@/hooks/use-scroll-to-top';
 import { ProductImage } from '@/components/product-image';
@@ -65,9 +66,9 @@ export default function ProductDetailPage() {
           snapshot = other;
           foundInSeller = !sellerListing;
         }
-        if (!snapshot.exists()) throw new Error('This product could not be found. The listing may have been removed.');
+        if (!snapshot.exists()) throw new ActionError('This product could not be found. The listing may have been removed.',404);
         const listing = { ...snapshot.data(), id: snapshot.id } as Listing;
-        if (foundInSeller && (listing as MarketplaceProduct).status !== 'published') throw new Error('This product is not available for public viewing.');
+        if (foundInSeller && (listing as MarketplaceProduct).status !== 'published') throw new ActionError('This product is not available for viewing.',404);
         if (!live) return;
         setProduct(listing); setResolvedSellerListing(foundInSeller); setLoading(false);
         if (foundInSeller && listing.sellerId) {
@@ -81,7 +82,7 @@ export default function ProductDetailPage() {
             }
           } catch { /* Seller display name is optional; the product remains visible. */ }
         }
-      } catch (err) { if (live) { setError(err instanceof Error ? err.message : 'Unable to load this product.'); setLoading(false); } }
+      } catch (err) { if (live) { setError(getErrorNotice(err,'load').description); setLoading(false); } }
     })();
     return () => { live = false; };
   }, [db, productId, sellerListing]);

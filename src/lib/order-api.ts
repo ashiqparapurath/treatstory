@@ -1,4 +1,5 @@
 'use client';
+import { ActionError } from '@/lib/user-notices';
 import type { User } from 'firebase/auth';
 
 export type OrderAction = 'accepted' | 'rejected' | 'preparing' | 'ready' | 'out-for-delivery' |
@@ -12,6 +13,6 @@ export async function sendOrderAction(user: User, orderId: string, action: Order
     body: JSON.stringify({ orderId, action, reason }),
   });
   const payload = await response.json().catch(() => ({})) as { error?: string; status?: string };
-  if (!response.ok) throw new Error(payload.error || 'Order update failed.');
+  if (!response.ok) throw new ActionError(payload.error || 'The order could not be updated.', response.status);
   return payload;
 }

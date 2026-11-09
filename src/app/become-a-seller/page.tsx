@@ -1,4 +1,6 @@
 'use client';
+import { requestSellerMail } from '@/lib/account-mail';
+import { errorToast } from '@/lib/user-notices';
 
 import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
@@ -49,13 +51,9 @@ export default function BecomeSellerPage() {
         submittedAt: serverTimestamp(),
       });
       setSubmitted(true);
+      try{await requestSellerMail(user,'application',user.uid);}catch{toast({title:'Application saved; email update delayed',description:'Track your application here. You do not need to submit it again.'});}
       toast({ title: 'Application submitted', description: 'Your request is awaiting review.' });
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Could not submit application',
-        description: 'Please check your details. Existing applications cannot be submitted again.',
-      });
+    } catch(error) {toast(errorToast(error,'seller-application'));
     } finally {
       setSubmitting(false);
     }

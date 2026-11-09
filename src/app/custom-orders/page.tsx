@@ -1,4 +1,6 @@
 'use client';
+import { getErrorNotice, ActionError } from '@/lib/user-notices';
+import { errorToast } from '@/lib/user-notices';
 import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -53,7 +55,7 @@ function CustomOrderContent(){
     if(!user || uploading) return;
     setUploading(true);
     try { setReferenceUrl(await uploadTreatStoryPhoto(user,file,'reference')); toast({title:'Reference photo uploaded'}); }
-    catch(error) { toast({variant:'destructive',title:'Could not upload reference photo',description:error instanceof Error?error.message:'Please try again.'}); }
+    catch(error) { toast(errorToast(error, 'upload-photo')); }
     finally { setUploading(false); }
   }
   const buyerQuery=useMemoFirebase(()=>db&&user?query(collection(db,'custom_quotes'),where('buyerUid','==',user.uid)):null,[db,user?.uid]);
@@ -61,12 +63,12 @@ function CustomOrderContent(){
   const {data:buyerQuotes,error:buyerError}=useCollection<Quote>(buyerQuery);
   const {data:sellerQuotes,error:sellerError}=useCollection<Quote>(sellerQuery);
   const api=async(data:Record<string,unknown>)=>{
-    if(!user)throw new Error('Sign in to continue.');
+    if(!user)throw new ActionError('Sign in to continue.', 401);
     const response=await fetch('/api/quotes',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await user.getIdToken()}`},body:JSON.stringify(data)});
     const result=await response.json().catch(()=>({})) as {error?:string};
-    if(response.status===503) { const message=result.error||'Custom requests are temporarily unavailable. Please try again later.'; setServiceError(message); throw new Error(message); }
+    if(response.status===503) { const failure=new ActionError(result.error||'Custom requests are temporarily unavailable.',response.status,(result as {details?:{code?:string}}).details?.code);setServiceError(getErrorNotice(failure,'quote').description);throw failure; }
     if(response.ok) setServiceError('');
-    if(!response.ok)throw new Error(result.error||'Unable to send custom request.');
+    if(!response.ok)throw new ActionError(result.error||'Unable to send custom request.',response.status);
     return result;
   };
   async function submit(e:FormEvent){
@@ -75,13 +77,13 @@ function CustomOrderContent(){
       await api({action:'create',sellerId:sellerId.trim(),productId:productId.trim(),occasion:occasion.trim(),description:description.trim(),budget:Number(budget),requestedDate:date,referenceUrl:referenceUrl.trim()});
       toast({title:'Custom request sent',description:'The creator can review your request and send a quote.'});
       setOccasion('');setDescription('');setBudget('');setDate('');setReferenceUrl('');
-    }catch(error){toast({variant:'destructive',title:'Could not send request',description:error instanceof Error?error.message:'Please retry.'});}
+    }catch(error){toast(errorToast(error, 'quote'));}
     finally{setBusy(false);}
   }
   async function action(data:Record<string,unknown>){
     if(busy)return;setBusy(true);
-    try{await api(data);toast({title:'Custom quote updated'});}
-    catch(error){toast({variant:'destructive',title:'Unable to update quote',description:error instanceof Error?error.message:'Please retry.'});}
+    try{await api(data);toast({title:data.action==='accept'?'Quote accepted':data.action==='decline'?'Request declined':'Quote sent to the buyer',description:data.action==='accept'?'Contact the creator to confirm the final order and payment. Accepting a quote does not place an order or collect payment.':data.action==='decline'?'The buyer will see that this request was declined.':'The buyer can now review your price and respond.'});}
+    catch(error){toast(errorToast(error, 'quote'));}
     finally{setBusy(false);}
   }
   return <div className="min-h-screen bg-[#f8f6f2]"><Header/><main className="section-shell pb-24 pt-10"><p className="eyebrow text-[#a68a64]">Made just for you</p><h1 className="mt-3 text-4xl font-medium">Custom creations & quotes</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Planning a birthday cake, custom painting or handmade gift? Ask a creator for a tailored price. Quotes are requests, not confirmed purchases or online payments.</p>

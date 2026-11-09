@@ -24,3 +24,7 @@ Instagram: [@mrashiq._](https://www.instagram.com/mrashiq._)
 ---
 
 © 2026 TreatStory. All rights reserved.
+
+## Transactional email
+
+Account, order, quote, support and seller updates use server-side Resend delivery. See [email setup](docs/email-setup.md) for verified sender/domain configuration, environment variables, retry scheduling and staging checks. Live delivery requires deployment configuration; no secrets are stored in this repository.

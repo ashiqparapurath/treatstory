@@ -1,4 +1,6 @@
 'use client';
+import { ActionError } from '@/lib/user-notices';
+import { errorToast } from '@/lib/user-notices';
 
 import { useState } from 'react';
 import { collection, limit, orderBy, query } from 'firebase/firestore';
@@ -25,10 +27,10 @@ export function SupportInbox(){
       const response=await fetch('/api/support',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await user.getIdToken()}`},
         body:JSON.stringify({action,ticketId,...(action==='reply'?{message:answers[ticketId]?.trim()}: {})})});
       const body=await response.json().catch(()=>({})) as {error?:string};
-      if(!response.ok)throw new Error(body.error||'Unable to update the ticket.');
+      if(!response.ok)throw new ActionError(body.error||'Unable to update the ticket.',response.status);
       toast({title:action==='close'?'Support ticket closed':'Reply sent to customer'});
       setAnswers(p=>({...p,[ticketId]:''}));
-    }catch(error){toast({variant:'destructive',title:'Support update failed',description:error instanceof Error?error.message:'Please retry.'});}
+    }catch(error){toast(errorToast(error, 'support'));}
     finally{setBusy(null);}
   }
   return <section className="space-y-5"><div><p className="eyebrow text-[#a68a64]">Customer care</p><h2 className="mt-2 text-2xl font-semibold">Support inbox</h2><p className="mt-2 text-sm text-muted-foreground">Only verified administrators can read and respond to customer requests. Up to the most recent 100 tickets are shown.</p></div>

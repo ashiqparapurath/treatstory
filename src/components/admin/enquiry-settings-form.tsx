@@ -1,4 +1,5 @@
 'use client';
+import { errorToast } from '@/lib/user-notices';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,10 +16,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, serverTimestamp } from 'firebase/firestore';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import type { EnquirySettings } from '@/lib/products';
 import { useToast } from '@/hooks/use-toast';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useEffect, useState } from 'react';
 import { Textarea } from '../ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -87,7 +87,7 @@ export function EnquirySettingsForm() {
         id: 'enquiry', // explicitly set id for "upsert"
       };
 
-      setDocumentNonBlocking(settingsRef, settingsData, { merge: true });
+      await setDoc(settingsRef, settingsData, {merge:true});
       
       toast({
         title: 'Settings Updated',
@@ -95,11 +95,7 @@ export function EnquirySettingsForm() {
       });
     } catch (error: any) {
       console.error("Enquiry settings submission error:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Failed to save settings',
-        description: error.message || 'An unexpected error occurred.',
-      });
+      toast(errorToast(error, 'save'));
     } finally {
       setIsSubmitting(false);
     }

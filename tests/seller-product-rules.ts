@@ -2,7 +2,7 @@
 import { initializeApp as initializeAdmin } from 'firebase-admin/app';
 import { getFirestore as adminFirestore, Timestamp } from 'firebase-admin/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { getFirestore, connectFirestoreEmulator, doc, setDoc, updateDoc, serverTimestamp, terminate } from 'firebase/firestore';
+import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, updateDoc, serverTimestamp, terminate } from 'firebase/firestore';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 
@@ -40,6 +40,10 @@ async function run(){
  await assert.rejects(()=>updateDoc(target,{sellerId:'someone-else',updatedAt:serverTimestamp()}),denied,'ownership cannot change');
  await db.doc('sellers/'+uid).update({accessEndsAt:Timestamp.fromMillis(Date.now()-1000)});
  await assert.rejects(()=>updateDoc(target,{price:550,updatedAt:serverTimestamp()}),denied,'expired seller access must be rejected');
+ await db.doc('mail_outbox/private-test').set({uid,href:'https://example.com/?oobCode=private'});
+ await assert.rejects(()=>getDoc(doc(client,'mail_outbox','private-test')),denied,'private email links are not client-readable');
+ await assert.rejects(()=>setDoc(doc(client,'mail_outbox','forged'),{uid}),denied,'clients cannot enqueue arbitrary emails');
+ await assert.rejects(()=>setDoc(doc(client,'mail_limits','forged'),{count:0}),denied,'clients cannot alter mail quotas');
  console.log('PASS reject missing variant prices, malformed labels, unexpected fields, ownership changes and expired access');
  await terminate(client);await deleteApp(app);await db.terminate();
 }

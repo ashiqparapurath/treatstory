@@ -1,4 +1,5 @@
 'use client';
+import { errorToast } from '@/lib/user-notices';
 import { LoadError } from '@/components/loading-states';
 
 import { useState } from 'react';
@@ -69,7 +70,7 @@ export function BannerList() {
       setBannerToDelete(null);
     } catch (error) {
       console.error('Banner deletion failed', error);
-      toast({ variant: 'destructive', title: 'Could not delete banner', description: error instanceof Error ? error.message : 'Check your administrator access and try again.' });
+      toast(errorToast(error, 'delete'));
     } finally { setWorkingBannerId(null); }
   };
 
@@ -83,7 +84,7 @@ export function BannerList() {
       toast({ title: 'Banner status updated', description: `"${banner.title}" is now ${!banner.isActive ? 'active' : 'inactive'}.` });
     } catch (error) {
       console.error('Banner status change failed', error);
-      toast({ variant: 'destructive', title: 'Could not change banner status', description: error instanceof Error ? error.message : 'Check your administrator access and try again.' });
+      toast(errorToast(error, 'save'));
     } finally { setWorkingBannerId(null); }
   };
 
@@ -103,7 +104,7 @@ export function BannerList() {
     );
   }
 
-  if (loadError) return <LoadError retry={retryLoad} />;
+  if (loadError) return <LoadError retry={retryLoad} error={loadError} />;
 
   return (
     <>

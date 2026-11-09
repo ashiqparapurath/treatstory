@@ -43,7 +43,7 @@ export function SellerStorefrontProducts({ limitCount }: { limitCount?: number }
     else addToCart(item, quantity);
     return cartLineId(item);
   };
-  if (error) return <LoadError retry={retry} />;
+  if (error) return <LoadError retry={retry} error={error} />;
   if (isLoading) return <ProductGridSkeleton count={limitCount || 8} />;
   if (!data?.length) return null;
   return <section className="space-y-6">

@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
   const apiKey = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
   if (!projectId || !cloudName || !apiKey || !apiSecret) {
-    return json({ error: 'Image uploads are temporarily unavailable. Please contact support.' }, 503);
+    return json({ error: 'Image uploads are temporarily unavailable. Please contact support.',code:'UPLOAD_NOT_CONFIGURED' }, 503);
   }
   const authHeader = request.headers.get('authorization') || '';
   if (!authHeader.startsWith('Bearer ')) return json({ error: 'Sign in before uploading images.' }, 401);
@@ -86,7 +86,9 @@ export async function POST(request: NextRequest) {
   const file = form.get('file');
   if (!(file instanceof Blob)) return json({ error: 'Choose an image to upload.' }, 400);
   const maxSize = kind === 'banner' ? MAX_BANNER_BYTES : MAX_PRODUCT_BYTES;
-  if (!file.size || file.size > maxSize || !ALLOWED_TYPES.has(file.type))
+  if (!file.size) return json({error:'The selected file is empty. Choose a different photo.'},400);
+  if (!ALLOWED_TYPES.has(file.type)) return json({error:'Choose a JPG, PNG or WebP photo.'},415);
+  if (file.size > maxSize)
     return json({ error: `Choose a JPG, PNG or WebP image under ${kind === 'banner' ? '1' : '2'} MB.` }, 413);
 
   try {

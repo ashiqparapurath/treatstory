@@ -1,4 +1,6 @@
 'use client';
+import { ActionError } from '@/lib/user-notices';
+import { errorToast } from '@/lib/user-notices';
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { collection, query, where, limit } from 'firebase/firestore';
@@ -28,10 +30,10 @@ export default function SupportPage(){
       const response=await fetch('/api/support',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await user.getIdToken()}`},
         body:JSON.stringify({action:'create',subject,category,message,orderId})});
       const body=await response.json().catch(()=>({})) as {error?:string};
-      if(!response.ok)throw new Error(body.error||'Could not submit your request.');
+      if(!response.ok)throw new ActionError(body.error||'Could not submit your request.',response.status);
       toast({title:'Support request sent',description:'You can follow the reply in this page and notifications.'});
       setSubject('');setMessage('');setOrderId('');
-    }catch(error){toast({variant:'destructive',title:'Could not contact support',description:error instanceof Error?error.message:'Please retry.'});}
+    }catch(error){toast(errorToast(error, 'support'));}
     finally{setBusy(false);}
   }
   return <div className="min-h-screen bg-[#f8f6f2]"><Header/><main className="section-shell pb-24 pt-12"><div className="flex items-start gap-3"><LifeBuoy className="mt-1 h-8 w-8 text-[#a68a64]"/><div><p className="eyebrow text-[#a68a64]">We are here to help</p><h1 className="mt-3 text-4xl font-medium">TreatStory support</h1><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">For orders, delivery, cancellations, payments or account questions, contact the TreatStory team. Your ticket is private to you and administrators.</p></div></div>

@@ -1,3 +1,5 @@
+import { queueNotification, processMailQueue } from '@/lib/server/mail';
+import { after } from 'next/server';
 import { z } from 'zod';
 import type { NextRequest } from 'next/server';
 import { Timestamp } from 'firebase-admin/firestore';
@@ -20,7 +22,7 @@ const quoteSchema = z.discriminatedUnion('action', [
 
 export async function POST(request: NextRequest) {
   try {
-    const {uid,db} = await verifiedUser(request);
+    const {uid,db,auth} = await verifiedUser(request);
     if (Number(request.headers.get('content-length') || 0)>10_000) throw new ApiError(413,'Quote request is too large.');
     const raw:unknown = await request.json().catch(()=>{throw new ApiError(400,'Invalid request.');});
     const parsed = quoteSchema.safeParse(raw);
@@ -50,10 +52,11 @@ export async function POST(request: NextRequest) {
           description:data.description,budget:data.budget,requestedDate:data.requestedDate,
           referenceUrl:data.referenceUrl,status:'requested',quotedPrice:null,quotedNote:'',createdAt:now,updatedAt:now});
         tx.set(limitRef,{buyerUid:uid,count:count+1,updatedAt:now});
-        tx.create(db.collection('notifications').doc(data.sellerId).collection('items').doc(),
-          {title:'New custom-order request',orderId:'',createdAt:now,read:false});
+        queueNotification(tx,db,data.sellerId,
+          {title:'New custom-order request',message:`${productSnap?.data()?.name || data.occasion}: review the buyer’s preferences, budget and requested date.`,kind:'quote',href:'/custom-orders',orderId:'',createdAt:now,read:false});
         return {id:ref.id,status:'requested'};
       });
+      after(async()=>{try{await processMailQueue(db,auth,3);}catch{console.error('Mail queue processing unavailable');}});
       return Response.json(result);
     }
     const result=await db.runTransaction(async tx=>{
@@ -74,23 +77,25 @@ export async function POST(request: NextRequest) {
         if(q.status!=='requested')throw new ApiError(409,'This quote is no longer open.');
         const expiresAt=Timestamp.fromMillis(now.toMillis()+7*86400000);
         tx.update(ref,{status:'quoted',quotedPrice:data.price,quotedNote:data.note,quotedAt:now,expiresAt,updatedAt:now});
-        tx.create(db.collection('notifications').doc(q.buyerUid).collection('items').doc(),
-          {title:'A creator sent your custom quote',orderId:'',createdAt:now,read:false});
+        queueNotification(tx,db,q.buyerUid,
+          {title:'Your custom quote is ready',message:`${q.productName || q.occasion}: review the seller’s price and included details before accepting.`,kind:'quote',href:'/custom-orders',orderId:'',createdAt:now,read:false});
         return {id:data.id,status:'quoted'};
       }
       if(data.action==='decline'){
         if(q.sellerId!==uid||q.status!=='requested')throw new ApiError(403,'Only the seller may decline an open request.');
         tx.update(ref,{status:'declined',updatedAt:now});
+        queueNotification(tx,db,q.buyerUid,{title:'Custom request declined',message:`${q.productName || q.occasion}: this creator cannot take the request. You can ask another creator.`,kind:'quote',href:'/custom-orders',orderId:'',createdAt:now,read:false});
         return {id:data.id,status:'declined'};
       }
       if(q.buyerUid!==uid)throw new ApiError(403,'Only the buyer can accept a quote.');
       if(q.status!=='quoted'||!q.expiresAt?.toMillis||q.expiresAt.toMillis()<=now.toMillis())
         throw new ApiError(409,'This quote has expired or is no longer available.');
       tx.update(ref,{status:'accepted',acceptedAt:now,updatedAt:now});
-      tx.create(db.collection('notifications').doc(q.sellerId).collection('items').doc(),
-        {title:'Buyer accepted your custom quote',orderId:'',createdAt:now,read:false});
+      queueNotification(tx,db,q.sellerId,
+        {title:'Buyer accepted your custom quote',message:`${q.productName || q.occasion}: agree on the final order and payment arrangements. Quote acceptance does not place an order.`,kind:'quote',href:'/custom-orders',orderId:'',createdAt:now,read:false});
       return {id:data.id,status:'accepted'};
     });
-    return Response.json(result);
+    after(async()=>{try{await processMailQueue(db,auth,3);}catch{console.error('Mail queue processing unavailable');}});
+      return Response.json(result);
   }catch(error){return safeResponse(error);}
 }

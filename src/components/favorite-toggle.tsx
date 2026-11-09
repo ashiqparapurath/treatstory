@@ -1,4 +1,5 @@
 'use client';
+import { errorToast } from '@/lib/user-notices';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -23,7 +24,7 @@ export function FavoriteToggle({ productId, title, imageUrl, compact = false }: 
       else await setDoc(ref, { productId, title: title.slice(0,120), imageUrl: (imageUrl||'').slice(0,2000), createdAt:serverTimestamp() });
       toast({ title: data?'Removed from favourites':'Saved to favourites' });
     } catch (error) {
-      toast({ variant:'destructive', title:'Could not update favourites', description:error instanceof Error?error.message:'Please retry.' });
+      toast(errorToast(error, 'save'));
     } finally { setBusy(false); }
   }
   return <button type="button" disabled={busy||isLoading} aria-pressed={!!data} aria-label={data?'Remove from favourites':'Add to favourites'} onClick={() => void toggle()} className={`inline-flex h-11 items-center gap-2 rounded-full border justify-center text-xs ${compact ? 'w-11' : 'px-4'} ${data?'border-rose-300 bg-rose-50 text-rose-700':'bg-white text-[#685d52]'}`}><Heart className={`h-4 w-4 ${data?'fill-current':''}`}/>{!compact && (data?'Saved':'Save for later')}</button>;

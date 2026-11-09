@@ -1,5 +1,6 @@
-
 'use client';
+
+import { ActionError, getErrorNotice, errorToast } from '@/lib/user-notices';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -30,11 +31,7 @@ import { Skeleton } from '../ui/skeleton';
 const MAX_FILE_SIZE = 1_000_000; // Under 1 MB. Images live on Cloudinary, not inside Firestore.
 const ACCEPTED_TYPES = new Set(['image/jpeg', 'image/png']);
 
-function bannerSaveError(error: unknown): string {
-  const code = (error as { code?: string } | null)?.code;
-  if (code === 'permission-denied') return 'You do not have permission to change this banner. Check your administrator access.';
-  return error instanceof Error ? error.message : 'Unable to save the banner. Please try again or contact support.';
-}
+function bannerSaveError(error: unknown): string { return getErrorNotice(error,'upload-photo').description; }
 
 const formSchema = z.object({
   title: z.string().min(2, 'Title must be at least 2 characters.'),
@@ -135,7 +132,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
     try {
       let url = data.imageUrl;
       if (selectedFile) url = await uploadTreatStoryPhoto(user, selectedFile, 'banner');
-      if (!url || url === 'pending-upload') throw new Error('Choose a banner image before saving.');
+      if (!url || url === 'pending-upload') throw new ActionError('Choose a banner image before saving.',400);
 
       const bannerData = {
         title: data.title.trim(),
@@ -155,7 +152,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
       onFinished();
     } catch (error: unknown) {
       console.error('Banner save failed', { code: (error as { code?: string })?.code, error });
-      toast({ variant: 'destructive', title: 'Could not save banner', description: bannerSaveError(error) });
+      toast(errorToast(error, 'save'));
     } finally {
       setIsSubmitting(false);
     }

@@ -1,4 +1,6 @@
 'use client';
+import { ActionError } from '@/lib/user-notices';
+import { errorToast } from '@/lib/user-notices';
 import { useState } from 'react';
 import { collection, query, where, limit } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
@@ -17,9 +19,9 @@ export function ReviewModeration(){
     try{
       const response=await fetch('/api/reviews',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await user.getIdToken()}`},body:JSON.stringify({action,orderId:review.orderId})});
       const result=await response.json().catch(()=>({})) as {error?:string};
-      if(!response.ok)throw new Error(result.error||'Unable to moderate review.');
+      if(!response.ok)throw new ActionError(result.error||'Unable to moderate review.',response.status);
       toast({title:action==='publish'?'Review published':'Review rejected'});
-    }catch(error){toast({variant:'destructive',title:'Review action failed',description:error instanceof Error?error.message:'Please retry.'});}
+    }catch(error){toast(errorToast(error, 'review'));}
     finally{setBusy(null);}
   }
   return <section className="space-y-5"><div><h2 className="text-2xl font-semibold">Product review moderation</h2><p className="mt-2 text-sm text-muted-foreground">Publish or reject reviews from completed, verified TreatStory purchases. A review doesn't appear publicly until approved.</p></div>

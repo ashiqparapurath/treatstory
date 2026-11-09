@@ -16,7 +16,7 @@ function ProductsPageContent() {
   const productsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
   const { data: products, isLoading, error, retry } = usePublicCatalog<Product>(productsQuery);
 
-  if (error) return <LoadError retry={retry} />;
+  if (error) return <LoadError retry={retry} error={error} />;
   if (isLoading) return <ProductGridSkeleton count={8} />;
   return <ProductGridContainer products={products || []} />;
 }

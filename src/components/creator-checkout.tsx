@@ -1,4 +1,5 @@
 'use client';
+import { errorToast, ActionError } from '@/lib/user-notices';
 
 import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState, type FormEvent } from 'react';
@@ -95,22 +96,21 @@ export function CreatorCheckout({ variant = 'card', onlyProductId, onlyLineId, i
       if (!response.ok) {
         if (response.status === 409 && payload.details?.priceChanges?.length) {
           setPriceChanges(payload.details.priceChanges);
-          throw new Error('Some prices changed. Review and accept the updated prices before placing the order.');
+          throw new ActionError('Some prices changed. Review and accept the updated prices before placing the order.', 409);
         }
-        throw new Error(payload.error || 'Checkout could not be confirmed.');
+        throw new ActionError(payload.error || 'Checkout could not be confirmed.', response.status, (payload as {details?:{code?:string}}).details?.code);
       }
       const orderIds = payload.orderIds ?? [];
-      if (!orderIds.length) throw new Error('No order confirmation was returned. Please retry using the same checkout ID.');
+      if (!orderIds.length) throw new ActionError('The order response was incomplete. Keep this checkout open and retry, or check your orders before starting again.');
       setResult(orderIds);
       if (direct) clearDirectCheckout();
       else for (const item of items) removeFromCart(item.lineId);
       sessionStorage.removeItem(pendingKey);
       onComplete?.();
-      toast({ title: 'Order confirmed', description: `${orderIds.length} creator order(s) placed. No online payment collected.` });
+      toast({ title: 'Order request sent', description: `${orderIds.length} creator order(s) received. Your seller will confirm preparation and delivery; no payment was collected online.` });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Please retry checkout.';
-      console.error('TreatStory atomic checkout failed', { code: (error as {code?:string})?.code, message });
-      toast({ variant: 'destructive', title: 'Could not place order', description: message });
+      console.error('TreatStory checkout response failed', {code:(error as {code?:string})?.code});
+      toast(errorToast(error,'checkout'));
     } finally { setBusy(false); }
   }
   function acceptUpdatedPrices() {

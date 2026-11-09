@@ -6,10 +6,16 @@ const ts = require('typescript');
 const React = require('react');
 const { create, act } = require('react-test-renderer');
 
+const sharedModules = new Map();
+const accountMailMock={requestAccountMail:async()=>({ok:true}),requestSellerMail:async()=>{}};
+function sharedModule(id) {
+  if (!sharedModules.has(id)) sharedModules.set(id, load(`src/lib/${id.slice("@/lib/".length)}.ts`));
+  return sharedModules.get(id);
+}
 function load(file, mocks = {}, globals = {}) {
   const output = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   const module = { exports: {} };
-  vm.runInNewContext(output, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id === 'lucide-react' ? new Proxy({}, { get: () => () => null }) : require(id), console,
+  vm.runInNewContext(output, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id==='@/lib/account-mail'?accountMailMock : ['@/lib/user-notices', '@/lib/order-feedback','@/lib/server/mail'].includes(id) ? sharedModule(id) : id === 'lucide-react' ? new Proxy({}, { get: () => () => null }) : require(id), console,
     setTimeout: (...args) => { const timer = setTimeout(...args); timer.unref(); return timer; }, clearTimeout, URL, URLSearchParams, ...globals }, { filename: file });
   return module.exports;
 }
@@ -365,7 +371,7 @@ test('checkout reuses the saved PIN and accepts address changes from a popup', a
   // A valid PIN passes local validation and reaches checkout, rather than the PIN error.
   assert.equal(sent.pincode, '680001');
   assert.equal(sent.deliveryAddress, 'House 123 Main Street, 673001');
-  assert.equal(notice.title, 'Order confirmed');
+  assert.equal(notice.title, 'Order request sent');
   act(() => tree.unmount());
   requiresAdvance = true;
   sent = undefined;
@@ -424,6 +430,7 @@ test('quote creation snapshots authoritative seller and product names with the r
   const db = { collection: name => ({doc: id => ({path:`${name}/${id || 'new-id'}`,id:id || 'new-id',collection: child=>({doc:()=>({path:`${name}/${id}/${child}/alert`})})})}),
     runTransaction: async fn => fn({get:async ref=>({exists:!!docs[ref.path],data:()=>docs[ref.path]}),create:(ref,data)=>{if(ref.path==='custom_quotes/new-id')created=data;},set(){}}) };
   const { POST } = load('src/app/api/quotes/route.ts', {
+    'next/server':{after(){}},
     'firebase-admin/firestore': {Timestamp:{now:()=>({toMillis:()=>now}),fromMillis:v=>v}},
     '@/lib/server/firebase-admin': {verifiedUser:async()=>({uid:'buyer',db}),ApiError:class extends Error{},safeResponse:e=>{throw e;}},
   }, {Response});
@@ -528,4 +535,106 @@ test('direct checkout uses its draft, never falls back to cart, and keeps confir
   assert.equal(tree.root.findAllByType(CheckoutMock).length,1);
   assert.equal(JSON.stringify(tree.toJSON()).includes('Your checkout is empty'),false);
   assert.equal(cart.length,1);act(()=>tree.unmount());
+});
+
+test('action errors give accurate credential, connection, access and upload recovery without leaking SDK details', () => {
+  const {getErrorNotice,ActionError,validateEmail}=sharedModule('@/lib/user-notices');
+  for(const code of ['auth/invalid-credential','auth/wrong-password','auth/user-not-found']) {
+    const notice=getErrorNotice({code,message:'Firebase secret diagnostic'},'sign-in');
+    assert.equal(notice.field,'credentials');assert.match(notice.description,/both details/);
+  }
+  assert.equal(validateEmail('bad').field,'email');assert.equal(validateEmail(' name@example.com '),null);
+  assert.equal(getErrorNotice({code:'auth/weak-password'},'register').field,'password');
+  assert.match(getErrorNotice({code:'auth/network-request-failed'},'sign-in').title,/Connection/);
+  assert.match(getErrorNotice({code:'auth/too-many-requests'},'sign-in').description,/Wait/);
+  assert.match(getErrorNotice({code:'permission-denied'},'seller-access').title,/Administrator/);
+  assert.match(getErrorNotice(new ActionError('Raw Firebase configuration https://private.example',503),'quote').title,/Temporarily/);
+  assert.match(getErrorNotice(new ActionError('This seller is no longer accepting requests.',409),'quote').description,/no longer accepting/);
+  assert.doesNotMatch(JSON.stringify(getErrorNotice(new Error('Firebase API_KEY private trace'),'save-product')),/Firebase|API_KEY|trace/);
+  assert.match(getErrorNotice(new ActionError('Choose JPG or PNG.',415),'upload-photo').title,/file type/);
+  assert.match(getErrorNotice(new ActionError('Reduce this photo.',413),'upload-photo').title,/too large/);
+  assert.match(getErrorNotice({code:'UPLOAD_NOT_CONFIGURED'},'upload-photo').title,/not ready/);
+});
+
+test('order feedback distinguishes requests, completion and seller-recorded payment', () => {
+  const {orderFeedback}=sharedModule('@/lib/order-feedback');
+  assert.match(orderFeedback('request-cancellation','Cake').description,/not cancelled yet/);
+  assert.match(orderFeedback('placed','Cake').description,/No online payment/);
+  assert.equal(orderFeedback('ready','Cake','pickup').title,'Ready for pickup');
+  assert.equal(orderFeedback('completed','Cake','pickup').title,'Order marked collected');
+  assert.match(orderFeedback('cod-collected','Cake').description,/marked as collected by the seller/);
+});
+
+test('seller access confirmation opens without a write, awaits acknowledgment and prevents duplicate writes', async () => {
+  let writes=0, resolveWrite, rejectWrite;
+  const notices=[];
+  class Timestamp {constructor(date){this.date=date;}toDate(){return this.date;}static fromDate(date){return new Timestamp(date);}static fromMillis(ms){return new Timestamp(new Date(ms));}}
+  const seller={id:'seller-a',businessName:'As Production',accessType:'trial',status:'active',accessEndsAt:Timestamp.fromDate(new Date('2026-11-15T23:59:59')),contactEmail:'seller@example.com'};
+  const db={}; const Dialog=()=>null;
+  const {SellerManagement}=load('src/components/admin/seller-management.tsx',{
+    '@/firebase':{useUser:()=>({user:{uid:'admin'}}),useFirestore:()=>db,useMemoFirebase:fn=>fn(),useCollection:()=>({data:[seller],isLoading:false})},
+    'firebase/firestore':{Timestamp,collection:()=>({}),doc:()=>({}),serverTimestamp:()=>0,updateDoc:()=>{writes++;return new Promise((resolve,reject)=>{resolveWrite=resolve;rejectWrite=reject;});}},
+    '@/components/ui/button':{Button:'button'},'@/components/ui/input':{Input:'input'},'@/components/ui/label':{Label:'label'},
+    '@/components/confirm-action-dialog':{ConfirmActionDialog:Dialog},'@/components/loading-states':{LoadError:()=>null},'@/hooks/use-toast':{useToast:()=>({toast:notice=>notices.push(notice)})},
+  },{window:{confirm:()=>{throw Error('Native dialog must not run');}}});
+  let tree;act(()=>{tree=create(React.createElement(SellerManagement));});
+  const button=label=>tree.root.findAllByType('button').find(n=>n.children.includes(label));
+  act(()=>button('Manage access').props.onClick());
+  act(()=>button('Save expiry').props.onClick());
+  let dialog=tree.root.findByType(Dialog);
+  assert.equal(dialog.props.open,true);assert.equal(writes,0);
+  assert.match(JSON.stringify(dialog.props.children,(key,value)=>key==="_owner"?undefined:value),/15 November 2026/);
+  act(()=>dialog.props.onOpenChange(false));assert.equal(writes,0);
+  act(()=>button('Save expiry').props.onClick());
+  let first;
+  act(()=>{first=tree.root.findByType(Dialog).props.onConfirm();});
+  assert.equal(writes,1);assert.equal(tree.root.findByType(Dialog).props.busy,true);assert.equal(notices.length,0);
+  await act(async()=>{await tree.root.findByType(Dialog).props.onConfirm();});assert.equal(writes,1);
+  await act(async()=>{rejectWrite({code:'permission-denied'});await first;});
+  assert.equal(tree.root.findByType(Dialog).props.open,true);assert.match(tree.root.findByType(Dialog).props.error,/correct account/);
+  act(()=>{first=tree.root.findByType(Dialog).props.onConfirm();});
+  await act(async()=>{resolveWrite();await first;});
+  assert.equal(writes,2);assert.equal(tree.root.findByType(Dialog).props.open,false);assert.equal(notices.at(-1).title,'Seller access saved');
+  act(()=>tree.unmount());
+});
+
+test('sign-in validates fields before requesting authentication and preserves password whitespace', async () => {
+  let attempts=0,args,code='auth/invalid-credential';const notices=[];
+  const {default:Login}=load('src/app/login/page.tsx',{
+    'next/navigation':{useRouter:()=>({replace(){}})},'next/link':'a',
+    '@/firebase':{useAuth:()=>({}),useUser:()=>({user:null,isUserLoading:false})},
+    'firebase/auth':{signInWithEmailAndPassword:async(...values)=>{attempts++;args=values;throw {code,message:'Firebase private diagnostic'};},sendPasswordResetEmail:async()=>{throw {code:'auth/user-not-found'};}},
+    '@/components/ui/toast':{ToastAction:'button'},'@/components/ui/button':{Button:'button'},
+    '@/components/ui/input':{Input:React.forwardRef((props,ref)=>React.createElement('input',{...props,ref}))},'@/components/ui/label':{Label:'label'},
+    '@/hooks/use-toast':{useToast:()=>({toast:n=>notices.push(n)})},
+  });
+  let tree;act(()=>{tree=create(React.createElement(Login));});
+  const input=id=>tree.root.findByProps({id});
+  const submit=()=>tree.root.findByType('form').props.onSubmit({preventDefault(){}});
+  act(()=>input('email').props.onChange({target:{value:'bad'}}));await act(submit);assert.equal(attempts,0);assert.equal(notices.at(-1).title,'Check your email address');
+  act(()=>input('email').props.onChange({target:{value:' buyer@example.com '}}));await act(submit);assert.equal(attempts,0);assert.equal(notices.at(-1).title,'Enter your password');
+  act(()=>input('password').props.onChange({target:{value:' password '}}));await act(submit);assert.equal(attempts,1);assert.equal(args[1],'buyer@example.com');assert.equal(args[2],' password ');assert.equal(notices.at(-1).title,'Email or password does not match');
+  code='auth/too-many-requests';await act(submit);assert.match(notices.at(-1).title,/pause/);
+  act(()=>tree.root.findAllByType('button').find(n=>n.children.includes('Forgot password?')).props.onClick());
+  await act(submit);assert.equal(notices.at(-1).title,'Check your inbox');assert.match(notices.at(-1).description,/If an account uses/);
+  act(()=>tree.unmount());
+});
+
+test('category save announces success only after the actual write and keeps failed edits open', async () => {
+  let resolveWrite,rejectWrite,finished=0;const notices=[];
+  const write=()=>new Promise((resolve,reject)=>{resolveWrite=resolve;rejectWrite=reject;});
+  const wrap=({children})=>React.createElement('div',null,children);
+  const {CategoryForm}=load('src/components/admin/category-form.tsx',{
+    'react-hook-form':{useForm:()=>({handleSubmit:fn=>()=>fn({name:'Bakes',description:'Fresh local bakes'}),formState:{isValid:true}})},
+    '@hookform/resolvers/zod':{zodResolver(){}},
+    '@/firebase':{useFirestore:()=>({}),useUser:()=>({user:{uid:'admin'}})},
+    'firebase/firestore':{collection:()=>({}),doc:()=>({}),serverTimestamp:()=>0,addDoc:write,updateDoc:write},
+    '@/components/ui/form':{Form:wrap,FormControl:wrap,FormField:()=>null,FormItem:wrap,FormLabel:wrap,FormMessage:()=>null},
+    '@/components/ui/button':{Button:'button'},'@/components/ui/input':{Input:'input'},'../ui/textarea':{Textarea:'textarea'},
+    '@/hooks/use-toast':{useToast:()=>({toast:n=>notices.push(n)})},
+  },{console:{error(){}}});
+  let tree,pending;act(()=>{tree=create(React.createElement(CategoryForm,{onFinished:()=>finished++}));});
+  act(()=>{pending=tree.root.findByType('form').props.onSubmit();});assert.equal(notices.length,0);assert.equal(finished,0);assert.equal(tree.root.findByType('button').props.disabled,true);
+  await act(async()=>{rejectWrite({code:'permission-denied'});await pending;});assert.equal(notices.at(-1).variant,'destructive');assert.equal(finished,0);
+  act(()=>{pending=tree.root.findByType('form').props.onSubmit();});await act(async()=>{resolveWrite();await pending;});assert.equal(notices.at(-1).title,'Category Added');assert.equal(finished,1);act(()=>tree.unmount());
 });

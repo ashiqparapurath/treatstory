@@ -1,3 +1,4 @@
+import { getErrorNotice } from '@/lib/user-notices';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function ProductGridSkeleton({ count = 8 }: { count?: number }) {
@@ -8,8 +9,9 @@ export function SectionSkeleton() {
   return <div role="status" aria-label="Loading content" className="space-y-5 py-6"><span className="sr-only">Loading…</span><Skeleton className="h-8 w-48" /><div className="grid gap-4 sm:grid-cols-2">{[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-40 rounded-2xl" />)}</div></div>;
 }
 
-export function LoadError({ retry }: { retry: () => void }) {
-  return <div role="alert" className="rounded-2xl border bg-white p-6"><p className="font-medium">We couldn’t load this section.</p><p className="mt-2 text-sm text-muted-foreground">Check your connection and try again.</p><button type="button" onClick={retry} className="mt-4 min-h-11 rounded-xl border px-5 text-sm font-semibold">Try again</button></div>;
+export function LoadError({retry,error}: {retry:()=>void;error?:unknown}) {
+  const notice=getErrorNotice(error,'load');
+  return <div role="alert" className="rounded-2xl border bg-white p-6"><p className="font-medium">{notice.title}</p><p className="mt-2 text-sm text-muted-foreground">{notice.description}</p><button type="button" onClick={retry} className="mt-4 min-h-11 rounded-xl border px-5 text-sm font-semibold">Try again</button></div>;
 }
 
 /** Keeps the dashboard's navigation and content geometry visible while auth resolves. */

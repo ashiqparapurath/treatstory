@@ -1,4 +1,6 @@
 'use client';
+import { ActionError } from '@/lib/user-notices';
+import { errorToast } from '@/lib/user-notices';
 import { Suspense, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -31,9 +33,9 @@ function ReviewContent(){
       const response=await fetch('/api/reviews',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await user.getIdToken()}`},
         body:JSON.stringify({action:'submit',orderId,rating,comment:comment.trim()})});
       const result=await response.json().catch(()=>({})) as {error?:string};
-      if(!response.ok)throw new Error(result.error||'Could not submit review.');
+      if(!response.ok)throw new ActionError(result.error||'Could not submit review.',response.status);
       setComplete(true);toast({title:'Review submitted',description:'Reviews are checked by TreatStory before appearing publicly.'});
-    }catch(error){toast({variant:'destructive',title:'Review not sent',description:error instanceof Error?error.message:'Please retry.'});}
+    }catch(error){toast(errorToast(error, 'review'));}
     finally{setBusy(false);}
   }
   return <div className="min-h-screen bg-[#f8f6f2]"><Header/><main className="section-shell max-w-2xl py-12"><p className="eyebrow text-[#a68a64]">Share your experience</p><h1 className="mt-3 text-4xl font-medium">Write a product review</h1><p className="mt-3 text-sm text-muted-foreground">Reviews are available for delivered orders only. Every published review is tied to a verified TreatStory purchase.</p>

@@ -1,4 +1,5 @@
 'use client';
+import { errorToast } from '@/lib/user-notices';
 import { useEffect, useState } from 'react';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAccountData, useFirestore, useUser } from '@/firebase';
@@ -41,10 +42,11 @@ export function DefaultDeliveryAddress({ onSaved }: { onSaved?: (a: DeliveryAddr
   }
   async function save() {
     if(!db || !user || busy) return;
-    if(!a.recipient.trim() || a.phone.trim().length<5 || a.line1.trim().length<10 || !a.district.trim() || !a.state.trim() || !/^\d{6}$/.test(a.pincode)) {toast({variant:'destructive',title:'Complete your delivery address'});return;}
+    const missing = !a.recipient.trim()?['Add the recipient’s name','Enter the name of the person receiving the order.']:a.phone.trim().length<5?['Add a contact number','Enter a phone number so your seller can contact you.']:a.line1.trim().length<10?['Add a more complete street address','Include your house or building and street, using at least ten characters.']:!a.district.trim()?['Add your district','Enter your delivery district.']:!a.state.trim()?['Add your state','Enter your delivery state.']:!/^\d{6}$/.test(a.pincode)?['Check the delivery PIN code','Use exactly six digits.']:null;
+    if(missing){toast({variant:'destructive',title:missing[0],description:missing[1]});return;}
     setBusy(true);
     try { await setDoc(doc(db,'customer_addresses',user.uid),{...a,updatedAt:serverTimestamp()});onSaved?.(a);setEditing(false);toast({title:'Default delivery address saved'}); }
-    catch(err) { toast({variant:'destructive',title:'Could not save address',description:err instanceof Error?err.message:'Check your account access and try again.'}); }
+    catch(err) { toast(errorToast(err, 'save-address')); }
     finally {setBusy(false);}
   }
   return <section className="w-full max-w-2xl rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:rounded-3xl sm:p-6"><div className="flex items-center gap-3"><MapPin className="h-5 w-5 text-[#a68a64]"/><div><p className="text-[10px] font-semibold uppercase tracking-widest text-[#a68a64]">Saved address</p><h2 className="mt-1 text-xl font-medium">Default delivery location</h2></div></div><p className="mt-2 text-xs leading-5 text-muted-foreground">Pre-filled at checkout. Tap Edit to update your address.</p>

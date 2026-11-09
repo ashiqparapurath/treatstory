@@ -1,4 +1,6 @@
 'use client';
+import { errorToast, getErrorNotice } from '@/lib/user-notices';
+import { ConfirmActionDialog } from '@/components/confirm-action-dialog';
 import { Suspense } from 'react';
 import { DashboardShellSkeleton, SectionSkeleton } from '@/components/loading-states';
 
@@ -53,6 +55,8 @@ function SellerContent() {
   const setSection = (next: Section) => router.push(`/seller/dashboard?section=${next}`, { scroll: false });
   const [editing, setEditing] = useState<MarketplaceProduct | null>(null);
   const [draft, setDraft] = useState<ProductDraft>(emptyDraft);
+  const [pendingDelete,setPendingDelete] = useState<MarketplaceProduct|null>(null);
+  const [deleteError,setDeleteError] = useState('');
   const [saveError, setSaveError] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
@@ -155,10 +159,12 @@ function SellerContent() {
       }
     }
     setUploadingPhotos(true);
+    let uploaded=0;
     try {
       for (const [index, file] of files.entries()) {
         setUploadProgress(`Uploading photo ${index + 1} of ${files.length}…`);
         const url = await uploadTreatStoryPhoto(user, file, 'product');
+        uploaded++;
         setDraft(previous => ({
           ...previous,
           imageUrls: [...previous.imageUrls.split(/\r?\n|,/).map(v => v.trim()).filter(Boolean), url].join('\n'),
@@ -168,7 +174,8 @@ function SellerContent() {
       toast({ title: 'Photos uploaded', description: 'Save the product to publish these images.' });
     } catch (error) {
       setUploadProgress('');
-      toast({ variant: 'destructive', title: 'Photo upload failed', description: error instanceof Error ? error.message : 'Check your connection and try again.' });
+      const notice=errorToast(error,'upload-photo');
+      toast({...notice,...(uploaded?{title:`${uploaded} of ${files.length} photos uploaded`,description:`Uploaded photos are kept in your draft. ${notice.description}`}:{})});
     } finally { setUploadingPhotos(false); }
   }
 
@@ -245,27 +252,22 @@ function SellerContent() {
       if (editing) await updateDoc(doc(db, 'marketplace_products', editing.id), data);
       else await addDoc(collection(db, 'marketplace_products'), { ...data, createdAt: serverTimestamp() });
       setCountVersion(v => v + 1);
-      toast({ title: editing ? 'Product updated' : 'Product created' });
+      toast({title:draft.status==='draft'?'Product draft saved':editing?'Product updated':'Product published',description:draft.status==='draft'?'Your draft is saved. Publish it when you are ready to show buyers.':`${draft.name.trim()} is saved and visible on its product page.`});
       setFormOpen(false);
     } catch (error) {
       const code = (error as {code?: string})?.code || 'unknown';
       console.error('TreatStory product save failed', { code, operation: editing ? 'update' : 'create', sizes: weights.length, allergens: allergens.length, dietaryLabels: dietaryTags.length });
-      const message = code === 'permission-denied'
-        ? 'Your changes could not be saved. Your seller access or product permissions may need updating. Please contact support. (permission-denied)'
-        : code === 'unavailable' ? 'Saving is temporarily unavailable. Check your connection and try again. Your changes are still here.'
-        : code === 'invalid-argument' ? 'A product field could not be saved. Review the details and try again. (invalid-argument)'
-        : 'Could not save your changes. Please try again or contact support.';
-      setSaveError(message);
-      toast({ variant: 'destructive', title: 'Could not save product', description: message });
+      const notice=errorToast(error,'save-product');
+      setSaveError(`${notice.title}. ${notice.description}`);toast(notice);
     }
     finally { setBusy(false); }
   }
 
   async function removeProduct(product: MarketplaceProduct) {
-    if (!db || !active || busy || !window.confirm('Delete this product permanently?')) return;
+    if (!db || !active || busy) return;
     setBusy(true);
-    try { await deleteDoc(doc(db, 'marketplace_products', product.id)); setCountVersion(v => v + 1); toast({ title: 'Product deleted' }); }
-    catch { toast({ variant: 'destructive', title: 'Could not delete product' }); }
+    try { await deleteDoc(doc(db, 'marketplace_products', product.id)); setCountVersion(v => v + 1); setPendingDelete(null);toast({title:'Product deleted',description:`${product.name} has been removed from your shop.`}); }
+    catch(error) {const notice=errorToast(error,'delete-product');setDeleteError(notice.description);toast(notice);}
     finally { setBusy(false); }
   }
 
@@ -274,10 +276,10 @@ function SellerContent() {
     if (!db || !user || !active || busy) return;
     const digits = storeDraft.whatsappNumber.replace(/[^0-9]/g, '');
     if (digits && (digits.length < 8 || digits.length > 15)) { toast({ variant: 'destructive', title: 'Enter a valid WhatsApp number with country code' }); return; }
-    const codes = storeDraft.deliveryPincodes.split(/[\\s,]+/).map(v=>v.trim()).filter(Boolean);
-    const slots = storeDraft.deliverySlots.split(/\\r?\\n/).map(v=>v.trim()).filter(Boolean);
+    const codes = storeDraft.deliveryPincodes.split(/[\s,]+/).map(v=>v.trim()).filter(Boolean);
+    const slots = storeDraft.deliverySlots.split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
     const deliveryFee = Number(storeDraft.deliveryFee), capacity = Number(storeDraft.dailyOrderCapacity), acceptanceHours = Number(storeDraft.acceptanceHours);
-    if (codes.length>10 || codes.some(v=>!/^\\d{6}$/.test(v))) return toast({variant:'destructive',title:'Enter up to 10 valid six-digit PIN codes'});
+    if (codes.length>10 || codes.some(v=>!/^\d{6}$/.test(v))) return toast({variant:'destructive',title:'Enter up to 10 valid six-digit PIN codes'});
     if (slots.length>6 || slots.some(v=>v.length>60)) return toast({variant:'destructive',title:'Enter up to 6 short delivery slots'});
     if (!storeDraft.deliveryMethods.length) return toast({variant:'destructive',title:'Enable pickup or delivery'});
     if (!Number.isFinite(deliveryFee) || deliveryFee<0 || deliveryFee>5000 || !Number.isInteger(capacity) || capacity<0 || capacity>100 || !Number.isInteger(acceptanceHours) || acceptanceHours<1 || acceptanceHours>72) return toast({variant:'destructive',title:'Check delivery charge, daily capacity and reply deadline'});
@@ -290,7 +292,7 @@ function SellerContent() {
         deliverySlots: slots, dailyOrderCapacity: capacity, acceptanceHours, updatedAt: serverTimestamp(),
       });
       toast({ title: 'Store settings saved' });
-    } catch { toast({ variant: 'destructive', title: 'Could not save store settings' }); }
+    } catch(error) {toast(errorToast(error,'save-store'));}
     finally { setBusy(false); }
   }
 
@@ -339,7 +341,7 @@ function SellerContent() {
         {section === 'products' && <div className="space-y-5">
           <Input aria-label="Search your products" placeholder="Search your catalog…" value={search} onChange={e => setSearch(e.target.value)} className="w-full max-w-sm rounded-full bg-white" />
           {productsLoading ? <SectionSkeleton /> : visible.length === 0 ? <div className="rounded-3xl border border-dashed bg-white p-12 text-center"><Package className="mx-auto h-8 w-8 text-[#a68a64]" /><h3 className="mt-4 text-xl font-medium">No products yet</h3><p className="mt-2 text-sm text-muted-foreground">Create your first listing to get started.</p><Button onClick={() => openForm()} disabled={!active} className="mt-5 rounded-full">Add product</Button></div> :
-            <><div className="space-y-3 md:hidden">{visible.map(p => <article key={p.id} className="rounded-2xl border bg-white p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words text-sm font-semibold">{p.name}</h3><p className="mt-1 text-xs text-muted-foreground">{p.category}</p>{p.advancePaymentRequired && <p className="mt-1 text-xs font-medium text-amber-800">Advance payment required</p>}{!!p.weightOptions?.length && <p className="mt-1 max-w-sm text-[11px] leading-5 text-[#806d56]">{sizePriceLabels(p)}</p>}</div><p className="shrink-0 text-sm font-semibold">{priceRange(p)}</p></div><div className="mt-3 flex flex-wrap gap-2 text-[11px]"><span className="rounded-full bg-[#f1ede6] px-3 py-1 capitalize">{p.availability.replaceAll('-', ' ')}</span><span className="rounded-full bg-[#f1ede6] px-3 py-1 capitalize">{p.status ?? 'draft'}</span></div><div className="mt-4 grid grid-cols-2 gap-2"><Button variant="outline" disabled={!active} onClick={() => openForm(p)} className="h-11"><Pencil className="mr-2 h-4 w-4" />Edit</Button><Button variant="outline" disabled={!active || busy} onClick={() => removeProduct(p)} className="h-11 text-red-700"><Trash2 className="mr-2 h-4 w-4" />Delete</Button></div></article>)}</div><div className="hidden overflow-hidden rounded-2xl border bg-white md:block"><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-[#f1ede6] text-xs uppercase tracking-wider text-muted-foreground"><tr><th className="px-5 py-4">Product</th><th className="px-5 py-4">Price</th><th className="px-5 py-4">Availability</th><th className="px-5 py-4">Visibility</th><th className="px-5 py-4">Actions</th></tr></thead><tbody>{visible.map(p => <tr key={p.id} className="border-t"><td className="min-w-[180px] px-5 py-4"><p className="font-medium">{p.name}</p><p className="text-xs text-muted-foreground">{p.category}</p>{p.advancePaymentRequired && <p className="mt-1 text-xs font-medium text-amber-800">Advance payment required</p>}{!!p.weightOptions?.length && <p className="mt-1 max-w-sm text-[11px] leading-5 text-[#806d56]">{sizePriceLabels(p)}</p>}</td><td className="px-5 py-4">{priceRange(p)}</td><td className="px-5 py-4 capitalize">{p.availability.replaceAll('-', ' ')}</td><td className="px-5 py-4 capitalize">{p.status ?? 'draft'}</td><td className="px-5 py-4"><div className="flex gap-2"><Button size="sm" variant="outline" disabled={!active} onClick={() => openForm(p)} aria-label={`Edit ${p.name}`}><Pencil className="h-4 w-4" /></Button><Button size="sm" variant="outline" disabled={!active || busy} onClick={() => removeProduct(p)} aria-label={`Delete ${p.name}`}><Trash2 className="h-4 w-4" /></Button></div></td></tr>)}</tbody></table></div></div></>}
+            <><div className="space-y-3 md:hidden">{visible.map(p => <article key={p.id} className="rounded-2xl border bg-white p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words text-sm font-semibold">{p.name}</h3><p className="mt-1 text-xs text-muted-foreground">{p.category}</p>{p.advancePaymentRequired && <p className="mt-1 text-xs font-medium text-amber-800">Advance payment required</p>}{!!p.weightOptions?.length && <p className="mt-1 max-w-sm text-[11px] leading-5 text-[#806d56]">{sizePriceLabels(p)}</p>}</div><p className="shrink-0 text-sm font-semibold">{priceRange(p)}</p></div><div className="mt-3 flex flex-wrap gap-2 text-[11px]"><span className="rounded-full bg-[#f1ede6] px-3 py-1 capitalize">{p.availability.replaceAll('-', ' ')}</span><span className="rounded-full bg-[#f1ede6] px-3 py-1 capitalize">{p.status ?? 'draft'}</span></div><div className="mt-4 grid grid-cols-2 gap-2"><Button variant="outline" disabled={!active} onClick={() => openForm(p)} className="h-11"><Pencil className="mr-2 h-4 w-4" />Edit</Button><Button variant="outline" disabled={!active || busy} onClick={() => {setDeleteError('');setPendingDelete(p);}} className="h-11 text-red-700"><Trash2 className="mr-2 h-4 w-4" />Delete</Button></div></article>)}</div><div className="hidden overflow-hidden rounded-2xl border bg-white md:block"><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-[#f1ede6] text-xs uppercase tracking-wider text-muted-foreground"><tr><th className="px-5 py-4">Product</th><th className="px-5 py-4">Price</th><th className="px-5 py-4">Availability</th><th className="px-5 py-4">Visibility</th><th className="px-5 py-4">Actions</th></tr></thead><tbody>{visible.map(p => <tr key={p.id} className="border-t"><td className="min-w-[180px] px-5 py-4"><p className="font-medium">{p.name}</p><p className="text-xs text-muted-foreground">{p.category}</p>{p.advancePaymentRequired && <p className="mt-1 text-xs font-medium text-amber-800">Advance payment required</p>}{!!p.weightOptions?.length && <p className="mt-1 max-w-sm text-[11px] leading-5 text-[#806d56]">{sizePriceLabels(p)}</p>}</td><td className="px-5 py-4">{priceRange(p)}</td><td className="px-5 py-4 capitalize">{p.availability.replaceAll('-', ' ')}</td><td className="px-5 py-4 capitalize">{p.status ?? 'draft'}</td><td className="px-5 py-4"><div className="flex gap-2"><Button size="sm" variant="outline" disabled={!active} onClick={() => openForm(p)} aria-label={`Edit ${p.name}`}><Pencil className="h-4 w-4" /></Button><Button size="sm" variant="outline" disabled={!active || busy} onClick={() => {setDeleteError('');setPendingDelete(p);}} aria-label={`Delete ${p.name}`}><Trash2 className="h-4 w-4" /></Button></div></td></tr>)}</tbody></table></div></div></>}
         </div>}
         {section === 'orders' && <OrderManagement mode="seller" />}
         {section === 'store' && <form onSubmit={saveStore} className="space-y-5 rounded-2xl border bg-white p-4 sm:space-y-6 sm:rounded-3xl sm:p-8"><div><h2 className="text-xl font-medium">Business profile</h2><p className="mt-1 text-sm text-muted-foreground">Only editable store details appear here. Business identity and access are controlled by TreatStory.</p></div><div><Label>Business name</Label><Input value={seller.businessName} disabled className="mt-2" /></div><div><Label htmlFor="storeDescription">About your store</Label><Textarea id="storeDescription" rows={5} maxLength={2000} value={storeDraft.description} onChange={e => setStoreDraft(s => ({ ...s, description: e.target.value }))} className="mt-2" /></div><div><Label htmlFor="storePhone">Contact phone</Label><Input id="storePhone" maxLength={40} value={storeDraft.contactPhone} onChange={e => setStoreDraft(s => ({ ...s, contactPhone: e.target.value }))} className="mt-2" /></div><div><Label htmlFor="storeWhatsapp">WhatsApp orders · business number</Label><Input id="storeWhatsapp" type="tel" inputMode="tel" maxLength={20} placeholder="919876543210 (include country code)" value={storeDraft.whatsappNumber} onChange={e => setStoreDraft(s => ({...s, whatsappNumber:e.target.value}))} className="mt-2" /><p className="mt-1 text-xs text-muted-foreground">Buyers can contact your store directly from product pages. Digits only, with country code. Leave empty to hide the WhatsApp button.</p></div><div className="rounded-2xl border bg-[#faf8f4] p-4 sm:p-6"><h3 className="text-base font-semibold">Delivery, pickup & booking</h3><p className="mt-2 text-xs leading-5 text-muted-foreground">You manage your own delivery. Set PIN codes and schedules buyers can choose at checkout. Leave coverage empty to accept requests from any location. Set capacity to zero for no daily limit.</p><div className="mt-4 space-y-4">
@@ -352,6 +354,7 @@ function SellerContent() {
         </div></div><label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={storeDraft.isOpen} onChange={e => setStoreDraft(s => ({ ...s, isOpen: e.target.checked }))} />Accepting enquiries</label><Button type="submit" disabled={!active || busy} className="rounded-full">Save changes</Button></form>}
       </main>
     </div>
+    <ConfirmActionDialog open={!!pendingDelete} onOpenChange={open=>{if(!open)setPendingDelete(null);}} title="Delete this product?" description={`${pendingDelete?.name || 'This product'} will be removed from your shop. This cannot be undone.`} confirmLabel="Delete product" pendingLabel="Deleting…" destructive busy={busy} error={deleteError} onConfirm={()=>pendingDelete?removeProduct(pendingDelete):undefined} />
     {formOpen && <SellerProductEditor saveError={saveError} open={formOpen} editing={!!editing} busy={busy} enabled={active} draft={draft} setDraft={setDraft} categories={[...new Set((products ?? []).map(p => p.category))]} onClose={() => { if (!uploadingPhotos && !busy) { setFormOpen(false); setUploadProgress(''); } }} onSubmit={saveProduct} onUploadPhotos={uploadProductPhotos} uploading={uploadingPhotos} uploadProgress={uploadProgress} />}
   </div>;
 }

@@ -1,3 +1,5 @@
+import { queueMail } from '@/lib/server/mail';
+import { orderFeedback } from '@/lib/order-feedback';
 import { createHash } from 'node:crypto';
 import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore';
 import type { CheckoutPayload, CheckoutLine } from '@/lib/checkout-schema';
@@ -208,8 +210,12 @@ export async function placeAtomicCheckout(db: Firestore, uid: string, input: Che
       const sellerId = order.record.sellerId as string;
       const buyerAlert = db.collection('notifications').doc(uid).collection('items').doc();
       const sellerAlert = db.collection('notifications').doc(sellerId).collection('items').doc();
-      tx.create(buyerAlert, { title: 'Your TreatStory order was placed', orderId: order.refId, createdAt: now, read: false });
-      tx.create(sellerAlert, { title: 'You have a new order', orderId: order.refId, createdAt: now, read: false });
+      const buyerMessage=orderFeedback('placed',order.record.productName as string,order.record.deliveryMode as string,'buyer');
+      const sellerMessage=orderFeedback('placed',order.record.productName as string,order.record.deliveryMode as string,'seller');
+      tx.create(buyerAlert,{title:buyerMessage.title,message:buyerMessage.description,kind:'order',href:'/orders',orderId:order.refId,createdAt:now,read:false});
+      queueMail(tx,db,uid,{title:buyerMessage.title,message:buyerMessage.description,href:'/orders'});
+      queueMail(tx,db,sellerId,{title:sellerMessage.title,message:sellerMessage.description,href:'/orders'});
+      tx.create(sellerAlert,{title:sellerMessage.title,message:sellerMessage.description,kind:'order',href:'/orders',orderId:order.refId,createdAt:now,read:false});
     }
     tx.create(checkoutRef, { buyerUid: uid, requestHash, orderIds: orders.map(x => x.refId),
       total, currency: 'INR', paymentMethod: orders.some(o => o.record.advancePaymentRequired) ? 'seller-arranged-advance' : 'cod', status: 'placed', createdAt: now });

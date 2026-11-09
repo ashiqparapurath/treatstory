@@ -1,4 +1,6 @@
 'use client';
+import { orderFeedback } from '@/lib/order-feedback';
+import { getErrorNotice, errorToast } from '@/lib/user-notices';
 import { SectionSkeleton } from '@/components/loading-states';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -111,7 +113,7 @@ export function OrderManagement({ mode }: { mode: 'seller' | 'admin' | 'customer
       if (page.docs.length) setOlderCursor(page.docs[page.docs.length - 1]);
       setHasOlderPages(page.docs.length === 20);
     } catch (err) {
-      toast({ variant: 'destructive', title: 'Could not load older orders', description: err instanceof Error ? err.message : 'Try again.' });
+      toast(errorToast(err, 'update-order'));
     } finally { setLoadingOlder(false); }
   }
   const [filter, setFilter] = useState('all');
@@ -140,9 +142,9 @@ export function OrderManagement({ mode }: { mode: 'seller' | 'admin' | 'customer
     setWorking(order.id); setConfirm(null);
     try {
       await sendOrderAction(user, order.id, status as OrderAction, reason);
-      toast({ title: 'Order updated', description: `Order #${order.id.slice(0,8)} is now ${labels[status].toLowerCase()}.` });
+      toast(orderFeedback(status,order.productName,order.deliveryMode,mode==='customer'?'buyer':'seller'));
     } catch (err) {
-      toast({ variant:'destructive', title:'Could not update order', description: err instanceof Error ? err.message : 'Please try again.' });
+      toast(errorToast(err, 'update-order'));
     } finally { setWorking(null); }
   }
   async function extraAction(order: OrderRecord, action: OrderAction, reason = '') {
@@ -151,11 +153,9 @@ export function OrderManagement({ mode }: { mode: 'seller' | 'admin' | 'customer
     try {
       await sendOrderAction(user, order.id, action, reason);
       if (action === 'request-cancellation') setRequestReason('');
-      toast({ title: 'Request updated', description: action === 'request-cancellation'
-        ? 'Your request is with the seller for review.' : 'Order record updated successfully.' });
+      toast(orderFeedback(action,order.productName,order.deliveryMode,mode==='customer'?'buyer':'seller'));
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Unable to update order',
-        description: error instanceof Error ? error.message : 'Please retry.' });
+      toast(errorToast(error, 'update-order'));
     } finally { setWorking(null); }
   }
 
@@ -184,7 +184,7 @@ export function OrderManagement({ mode }: { mode: 'seller' | 'admin' | 'customer
     <div className="rounded-2xl border border-[#e8e0d5] bg-white p-3 sm:p-4"><div className="flex gap-2 overflow-x-auto pb-3">{filters.map(f => <button key={f.key} onClick={() => setFilter(f.key)} className={`shrink-0 rounded-full px-3.5 py-2 text-xs font-medium transition ${filter===f.key?'bg-[#29251f] text-white':'bg-[#f7f5f1] text-[#71685e] hover:bg-[#eee8df]'}`}>{f.label} <span className="ml-1 opacity-70">{f.n}</span></button>)}</div><div className="grid gap-3 border-t pt-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]"><div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search loaded orders…" className="h-10 bg-[#faf9f7] pl-9" /></div><select aria-label="Sort orders" value={sort} onChange={e => setSort(e.target.value as typeof sort)} className="h-10 rounded-lg border bg-white px-3 text-xs"><option value="newest">Newest loaded first</option><option value="oldest">Oldest first</option><option value="value">Highest value</option></select><select aria-label="Filter loaded orders by date" value={period} onChange={e => setPeriod(e.target.value as typeof period)} className="h-10 rounded-lg border bg-white px-3 text-xs"><option value="all">All dates</option><option value="today">Today</option><option value="week">Last 7 days</option><option value="month">Last 30 days</option></select></div></div>
     {mode !== 'customer' && <div className="flex justify-end"><Button variant="outline" size="sm" disabled={!orders.length} onClick={exportVisible}>Export visible CSV</Button></div>}
     {usingFallback && !error && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">Showing a limited order history while the full history is temporarily unavailable. Please try again later.</p>}
-    {error && <div role="alert" className="rounded-2xl border border-amber-200 bg-white p-5"><p className="font-semibold">Orders could not be loaded</p><p className="mt-2 text-sm text-muted-foreground">{(error as {code?: string}).code === 'permission-denied' ? 'Your account cannot access these orders. Check that you are signed in to the correct account.' : (error as {code?: string}).code === 'failed-precondition' ? 'Your order history is temporarily unavailable. Please try again later or contact support.' : error.message}</p><Button type="button" variant="outline" className="mt-4" onClick={retry}>Try again</Button></div>}
+    {error && <div role="alert" className="rounded-2xl border border-amber-200 bg-white p-5"><p className="font-semibold">Orders could not be loaded</p><p className="mt-2 text-sm text-muted-foreground">{(error as {code?: string}).code === 'permission-denied' ? 'Your account cannot access these orders. Check that you are signed in to the correct account.' : (error as {code?: string}).code === 'failed-precondition' ? 'Your order history is temporarily unavailable. Please try again later or contact support.' : getErrorNotice(error,'load').description}</p><Button type="button" variant="outline" className="mt-4" onClick={retry}>Try again</Button></div>}
     {error ? null : isLoading ? <SectionSkeleton /> : !orders.length ? <div className="rounded-2xl border bg-white p-12 text-center"><Package className="mx-auto h-9 w-9 text-[#a68a64]" /><h3 className="mt-4 font-medium">No matching orders</h3><p className="mt-2 text-sm text-muted-foreground">Try another status or search term.</p></div> : <div className="space-y-3">{orders.map(o => <article key={o.id} className="overflow-hidden rounded-2xl border border-[#e8e0d5] bg-white transition hover:border-[#cbbba7]"><div className="p-4 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="text-xs font-semibold">#{o.id.slice(0,10).toUpperCase()}</span><span className="text-xs text-muted-foreground">{date(o.createdAt)}</span></div><h3 className="mt-3 text-base font-semibold sm:text-lg">{o.productName}</h3><p className="mt-1 text-sm text-muted-foreground">{o.quantity} × {money(o.unitPrice)} <span className="mx-1">·</span> {o.customerName}</p></div><div className="text-right"><span className={`inline-flex rounded-full border px-3 py-1.5 text-[11px] font-semibold ${badge[o.status]}`}>{labels[o.status]}</span><p className="mt-3 text-lg font-semibold">{money(o.subtotal)}</p></div></div>
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#f0ece6] pt-4 text-xs text-muted-foreground"><span className="flex items-center gap-1.5"><Banknote className="h-3.5 w-3.5" />{o.advancePaymentRequired ? 'Advance payment required' : o.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Offline payment'}</span><span className="flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" />{age(o.createdAt)}</span><span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{o.deliveryAddress.slice(0,45)}{o.deliveryAddress.length>45?'…':''}</span></div>
       <div className="mt-4 flex flex-wrap items-center gap-2">{mode !== 'customer' && next[o.status]?.filter(s => !['rejected','cancelled'].includes(s)).map(s => <Button key={s} size="sm" disabled={working !== null} onClick={() => transition(o,s)} className="h-10 rounded-full bg-[#29251f] px-5 text-xs hover:bg-[#51463a]">{s==='completed'?'Mark as delivered':primary[o.status] || labels[s]} <ArrowRight className="ml-2 h-3.5 w-3.5" /></Button>)}<Button size="sm" variant="outline" onClick={() => setSelected(o.id)} className="h-10 rounded-full px-4 text-xs">View details <ChevronRight className="ml-1 h-3.5 w-3.5" /></Button>{mode !== 'customer' && next[o.status]?.filter(s => ['rejected','cancelled'].includes(s)).map(s => <Button key={s} size="sm" variant="ghost" disabled={working !== null} onClick={() => transition(o,s)} className="h-10 rounded-full text-xs text-red-700">{s === 'rejected'?'Reject order':'Cancel order'}</Button>)}</div></div></article>)}</div>}

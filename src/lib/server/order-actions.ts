@@ -1,3 +1,5 @@
+import { queueMail } from '@/lib/server/mail';
+import { orderFeedback } from '@/lib/order-feedback';
 import { Timestamp, type Firestore, type Transaction } from 'firebase-admin/firestore';
 import { ApiError } from '@/lib/server/firebase-admin';
 
@@ -13,7 +15,7 @@ const allowed: Record<string, string[]> = {
   completed: [], rejected: [], cancelled: [],
 };
 type OrderInfo = {
-  buyerUid: string; sellerId: string; productId: string; status: string;
+  buyerUid: string; sellerId: string; productId: string; status: string; productName?: string; deliveryMode?: string;
   quantity: number; stockSource?: 'product' | 'option' | 'none';
   stockReserved?: boolean; stockReleasedAt?: Timestamp; bookingReleasedAt?: Timestamp;
   selectedWeight?: {value: number; unit: string}|null;
@@ -38,9 +40,11 @@ export async function applyOrderAction(db: Firestore, uid: string, orderId: stri
     const now = Timestamp.now();
     const event = { at: now, by: uid, action, ...(reason ? { note: reason } : {}) };
     const history = [...(order.history || []).slice(-29), event];
-    const notify = (receiver: string, title: string) => {
+    const notify = (receiver: string, event: string) => {
+      const text=orderFeedback(event,order.productName,order.deliveryMode,receiver===order.buyerUid?'buyer':'seller');
+      queueMail(tx,db,receiver,{title:text.title,message:text.description,href:'/orders'});
       const ref = db.collection('notifications').doc(receiver).collection('items').doc();
-      tx.create(ref, { title, orderId, createdAt: now, read: false });
+      tx.create(ref, {title:text.title,message:text.description,kind:'order',href:'/orders',orderId,createdAt:now,read:false});
     };
 
     if (action === 'request-cancellation') {
@@ -49,14 +53,14 @@ export async function applyOrderAction(db: Firestore, uid: string, orderId: stri
       if (reason.trim().length < 5 || reason.trim().length > 300) throw new ApiError(400, 'Provide a reason between 5 and 300 characters.');
       if (order.cancellationRequest) throw new ApiError(409, 'You already requested cancellation.');
       tx.update(orderRef, { cancellationRequest: { reason: reason.trim(), requestedAt: now }, updatedAt: now, history });
-      notify(order.sellerId, 'A buyer requested order cancellation');
+      notify(order.sellerId, 'request-cancellation');
       return { status: order.status, action, orderId };
     }
     if (action === 'decline-cancellation') {
       if (!isSeller && !isAdmin) throw new ApiError(403, 'Only the seller can respond to cancellation requests.');
       if (!order.cancellationRequest) throw new ApiError(409, 'No cancellation request is pending.');
       tx.update(orderRef, { cancellationRequest: null, updatedAt: now, history });
-      notify(order.buyerUid, 'Your cancellation request was declined');
+      notify(order.buyerUid, 'decline-cancellation');
       return { status: order.status, action, orderId };
     }
     if (action === 'cod-collected') {
@@ -64,7 +68,7 @@ export async function applyOrderAction(db: Firestore, uid: string, orderId: stri
       if (order.status !== 'completed') throw new ApiError(409, 'Complete the order before recording COD collection.');
       if (order.paymentStatus === 'collected') return { status: order.status, action, orderId };
       tx.update(orderRef, { paymentStatus: 'collected', paymentCollectedAt: now, updatedAt: now, history });
-      notify(order.buyerUid, 'Payment received for your order');
+      notify(order.buyerUid, 'cod-collected');
       return { status: order.status, action, orderId };
     }
     if (!isSeller && !isAdmin) throw new ApiError(403, 'Only the seller can change fulfillment status.');
@@ -112,7 +116,7 @@ export async function applyOrderAction(db: Firestore, uid: string, orderId: stri
         inventoryReleaseReview: needsInventoryReview,
       } : {}),
     });
-    notify(order.buyerUid, 'Your TreatStory order is now ' + action.replaceAll('-', ' '));
+    notify(order.buyerUid, action);
     return { status: action, action, orderId, inventoryReleaseReview: needsInventoryReview };
   }, { maxAttempts: 5 });
 }

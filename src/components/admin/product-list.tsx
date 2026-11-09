@@ -1,9 +1,10 @@
 'use client';
+import { errorToast } from '@/lib/user-notices';
 import { LoadError } from '@/components/loading-states';
 
 import { useState } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, deleteDoc } from 'firebase/firestore';
 import type { Product } from '@/lib/products';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,7 +29,6 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { ProductDialog } from './product-dialog';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
 import Image from 'next/image';
@@ -61,13 +61,15 @@ export function ProductList() {
   const confirmDelete = async () => {
     if (productToDelete && firestore) {
       const docRef = doc(firestore, 'products', productToDelete.id);
-      deleteDocumentNonBlocking(docRef);
+      try {
+      await deleteDoc(docRef);
       toast({
         title: 'Product Deleted',
         description: `${productToDelete.name} has been removed.`,
       });
       setIsDeleteConfirmOpen(false);
       setProductToDelete(null);
+      } catch(error) {toast(errorToast(error,'delete-product'));}
     }
   };
 
@@ -94,7 +96,7 @@ export function ProductList() {
     );
   }
 
-  if (loadError) return <LoadError retry={retryLoad} />;
+  if (loadError) return <LoadError retry={retryLoad} error={loadError} />;
 
   return (
     <>

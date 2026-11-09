@@ -25,7 +25,7 @@ function HomePageContent() {
   }, [firestore]);
   const { data: products, isLoading, error, retry } = usePublicCatalog<Product>(productsQuery);
 
-  if (error) return <LoadError retry={retry} />;
+  if (error) return <LoadError retry={retry} error={error} />;
   if (isLoading) return <ProductGridSkeleton count={8} />;
   if (!products?.length) return null;
   return <ProductGridContainer products={products} />;

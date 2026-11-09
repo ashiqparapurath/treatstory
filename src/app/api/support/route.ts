@@ -1,3 +1,5 @@
+import { queueNotification, queueMail, processMailQueue } from '@/lib/server/mail';
+import { after } from 'next/server';
 import { z } from 'zod';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { NextRequest } from 'next/server';
@@ -23,7 +25,7 @@ const requestSchema = z.discriminatedUnion('action', [
 
 export async function POST(request: NextRequest) {
   try {
-    const {uid,db}=await verifiedUser(request);
+    const {uid,db,auth}=await verifiedUser(request);
     if(Number(request.headers.get('content-length')||0)>5000)throw new ApiError(413,'Support message is too large.');
     const raw:unknown=await request.json().catch(()=>{throw new ApiError(400,'Invalid support request.');});
     const parsed=requestSchema.safeParse(raw);
@@ -43,8 +45,11 @@ export async function POST(request: NextRequest) {
         tx.create(ref,{ownerUid:uid,subject:data.subject,category:data.category,
           orderId:data.orderId,message:data.message,status:'open',response:'',createdAt:now,updatedAt:now});
         tx.set(quotaRef,{ownerUid:uid,date,count:(quota.data()?.count||0)+1,updatedAt:now});
+        if(process.env.RESEND_SUPPORT_EMAIL)queueMail(tx,db,uid,{title:'New support request',message:`A customer submitted “${data.subject}”. Open the support inbox to review it.`,href:'/admin'},undefined,false,process.env.RESEND_SUPPORT_EMAIL);
+        queueNotification(tx,db,uid,{title:'Support request received',message:`We received “${data.subject}”. Open your support requests to track our response.`,href:'/support',kind:'support',createdAt:now,read:false});
         return {ticketId:ref.id,status:'open'};
       });
+      after(async()=>{try{await processMailQueue(db,auth,3);}catch{console.error('Mail queue processing unavailable');}});
       return Response.json(result);
     }
     const adminRef=db.collection('roles_admin').doc(uid);
@@ -58,12 +63,14 @@ export async function POST(request: NextRequest) {
       const now=Timestamp.now();
       tx.update(ticketRef,{status:data.action==='close'?'closed':'responded',
         ...(data.action==='reply'?{response:data.message,respondedBy:uid}:{}),updatedAt:now});
-      tx.create(db.collection('notifications').doc(previous.ownerUid).collection('items').doc(),{
+      queueNotification(tx,db,previous.ownerUid,{
         title:data.action==='close'?'Your support request has been closed':'TreatStory support replied to your request',
+        message:data.action==='close'?`“${previous.subject}” was marked closed. You can open a new request if you need more help.`:`There is a response to “${previous.subject}”. Open your support request to read it.`,kind:'support',href:'/support',
         orderId:previous.orderId||'',createdAt:now,read:false,
       });
       return {ticketId:data.ticketId,status:data.action==='close'?'closed':'responded'};
     });
-    return Response.json(result);
+    after(async()=>{try{await processMailQueue(db,auth,3);}catch{console.error('Mail queue processing unavailable');}});
+      return Response.json(result);
   }catch(error){return safeResponse(error);}
 }

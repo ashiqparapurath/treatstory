@@ -1,5 +1,6 @@
-
 'use client';
+
+import { getErrorNotice, errorToast } from '@/lib/user-notices';
 
 import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
@@ -120,7 +121,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
       form.clearErrors('imageUrls');
       toast({ title: 'Product photos uploaded', description: 'Save the product to display them to buyers.' });
     } catch (error) {
-      form.setError('imageUrls', { type: 'manual', message: error instanceof Error ? error.message : 'Image upload failed.' });
+      form.setError('imageUrls', { type: 'manual', message: getErrorNotice(error,'upload-photo').description });
     } finally { setUploading(false); }
   };
 
@@ -166,11 +167,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
         await saveProduct(data);
     } catch (error: any) {
         console.error("Product form submission error:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Failed to save product',
-            description: error.message || 'An unexpected error occurred.',
-        });
+        toast(errorToast(error, 'save-product'));
         setIsSubmitting(false);
     }
   };
