@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         tx.create(ref,{ownerUid:uid,subject:data.subject,category:data.category,
           orderId:data.orderId,message:data.message,status:'open',response:'',createdAt:now,updatedAt:now});
         tx.set(quotaRef,{ownerUid:uid,date,count:(quota.data()?.count||0)+1,updatedAt:now});
-        if(process.env.RESEND_SUPPORT_EMAIL)queueMail(tx,db,uid,{title:'New support request',message:`A customer submitted “${data.subject}”. Open the support inbox to review it.`,href:'/admin'},undefined,false,process.env.RESEND_SUPPORT_EMAIL);
+        if(process.env.MAIL_SUPPORT_EMAIL)queueMail(tx,db,uid,{title:'New support request',message:`A customer submitted “${data.subject}”. Open the support inbox to review it.`,href:'/admin'},undefined,false,process.env.MAIL_SUPPORT_EMAIL);
         queueNotification(tx,db,uid,{title:'Support request received',message:`We received “${data.subject}”. Open your support requests to track our response.`,href:'/support',kind:'support',createdAt:now,read:false});
         return {ticketId:ref.id,status:'open'};
       });

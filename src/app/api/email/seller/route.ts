@@ -33,7 +33,7 @@ export async function POST(request:NextRequest) {
       const message=kind==='access'?`${data.businessName}: status ${data.status}; ${data.accessType} access${expiry?` until ${expiry}`:''}. Open your seller studio to review your access.`:data.status==='pending'?`${data.businessName}: your application is awaiting review. We will update you when it has been reviewed.`:`${data.businessName}: your application was ${data.status==='approved'?'approved. Open your seller studio to review your trial access.':'declined. Contact support if you need help.'}`;
       // Stable outbox ID makes repeated browser delivery requests harmless.
       queueMail(tx,db,owner,{title,message,href:kind==='application'&&data.status!=='approved'?'/become-a-seller':'/seller/dashboard'},key);
-      if(kind==='application'&&data.status==='pending'&&process.env.RESEND_SUPPORT_EMAIL)queueMail(tx,db,owner,{title:'New seller application',message:`${data.businessName} submitted an application. Review it in your admin workspace.`,href:'/admin'},`${key}-team`,false,process.env.RESEND_SUPPORT_EMAIL);
+      if(kind==='application'&&data.status==='pending'&&process.env.MAIL_SUPPORT_EMAIL)queueMail(tx,db,owner,{title:'New seller application',message:`${data.businessName} submitted an application. Review it in your admin workspace.`,href:'/admin'},`${key}-team`,false,process.env.MAIL_SUPPORT_EMAIL);
     });
     after(async()=>{try{await processMailQueue(db,auth,3);}catch{console.error('Seller mail worker unavailable');}});
     return Response.json({ok:true},{headers:{'Cache-Control':'no-store'}});

@@ -5,36 +5,50 @@ test('mail template escapes user content and uses absolute HTTPS links',()=>{
   assert.doesNotMatch(mail.html,/<script>|<img/);assert.match(mail.html,/&lt;img/);assert.match(mail.html,/https:\/\/shop.example.com\/orders/);assert.doesNotMatch(mail.subject,/\n/);
   assert.throws(()=>renderMail({title:'x',message:'x',href:'javascript:alert(1)'},'https://example.com'));
 });
-test('Resend uses server auth, stable idempotency key and detects HTTP failure',async()=>{
-  let sent;let status=200;
-  const {sendResend}=load('src/lib/server/mail.ts',{}, {fetch:async(url,options)=>{sent={url,...options};return Response.json(status===200?{id:'message-id'}:{},{status});}});
-  assert.equal(await sendResend({to:['buyer@example.com'],from:'shop@example.com',subject:'Hello',html:'Hi',text:'Hi'},'fixture-secret','event-id'),'message-id');
-  assert.equal(sent.url,'https://api.resend.com/emails');assert.equal(sent.headers.Authorization,'Bearer fixture-secret');assert.equal(sent.headers['Idempotency-Key'],'treatstory/event-id');
-  status=429;await assert.rejects(()=>sendResend({},'fixture-secret','event-id'),e=>e.status===429);
+const crypto=require('node:crypto');
+const relayConfig={endpoint:'https://script.google.com/macros/s/fixture/exec',secret:'fixture-secret-that-is-at-least-32-characters'};
+test('Apps Script requests sign exact payload bytes and reject HTTP-200 relay failures',async()=>{
+  let sent,result={ok:true,id:'event-id'};
+  const {sendAppsScript}=load('src/lib/server/mail.ts',{}, {fetch:async(url,options)=>{sent={url,...options};return Response.json(result);}});
+  assert.equal(await sendAppsScript({to:['buyer@example.com'],subject:'Hello',html:'Hi',text:'Hi'},relayConfig,'event-id'),'event-id');
+  assert.equal(sent.url,relayConfig.endpoint);const envelope=JSON.parse(sent.body);
+  assert.equal(envelope.signature,crypto.createHmac('sha256',relayConfig.secret).update(`${envelope.timestamp}.${envelope.id}.${envelope.payload}`).digest('hex'));
+  assert.equal(JSON.parse(envelope.payload).to[0],'buyer@example.com');assert.ok(!sent.body.includes(relayConfig.secret));
+  result={ok:false,code:'QUOTA_EXCEEDED'};await assert.rejects(()=>sendAppsScript({},relayConfig,'event-id'),e=>e.status===429);
+  result={ok:false,code:'DELIVERY_UNCERTAIN'};await assert.rejects(()=>sendAppsScript({},relayConfig,'event-id'),e=>e.code==='DELIVERY_UNCERTAIN');
+  result={ok:true,id:'other-id'};await assert.rejects(()=>sendAppsScript({},relayConfig,'event-id'),e=>e.code==='INVALID_RELAY_RESPONSE');
 });
-function accountFixture(){
-  let lookup=0,queued=0,known=true,allowed=true,verified=0;const jobs=[];
+test('relay configuration rejects endpoints that could receive the signing secret outside Apps Script',()=>{
+  for(const endpoint of ['https://evil.example/exec','http://script.google.com/macros/s/id/exec','https://script.google.com/macros/s/id/dev','https://script.google.com/macros/s/id/exec?x=1']){
+    const {mailConfig}=load('src/lib/server/mail.ts',{}, {process:{env:{APP_URL:'https://treatstory.vercel.app',APPS_SCRIPT_MAIL_SECRET:relayConfig.secret,APPS_SCRIPT_MAIL_URL:endpoint}}});assert.throws(mailConfig);
+  }
+});
+test('reset and verification use built-in authentication delivery without the email server or relay',async()=>{
+  const calls=[];let code='';const user={emailVerified:false};
+  const {requestAccountMail}=load('src/lib/account-mail.ts',{
+    'firebase/auth':{sendPasswordResetEmail:async(...args)=>{calls.push(['reset',...args]);if(code)throw {code};},sendEmailVerification:async(...args)=>calls.push(['verify',...args])},
+    '@/lib/user-notices':{ActionError:class extends Error{}},
+  },{window:{location:{origin:'https://treatstory.vercel.app'}},fetch:()=>{throw Error('Account links must not use the relay');}});
+  await requestAccountMail('reset-password',{auth:'auth',email:' buyer@example.com '});assert.equal(calls[0][2],'buyer@example.com');assert.equal(calls[0][3].url,'https://treatstory.vercel.app/login');
+  code='auth/user-not-found';assert.equal((await requestAccountMail('reset-password',{auth:'auth',email:'missing@example.com'})).ok,true);
+  code='auth/too-many-requests';await assert.rejects(()=>requestAccountMail('reset-password',{auth:'auth',email:'buyer@example.com'}),e=>e.code===code);
+  await requestAccountMail('verify-email',{user});assert.equal(calls.at(-1)[0],'verify');assert.equal(calls.at(-1)[2].url,'https://treatstory.vercel.app/account');
+  user.emailVerified=true;assert.equal((await requestAccountMail('verify-email',{user})).alreadyVerified,true);
+});
+test('welcome endpoint requires a session, accepts no recipient/content overrides, and deduplicates',async()=>{
+  let queued=0,existing=false,authenticated=true;
   class ApiError extends Error{constructor(status,message){super(message);this.status=status;}}
-  const db={collection:()=>({doc:()=>({})}),runTransaction:async fn=>fn({get:async()=>({exists:false,data:()=>({count:allowed?0:3})}),set(){},create(){}})};
-  const auth={getUserByEmail:async()=>{lookup++;if(!known)throw {code:'auth/user-not-found'};return {uid:'buyer',email:'buyer@example.com'};},generatePasswordResetLink:async()=> 'https://auth.example.com/?oobCode=secret',getUser:async()=>({uid:'buyer',email:'buyer@example.com',emailVerified:false}),generateEmailVerificationLink:async()=> 'https://auth.example.com/?oobCode=verify'};
+  const db={collection:()=>({doc:()=>({})}),runTransaction:async fn=>fn({get:async()=>({exists:existing})})};
   const {POST}=load('src/app/api/email/account/route.ts',{
-    'next/server':{after(){}},'firebase-admin/firestore':{Timestamp:{now:()=>0}},
-    '@/lib/server/firebase-admin':{ApiError,getServerFirebase:()=>({db,auth}),verifiedUser:async()=>{verified++;return {db,auth,uid:'buyer'};},safeResponse:e=>Response.json({error:e.message},{status:e.status||503})},
-    '@/lib/server/mail':{mailConfig:()=>({origin:'https://shop.example.com'}),mailId:()=> 'hash',queueMail:(...args)=>{queued++;jobs.push(args);},processMailQueue:async()=>{}},
+    'next/server':{after(){}},
+    '@/lib/server/firebase-admin':{ApiError,verifiedUser:async()=>{if(!authenticated)throw new ApiError(401,'Sign in');return {uid:'buyer',db,auth:{getUser:async()=>({email:'buyer@example.com'})}};},safeResponse:e=>Response.json({error:e.message},{status:e.status||503})},
+    '@/lib/server/mail':{mailConfig(){},mailId:()=> 'hash',queueMail:(_tx,_db,uid,content)=>{assert.equal(uid,'buyer');assert.equal(content.href,'/account');queued++;},processMailQueue:async()=>{}},
   });
-  const request=(body,origin='https://shop.example.com')=>POST({url:'https://shop.example.com/api/email/account',headers:new Headers({origin}),text:async()=>JSON.stringify(body)});
-  return {request,jobs,get lookup(){return lookup;},get queued(){return queued;},get verified(){return verified;},set known(v){known=v;},set allowed(v){allowed=v;}};
-}
-test('password reset is private, rate limited and cannot accept arbitrary mail content',async()=>{
-  const f=accountFixture();const known=await f.request({action:'reset-password',email:'buyer@example.com'});assert.equal(known.status,200);const body=await known.json();assert.equal(f.queued,1);assert.equal(f.jobs[0][2],'buyer');assert.equal(f.jobs[0][5],true);assert.equal(f.jobs[0][6],'buyer@example.com');
-  f.known=false;const missing=await f.request({action:'reset-password',email:'missing@example.com'});assert.deepEqual(await missing.json(),body);assert.equal(f.queued,1);
-  f.allowed=false;assert.deepEqual(await (await f.request({action:'reset-password',email:'buyer@example.com'})).json(),body);
-  assert.equal((await f.request({action:'reset-password',email:'buyer@example.com',html:'arbitrary'})).status,400);
-  assert.equal((await f.request({action:'reset-password',email:'buyer@example.com'},'https://evil.example')).status,403);
-});
-test('verification and welcome use the verified session identity without accepting another recipient',async()=>{
-  const f=accountFixture();assert.equal((await f.request({action:'verify-email'})).status,200);assert.equal(f.verified,1);assert.equal(f.jobs[0][2],'buyer');assert.match(f.jobs[0][3].href,/oobCode=verify/);
-  assert.equal((await f.request({action:'welcome',email:'other@example.com'})).status,400);
+  const request=body=>POST({url:'https://shop.example.com/api/email/account',headers:new Headers({origin:'https://shop.example.com'}),text:async()=>JSON.stringify(body)});
+  authenticated=false;assert.equal((await request({action:'welcome'})).status,401);
+  authenticated=true;assert.equal((await request({action:'welcome',to:'attacker@example.com'})).status,400);
+  assert.equal((await request({action:'reset-password',email:'buyer@example.com'})).status,400);
+  assert.equal((await request({action:'welcome'})).status,200);assert.equal(queued,1);existing=true;await request({action:'welcome'});assert.equal(queued,1);
 });
 
 test('seller email content and recipients come from authorized committed records',async()=>{

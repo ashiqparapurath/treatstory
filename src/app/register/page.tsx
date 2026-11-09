@@ -35,8 +35,10 @@ export default function RegisterPage() {
         await updateProfile(result.user, {displayName:name.trim()});
         toast({title:'Your account is ready',description:`Welcome to TreatStory, ${name.trim().split(/\s+/)[0]}.`});
       } catch {toast({title:'Account created; name not saved',description:'You can sign in now. Add your name from your profile.'});}
+      try {await requestAccountMail('verify-email',{user:result.user});}
+      catch {toast({title:'Account ready; verification email not sent',description:'You can use your account now. Request email verification again from your profile.'});}
       try {await requestAccountMail('welcome',{user:result.user});}
-      catch {toast({title:'Account ready; welcome email delayed',description:'You can use your account now. Request email verification again from your profile.'});}
+      catch {toast({title:'Account ready; welcome email delayed',description:'You can use your account now. Your welcome email could not be requested.'});}
       const next = new URLSearchParams(window.location.search).get('next');
       router.replace(next && next.startsWith('/') && !next.startsWith('//') && !next.includes('\\') ? next : '/account');
     } catch (error) {

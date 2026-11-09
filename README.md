@@ -27,4 +27,4 @@ Instagram: [@mrashiq._](https://www.instagram.com/mrashiq._)
 
 ## Transactional email
 
-Account, order, quote, support and seller updates use server-side Resend delivery. See [email setup](docs/email-setup.md) for verified sender/domain configuration, environment variables, retry scheduling and staging checks. Live delivery requires deployment configuration; no secrets are stored in this repository.
+Welcome, order, quote, support and seller updates use a signed Google Apps Script relay, sent from the deploying Google account. Verification/password reset use Firebase’s built-in account emails. See [email setup](docs/email-setup.md) and the complete [Code.gs](apps-script/Code.gs) for deployment, environment variables and the included retry trigger. No custom email domain is required; no secrets are stored in this repository.
