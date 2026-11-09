@@ -1,4 +1,5 @@
 "use client";
+import{IMAGE_FALLBACK,LEGACY_CARD_IMAGE_SIZES,productPhotos}from'@/lib/image-source';
 
 import { FavoriteToggle } from '@/components/favorite-toggle';
 
@@ -17,8 +18,8 @@ interface ProductCardProps { product: Product; }
 export function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
   const { toast } = useToast();
-  const fallbackImage = "https://placehold.co/600x600/f1eee8/756b60?text=TreatStory";
-  const images = (product.imageUrls ?? []).flatMap(url => url.split(/\r?\n/)).map(url => url.trim()).filter(Boolean);
+  const fallbackImage = IMAGE_FALLBACK;
+  const images = productPhotos(product.imageUrls);
   if (!images.length) images.push(fallbackImage);
   const gallery = useProductGallery(images.length);
 
@@ -34,7 +35,7 @@ export function ProductCard({ product }: ProductCardProps) {
     <Card className="group relative h-full overflow-hidden rounded-[22px] border border-white/70 bg-[#f1eee9] shadow-[0_6px_24px_rgba(35,29,23,0.09)] transition-shadow duration-300 hover:shadow-[0_16px_36px_rgba(35,29,23,0.15)]">
       <CardHeader className="relative overflow-hidden rounded-none bg-[#f1eee9] p-0">
         <div className="relative aspect-[3/4] w-full touch-pan-y overflow-hidden" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
-          <div key={gallery.index} className={`absolute inset-0 ${gallery.direction === 'next' ? 'treatstory-photo-next' : 'treatstory-photo-previous'}`}><ProductImage src={images[gallery.index]} alt={product.name} /></div>
+          <div key={gallery.index} className={`absolute inset-0 ${gallery.direction === 'next' ? 'treatstory-photo-next' : 'treatstory-photo-previous'}`}><ProductImage src={images[gallery.index]} alt={product.name} sizes={LEGACY_CARD_IMAGE_SIZES}/></div>
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
           <Link href={`/product/${encodeURIComponent(product.id)}`} aria-label={`View details for ${product.name}`} className="absolute inset-0 z-10" />
           {images.length > 1 && (

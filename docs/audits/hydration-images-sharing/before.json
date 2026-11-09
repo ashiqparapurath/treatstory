@@ -1,0 +1,172 @@
+{
+  "conditions": {
+    "origin": "loopback demo emulators",
+    "mobile": {
+      "latencyMs": 150,
+      "downMbps": 1.6,
+      "cpuSlowdown": 4,
+      "dpr": 2
+    },
+    "desktop": {
+      "width": 1440,
+      "dpr": 1
+    },
+    "concurrentLoad": false
+  },
+  "results": [
+    {
+      "path": "/",
+      "mobile": false,
+      "run": 0,
+      "elapsedMs": 1786,
+      "lcpMs": 472,
+      "hero": {
+        "url": "http://127.0.0.1:9030/_next/image?url=%2Fimg%2Flanding-hero.webp&w=828&q=75",
+        "complete": true,
+        "naturalWidth": 792,
+        "width": 685,
+        "bytes": 42590,
+        "transferBytes": 42890
+      },
+      "hydrationErrors": [
+        "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+      ],
+      "otherErrors": []
+    },
+    {
+      "path": "/products",
+      "mobile": false,
+      "run": 0,
+      "elapsedMs": 1076,
+      "lcpMs": 400,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/product/seller:audit-product-0001",
+      "mobile": false,
+      "run": 0,
+      "elapsedMs": 1038,
+      "lcpMs": 424,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/",
+      "mobile": false,
+      "run": 1,
+      "elapsedMs": 1723,
+      "lcpMs": 428,
+      "hero": {
+        "url": "http://127.0.0.1:9030/_next/image?url=%2Fimg%2Flanding-hero.webp&w=828&q=75",
+        "complete": true,
+        "naturalWidth": 792,
+        "width": 685,
+        "bytes": 42590,
+        "transferBytes": 42890
+      },
+      "hydrationErrors": [
+        "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+      ],
+      "otherErrors": []
+    },
+    {
+      "path": "/products",
+      "mobile": false,
+      "run": 1,
+      "elapsedMs": 1110,
+      "lcpMs": 424,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/product/seller:audit-product-0001",
+      "mobile": false,
+      "run": 1,
+      "elapsedMs": 988,
+      "lcpMs": 308,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/",
+      "mobile": true,
+      "run": 0,
+      "elapsedMs": 5058,
+      "lcpMs": 1284,
+      "hero": {
+        "url": "http://127.0.0.1:9030/_next/image?url=%2Fimg%2Flanding-hero.webp&w=828&q=75",
+        "complete": true,
+        "naturalWidth": 390,
+        "width": 358,
+        "bytes": 42590,
+        "transferBytes": 42890
+      },
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/products",
+      "mobile": true,
+      "run": 0,
+      "elapsedMs": 2904,
+      "lcpMs": 1660,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/product/seller:audit-product-0001",
+      "mobile": true,
+      "run": 0,
+      "elapsedMs": 2005,
+      "lcpMs": 1440,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/",
+      "mobile": true,
+      "run": 1,
+      "elapsedMs": 5208,
+      "lcpMs": 1512,
+      "hero": {
+        "url": "http://127.0.0.1:9030/_next/image?url=%2Fimg%2Flanding-hero.webp&w=828&q=75",
+        "complete": true,
+        "naturalWidth": 390,
+        "width": 358,
+        "bytes": 42590,
+        "transferBytes": 42890
+      },
+      "hydrationErrors": [
+        "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+      ],
+      "otherErrors": []
+    },
+    {
+      "path": "/products",
+      "mobile": true,
+      "run": 1,
+      "elapsedMs": 3093,
+      "lcpMs": 1992,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    },
+    {
+      "path": "/product/seller:audit-product-0001",
+      "mobile": true,
+      "run": 1,
+      "elapsedMs": 2093,
+      "lcpMs": 1448,
+      "hero": null,
+      "hydrationErrors": [],
+      "otherErrors": []
+    }
+  ]
+}

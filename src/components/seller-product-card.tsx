@@ -1,4 +1,5 @@
 'use client';
+import{productPhotos}from'@/lib/image-source';
 
 import { FavoriteToggle } from '@/components/favorite-toggle';
 
@@ -15,7 +16,7 @@ export function SellerProductCard({ product: p, addToBag, buyNow }: {
   addToBag: (product: MarketplaceProduct) => void;
   buyNow: (product: MarketplaceProduct) => void;
 }) {
-  const photos = (p.imageUrls ?? []).flatMap(url => url.split(/\r?\n/)).map(url => url.trim()).filter(Boolean);
+  const photos = productPhotos(p.imageUrls);
   const gallery = useProductGallery(photos.length);
   const sizeOptions = p.weightOptions ?? [];
   const priceChoices = sizeOptions.length

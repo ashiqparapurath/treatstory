@@ -2,6 +2,8 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  // Social crawlers must receive complete metadata in HTML without executing scripts.
+  htmlLimitedBots: /bot|crawler|spider|preview|facebookexternalhit|facebookcatalog|WhatsApp|Slurp|tumblr|vkShare|ia_archiver|Yeti|googleweblight|Chrome-Lighthouse|yandex|sogou|[\w-]+-Google|Google-[\w-]+/i,
   poweredByHeader:false,
   productionBrowserSourceMaps:false,
   async headers(){return [{source:'/:path*',headers:[

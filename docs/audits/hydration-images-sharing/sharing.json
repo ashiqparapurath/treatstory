@@ -1,0 +1,21 @@
+{
+  "checks": [
+    "WhatsApp/2.0 receives public metadata in head",
+    "WhatsApp/2.0 excludes private product fields",
+    "facebookexternalhit/1.1 receives public metadata in head",
+    "facebookexternalhit/1.1 excludes private product fields",
+    "Twitterbot/1.0 receives public metadata in head",
+    "Twitterbot/1.0 excludes private product fields",
+    "TelegramBot receives public metadata in head",
+    "TelegramBot excludes private product fields",
+    "same URL immediately reflects changed product",
+    "draft remains private and unindexed",
+    "desktop copies clean product URL",
+    "WhatsApp uses clean encoded product link",
+    "desktop uses responsive AVIF hero",
+    "desktop has no horizontal overflow",
+    "native share gets clean product URL",
+    "mobile uses responsive AVIF hero",
+    "mobile has no horizontal overflow"
+  ]
+}
