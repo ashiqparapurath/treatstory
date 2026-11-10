@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import type { User } from 'firebase/auth';
 import { doc, runTransaction, serverTimestamp, type Firestore } from 'firebase/firestore';
-import { Check, ImagePlus, ShieldCheck, Store, Truck, Clock3, AlertTriangle } from 'lucide-react';
+import { Check, Pencil, BookOpen, ShieldCheck, Store, Truck, Clock3, AlertTriangle } from 'lucide-react';
 import type { Seller } from '@/lib/marketplace-types';
 import { uploadTreatStoryPhoto } from '@/lib/cloudinary-upload';
 import { Button } from '@/components/ui/button';
@@ -56,6 +56,7 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const loadedVersion = useRef<number | null>(version(seller.updatedAt));
+  const logoInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!dirty && !busy && !uploading) {
@@ -141,23 +142,27 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
   return <form onSubmit={save} className="min-w-0 space-y-4 pb-8 sm:space-y-6">
     <div className="overflow-hidden rounded-2xl bg-[#29251f] px-5 py-6 text-white sm:rounded-3xl sm:p-8">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white text-3xl font-semibold text-[#78664f] shadow-inner sm:h-24 sm:w-24">
-          {draft.logoUrl ? <img src={draft.logoUrl} alt="Store logo preview" className="h-full w-full object-contain" /> : seller.businessName.slice(0, 1).toUpperCase()}
+        <div className="relative h-20 w-20 shrink-0 sm:h-24 sm:w-24">
+          <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-2xl bg-white text-3xl font-semibold text-[#78664f] shadow-inner">
+            {draft.logoUrl ? <img src={draft.logoUrl} alt="Store logo preview" className="h-full w-full object-contain" /> : seller.businessName.slice(0, 1).toUpperCase()}
+          </div>
+          <input ref={logoInput} id="sellerLogo" type="file" accept="image/png,image/jpeg,image/webp" tabIndex={-1} className="sr-only" aria-label="Choose a store logo" disabled={!active || busy || uploading} onChange={e => { void uploadLogo(e.target.files?.[0]); e.target.value = ''; }} />
+          <button type="button" aria-label="Edit store logo" title="Edit store logo" onClick={() => logoInput.current?.click()} disabled={!active || busy || uploading} className="absolute -bottom-2 -right-2 flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#29251f] bg-white text-[#29251f] shadow-md transition hover:bg-[#f4ede4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50">
+            <Pencil className="h-4 w-4" />
+          </button>
         </div>
-        <div className="min-w-0 flex-1"><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#d2b58b]">Store identity</p><h2 className="mt-2 break-words text-2xl font-semibold sm:text-3xl">{seller.businessName}</h2><p className="mt-2 max-w-xl text-xs leading-5 text-white/70">Make your store instantly recognizable with a clear logo and a thoughtful description.</p><Link href={'/shop/' + user.uid} className="mt-3 inline-flex text-xs font-medium text-[#eacda6] underline underline-offset-4">Preview public storefront</Link></div>
+        <div className="min-w-0 flex-1"><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#d2b58b]">Store identity</p><h2 className="mt-2 break-words text-2xl font-semibold sm:text-3xl">{seller.businessName}</h2><p className="mt-2 max-w-xl text-xs leading-5 text-white/70">Tap the pencil on your logo to upload a JPG, PNG or WebP (up to 2 MB). Save your changes when you're ready.</p>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2"><Link href={'/shop/' + user.uid} className="inline-flex text-xs font-medium text-[#eacda6] underline underline-offset-4">Preview public storefront</Link>{draft.logoUrl && <button type="button" onClick={() => update('logoUrl', '')} disabled={!active || busy || uploading} className="text-xs text-white/70 underline underline-offset-4 hover:text-white disabled:opacity-50">Remove logo</button>}</div>
+        {uploading && <p role="status" className="mt-2 text-xs text-[#eacda6]">Uploading logo…</p>}</div>
       </div>
     </div>
 
     <div className={'grid min-w-0 gap-4 lg:grid-cols-2 lg:gap-6'}>
       <section className={panel}>
-        <div className="flex items-center gap-2"><ImagePlus className="h-5 w-5 text-[#9c7c52]" /><h3 className="text-lg font-semibold">Branding & story</h3></div>
-        <p className="mt-2 text-xs leading-5 text-muted-foreground">Square PNG, JPG or WebP recommended. Maximum 2 MB.</p>
-        <Label htmlFor="sellerLogo" className="mt-5 block text-sm">Store logo</Label>
-        <input id="sellerLogo" type="file" accept="image/png,image/jpeg,image/webp" disabled={!active || busy || uploading} onChange={e => { void uploadLogo(e.target.files?.[0]); e.target.value = ''; }} className="mt-2 block w-full min-w-0 rounded-xl border border-dashed border-[#d9cabb] p-3 text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-[#eee6da] file:px-3 file:py-2 file:text-xs file:font-semibold disabled:opacity-50" />
-        {uploading && <p role="status" className="mt-2 text-xs text-muted-foreground">Uploading logo securely…</p>}
-        {draft.logoUrl && <Button type="button" variant="outline" size="sm" className="mt-3 rounded-full" disabled={!active || uploading || busy} onClick={() => update('logoUrl', '')}>Remove logo</Button>}
+        <div className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-[#9c7c52]" /><h3 className="text-lg font-semibold">Your store story</h3></div>
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">Share what makes your creations special.</p>
         <Label htmlFor="sellerDescription" className="mt-5 block text-sm">About your store</Label>
-        <Textarea id="sellerDescription" rows={5} maxLength={2000} value={draft.description} disabled={!active} onChange={e => update('description', e.target.value)} placeholder="Tell your buyers what makes your creations special…" className="mt-2 resize-y" />
+        <Textarea id="sellerDescription" rows={4} maxLength={2000} value={draft.description} disabled={!active} onChange={e => update('description', e.target.value)} placeholder="Tell your buyers what makes your creations special…" className="mt-2 resize-y" />
         <p className="mt-1 text-right text-[11px] text-muted-foreground">{draft.description.length}/2000</p>
       </section>
       <section className={panel}>
