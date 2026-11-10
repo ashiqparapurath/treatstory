@@ -161,6 +161,8 @@ export async function placeAtomicCheckout(
       async () => {
         const result = await db.runTransaction(
           async (tx) => {
+            const buyerDeletion = await tx.get(db.collection('account_deletions').doc(uid));
+            if (buyerDeletion.exists) throw new ApiError(403, 'Account deletion is in progress. Checkout is disabled.');
             const prior = await tx.get(checkoutRef);
             if (prior.exists) {
               const original = prior.data()!;
@@ -239,6 +241,10 @@ export async function placeAtomicCheckout(
             const sellers = await Promise.all(
               sellerIds.map((id) => tx.get(db.collection("sellers").doc(id))),
             );
+            const deletedStores = await Promise.all(
+              sellerIds.map((id) => tx.get(db.collection('account_deletions').doc(id))),
+            );
+            if (deletedStores.some(item => item.exists)) throw new ApiError(409, 'A seller is closing their account. Please remove those products from your bag.');
             const storeById = new Map<string, SellerRecord>();
             const now = Timestamp.now();
             for (const [idx, snap] of sellers.entries()) {
