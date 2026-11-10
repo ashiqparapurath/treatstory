@@ -40,6 +40,8 @@ export async function POST(request: NextRequest) {
         const limitRef=db.collection('quote_limits').doc(uid+'_'+new Date().toISOString().slice(0,10));
         const productRef=data.productId ? db.collection('marketplace_products').doc(data.productId) : null;
         const [sellerSnap,limitSnap,productSnap]=await Promise.all([tx.get(sellerRef),tx.get(limitRef),productRef?tx.get(productRef):Promise.resolve(null)]);
+        const [buyerDeletion, sellerDeletion] = await Promise.all([tx.get(db.collection('account_deletions').doc(uid)),tx.get(db.collection('account_deletions').doc(data.sellerId))]);
+        if (buyerDeletion.exists || sellerDeletion.exists) throw new ApiError(409,'This account is closing and cannot accept new custom-order requests.');
         const now=Timestamp.now();
         if (!sellerSnap.exists || sellerSnap.data()?.status!=='active' ||
             !sellerSnap.data()?.isOpen || !sellerSnap.data()?.accessEndsAt?.toMillis ||
