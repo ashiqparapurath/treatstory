@@ -1,0 +1,12 @@
+{
+  "source": "User-supplied recording inspected locally; original media is not included",
+  "nominalSampleRateFps": 24,
+  "units": "pixels in the encoded video, not device CSS pixels",
+  "before": {"approxSeconds": 1.875, "logoBounds": {"left":206,"top":623,"right":512,"bottom":694}},
+  "after": {"approxSeconds": 1.917, "logoBounds": {"left":206,"top":605,"right":512,"bottom":675}},
+  "observedLogoTopShiftPx": -18,
+  "logoWidthUnchanged": true,
+  "systemBarAppearanceChangesAtJump": true,
+  "insetChangeCauseConfirmed": false,
+  "fixVerifiedOnPhysicalDevice": false
+}

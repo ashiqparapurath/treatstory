@@ -1,0 +1,11 @@
+{
+  "physicalAndroidLaunchVerified": false,
+  "checks": [
+    "393x852 /: default viewport, visible navigation, no overflow or extra splash",
+    "393x852 /products: default viewport, visible navigation, no overflow or extra splash",
+    "393x852 /about: default viewport, visible navigation, no overflow or extra splash",
+    "852x393 /: default viewport, visible navigation, no overflow or extra splash",
+    "852x393 /products: default viewport, visible navigation, no overflow or extra splash",
+    "852x393 /about: default viewport, visible navigation, no overflow or extra splash"
+  ]
+}
