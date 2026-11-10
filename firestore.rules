@@ -137,11 +137,6 @@ service cloud.firestore {
         request.resource.data.contactPhone is string &&
         request.resource.data.contactPhone.size() >= 5 &&
         request.resource.data.contactPhone.size() <= 40 &&
-        (!('logoUrl' in request.resource.data) ||
-          (request.resource.data.logoUrl is string &&
-            request.resource.data.logoUrl.size() <= 2048 &&
-            (request.resource.data.logoUrl == '' ||
-             request.resource.data.logoUrl.matches('^https://res[.]cloudinary[.]com/[A-Za-z0-9_-]+/image/upload/.*$')))) &&
         request.resource.data.description is string &&
         request.resource.data.description.size() >= 1 &&
         request.resource.data.description.size() <= 2000 &&
@@ -190,6 +185,11 @@ service cloud.firestore {
           'deliveryMethods', 'deliveryPincodes', 'deliveryFee', 'pickupAddress',
           'deliverySlots', 'dailyOrderCapacity', 'acceptanceHours'
         ]) &&
+        (!('logoUrl' in request.resource.data) ||
+          (request.resource.data.logoUrl is string &&
+            request.resource.data.logoUrl.size() <= 2048 &&
+            (request.resource.data.logoUrl == '' ||
+             request.resource.data.logoUrl.matches('^https://res[.]cloudinary[.]com/[A-Za-z0-9_-]+/image/upload/.*$')))) &&
         request.resource.data.description is string &&
         request.resource.data.description.size() <= 2000 &&
         request.resource.data.contactPhone is string &&
