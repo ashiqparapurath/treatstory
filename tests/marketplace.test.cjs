@@ -431,12 +431,12 @@ test('quote creation snapshots authoritative seller and product names with the r
 });
 
 test('reference photo uploads authenticate buyers, keep file checks and enforce a daily quota', async () => {
-  let count = 0, upstreamCalls = 0, authenticated = true;
+  let count = 0, upstreamCalls = 0, authenticated = true, deleting = false;
   const {POST} = load('src/app/api/cloudinary/upload/route.ts', {
     'firebase-admin/app': {getApps:()=>[{name:'treatstory-image-upload'}]},
     'firebase-admin/auth': {getAuth:()=>({verifyIdToken:async()=>{if(!authenticated)throw Error('invalid');return {uid:'buyer'};}})},
     'next/server': {NextResponse:{json:(data,options)=>Response.json(data,options)}},
-    '@/lib/server/firebase-admin': {getServerFirebase:()=>({db:{collection:()=>({doc:()=>({})}),runTransaction:async fn=>fn({get:async()=>({data:()=>({count})}),set:(_ref,data)=>{count=data.count;}})}}),ApiError:class extends Error {constructor(status,message){super(message);this.status=status;}},safeResponse:error=>Response.json({error:error.message},{status:error.status})},
+    '@/lib/server/firebase-admin': {getServerFirebase:()=>({db:{collection:()=>({doc:()=>({get:async()=>({exists:deleting})})}),runTransaction:async fn=>fn({get:async()=>({data:()=>({count})}),set:(_ref,data)=>{count=data.count;}})}}),ApiError:class extends Error {constructor(status,message){super(message);this.status=status;}},safeResponse:error=>Response.json({error:error.message},{status:error.status})},
   }, {process:{env:{NEXT_PUBLIC_FIREBASE_PROJECT_ID:'test',CLOUDINARY_CLOUD_NAME:'test',CLOUDINARY_API_KEY:'test',CLOUDINARY_API_SECRET:'test'}},Blob,FormData,Buffer,Response,
     fetch:async(_url,options)=>{upstreamCalls++;assert.equal(options.body.get('folder'),'treatstory/references/buyer');return {ok:true,json:async()=>({secure_url:'https://res.cloudinary.com/test/image/upload/photo.png',public_id:'photo'})};}});
   const png = new Blob([new Uint8Array([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])],{type:'image/png'});
@@ -450,6 +450,10 @@ test('reference photo uploads authenticate buyers, keep file checks and enforce 
   response=await POST(request(png));
   assert.equal(response.status,401);assert.equal(upstreamCalls,1);
   authenticated=true;
+  deleting=true;
+  response=await POST(request(png));
+  assert.equal(response.status,403);assert.equal(upstreamCalls,1);
+  deleting=false;
   response=await POST(request(new Blob(['not an image'],{type:'image/png'})));
   assert.equal(response.status,400);assert.equal(upstreamCalls,1);
 });
