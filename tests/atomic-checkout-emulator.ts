@@ -133,6 +133,17 @@ async function run() {
   assert.equal(mails.docs[0].data().details.find((row:{label:string})=>row.label==='Payment').value,'Advance arranged with seller');
   await placeAtomicCheckout(db,'buyer-advance',advance);
   assert.equal((await db.collection('mail_outbox').where('uid','==','buyer-advance').get()).size,1,'idempotent checkout does not queue duplicate emails');
+  // The same database transaction must block new orders from buyers or stores
+  // whose account deletion has started, even when a stale session exists.
+  const closingBuyer = 'buyer-closing-' + randomUUID();
+  await db.collection('account_deletions').doc(closingBuyer).set({ state: 'deleting' });
+  await assert.rejects(() => placeAtomicCheckout(db, closingBuyer, request(closingBuyer)), /Account deletion is in progress/i);
+  await db.collection('account_deletions').doc(closingBuyer).delete();
+  await db.collection('account_deletions').doc(sellerId).set({ state: 'deleting' });
+  const duringStoreClosure = request('buyer-after-closure');
+  duringStoreClosure.advancePaymentAcknowledged = true;
+  await assert.rejects(() => placeAtomicCheckout(db, 'buyer-after-closure', duringStoreClosure), /closing their account/i);
+  await db.collection('account_deletions').doc(sellerId).delete();
   console.log('PASS Firestore transactions: stock race, retry, capacity, price acceptance, cancellation restoration and simultaneous different-size pricing');
 }
 run().catch(e=>{ console.error(e);process.exitCode=1;});
