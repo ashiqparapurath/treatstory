@@ -1,7 +1,5 @@
 import type {Metadata, Viewport} from 'next';
 import{siteSocialMetadata}from'@/lib/social-metadata';
-import { PwaLaunchSplash } from '@/components/pwa-launch-splash';
-import { pwaLaunchScript } from '@/lib/pwa-launch';
 import { pwaStartupImages } from '@/lib/pwa-startup-images';
 import branding from '@/lib/pwa-branding.json';
 import { pwaIcons } from '@/lib/pwa-icons';
@@ -41,12 +39,9 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <script dangerouslySetInnerHTML={{__html:pwaLaunchScript}} />
-        <link rel="preload" as="image" href={branding.artwork} media="(display-mode: standalone), (display-mode: minimal-ui), (display-mode: fullscreen), (display-mode: window-controls-overlay)" />
         <link rel="manifest" href="/manifest.json" crossOrigin="use-credentials" />
       </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable)}>
-        <PwaLaunchSplash />
         <FirebaseClientProvider>
           <CartProvider>
             {children}

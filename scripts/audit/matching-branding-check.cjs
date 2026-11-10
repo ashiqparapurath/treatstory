@@ -4,31 +4,36 @@ const { chromium } = require("playwright"),
   vm = require("node:vm"),
   ts = require("typescript"),
   React = require("react"),
-  { renderToStaticMarkup } = require("react-dom/server");
+  { renderToStaticMarkup } = require("react-dom/server"),
+  sharp = require("sharp");
 if (process.env.TREATSTORY_AUDIT !== "local-only")
   throw Error("Loopback preview required");
-const origin = "http://127.0.0.1:9032",
-  branding = JSON.parse(fs.readFileSync("src/lib/pwa-branding.json", "utf8"));
-const moduleCopy = { exports: {} };
-vm.runInNewContext(
-  ts.transpileModule(fs.readFileSync("src/app/loading.tsx", "utf8"), {
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2020,
-      jsx: ts.JsxEmit.ReactJSX,
-      esModuleInterop: true,
+const origin = "http://127.0.0.1:9032";
+function load(file, mocks = {}) {
+  const module = { exports: {} };
+  vm.runInNewContext(
+    ts.transpileModule(fs.readFileSync(file, "utf8"), {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        target: ts.ScriptTarget.ES2020,
+        jsx: ts.JsxEmit.ReactJSX,
+        esModuleInterop: true,
+      },
+    }).outputText,
+    {
+      module,
+      exports: module.exports,
+      require: (id) => (id in mocks ? mocks[id] : require(id)),
     },
-  }).outputText,
-  {
-    module: moduleCopy,
-    exports: moduleCopy.exports,
-    require: (id) =>
-      id === "@/lib/pwa-branding.json" ? branding : require(id),
-  },
-);
-const loading = renderToStaticMarkup(
-  React.createElement(moduleCopy.exports.default),
-);
+  );
+  return module.exports;
+}
+const utils = load("src/lib/utils.ts"),
+  skeleton = load("src/components/ui/skeleton.tsx", { "@/lib/utils": utils });
+const { default: Loading } = load("src/app/loading.tsx", {
+  "@/components/ui/skeleton": skeleton,
+});
+const loading = renderToStaticMarkup(React.createElement(Loading));
 (async () => {
   const browser = await chromium.launch({
       executablePath: "/usr/bin/chromium",
@@ -43,42 +48,14 @@ const loading = renderToStaticMarkup(
     await context.addInitScript(() =>
       Object.defineProperty(navigator, "standalone", { value: true }),
     );
-    const page = await context.newPage(),
-      errors = [];
-    page.on("pageerror", (error) => errors.push(error.message));
-    let release = false;
-    const waiting = [];
-    await page.route("**/_next/static/**/*.js", (route) =>
-      release
-        ? route.continue()
-        : new Promise((resolve) =>
-            waiting.push(async () => {
-              await route.continue();
-              resolve();
-            }),
-          ),
+    const page = await context.newPage();
+    await page.goto(origin);
+    await page.getByRole("heading", { name: /Little finds/ }).waitFor();
+    assert.equal(
+      await page.locator(".pwa-launch-splash,[data-pwa-launch]").count(),
+      0,
     );
-    await page.goto(origin, { waitUntil: "commit" });
-    await page.waitForFunction(() => {
-      const i = document.querySelector(".pwa-launch-splash img");
-      return i?.complete && i.naturalWidth > 0;
-    });
-    const splash = page.locator(".pwa-launch-splash"),
-      image = splash.locator("img"),
-      splashBounds = await image.boundingBox(),
-      background = await splash.evaluate(
-        (node) => getComputedStyle(node).backgroundColor,
-      );
-    await page.screenshot({ path: "/tmp/treatstory-matching-splash.png" });
-    release = true;
-    await Promise.all(waiting.map((fn) => fn()));
-    await page.waitForFunction(
-      () => !document.documentElement.hasAttribute("data-pwa-launch"),
-    );
-    assert.equal(errors.length, 0, errors.join("\n"));
-    checks.push(
-      "installed launch uses the supplied artwork and clears without hydration errors",
-    );
+    checks.push("installed page contains no second in-app splash");
     const css = await page
       .locator('link[rel="stylesheet"]')
       .evaluateAll((links) =>
@@ -93,73 +70,43 @@ const loading = renderToStaticMarkup(
       }),
     );
     await page.goto(origin + "/__loading-preview");
-    const fallback = page.getByRole("status", {
-      name: "Loading TreatStory",
-      exact: true,
-    });
-    await fallback.locator("img").waitFor();
-    await page.waitForFunction(() => {
-      const i = document.querySelector("main img");
-      return i?.complete && i.naturalWidth > 0;
-    });
-    const bounds = await fallback.locator("img").boundingBox();
-    assert.equal(
-      await fallback.locator("img").getAttribute("src"),
-      branding.artwork,
-    );
-    assert.equal(
-      await fallback.evaluate((node) => getComputedStyle(node).backgroundColor),
-      background,
-    );
-    for (const key of ["x", "y", "width", "height"])
-      assert.ok(
-        Math.abs(bounds[key] - splashBounds[key]) <= 1,
-        key + " artwork bounds should remain continuous",
-      );
-    assert.equal(await fallback.getByRole("img").count(), 1);
-    await page.screenshot({ path: "/tmp/treatstory-matching-loading.png" });
+    await page
+      .getByRole("status", { name: "Loading page", exact: true })
+      .waitFor();
+    assert.equal(await page.locator("img").count(), 0);
+    assert.ok(!(await page.locator("body").innerText()).includes("Since 2026"));
+    await page.screenshot({ path: "/tmp/treatstory-native-only-loading.png" });
     checks.push(
-      "actual route-loading component has the same artwork, scale, position and background as the splash",
+      "route loading shows an unbranded page skeleton instead of another logo screen",
     );
     await page.goto(origin);
-    const manifestResponse = await page.request.get(origin + "/manifest.json"),
-      manifest = await manifestResponse.json();
-    assert.equal(manifest.background_color, branding.background);
-    assert.equal(manifest.theme_color, branding.background);
+    const manifest = await (
+      await page.request.get(origin + "/manifest.json")
+    ).json();
+    assert.ok(manifest.icons.every((icon) => icon.purpose === "any"));
     for (const icon of manifest.icons) {
-      assert.match(icon.src, /-[a-f0-9]{12}\.png$/);
       const response = await page.request.get(origin + icon.src);
       assert.equal(response.status(), 200);
-      assert.ok(response.headers()["content-type"].includes("image/png"));
+      const { data } = await sharp(await response.body())
+        .extract({ left: 0, top: 0, width: 1, height: 1 })
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      assert.equal(data[3], 0);
     }
     checks.push(
-      "manifest selects the new versioned regular and Android maskable artwork on the shared background",
+      "served Chrome manifest icons have transparent canvas and no advertised opaque maskable tile",
     );
     const apple = await page
         .locator('link[rel="apple-touch-icon"]')
         .getAttribute("href"),
       favicon = await page.locator('link[rel="icon"]').getAttribute("href");
-    assert.match(apple, /app-180-[a-f0-9]{12}\.png$/);
-    assert.match(favicon, /favicon-[a-f0-9]{12}\.ico$/);
-    assert.equal(
-      (await page.request.get(new URL(apple, origin).href)).status(),
-      200,
-    );
-    assert.equal(
-      (await page.request.get(new URL(favicon, origin).href)).status(),
-      200,
-    );
-    assert.equal(
-      (await page.request.get(origin + "/icons/app-192.png")).status(),
-      200,
-    );
-    assert.equal(
-      (await page.request.get(origin + "/favicon.ico")).status(),
-      200,
-    );
-    checks.push(
-      "Apple/browser metadata references refreshed artwork while old icon URLs remain valid",
-    );
+    for (const path of [apple, favicon, "/icons/app-192.png", "/favicon.ico"])
+      assert.equal(
+        (await page.request.get(new URL(path, origin).href)).status(),
+        200,
+      );
+    checks.push("Apple/favicon and stable legacy icon URLs remain available");
     await context.close();
     fs.writeFileSync(
       "/tmp/treatstory-matching-branding-checks.json",

@@ -5,22 +5,16 @@
   "description": "Discover home bakes, art and handmade finds from independent creators.",
   "icons": [
     {
-      "src": "/icons/app-192-c4e9f59838d1.png",
+      "src": "/icons/app-192-42d8d0e7af34.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any"
     },
     {
-      "src": "/icons/app-512-c4e9f59838d1.png",
+      "src": "/icons/app-512-42d8d0e7af34.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any"
-    },
-    {
-      "src": "/icons/app-512-maskable-c4e9f59838d1.png",
-      "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "maskable"
     }
   ],
   "start_url": "/",

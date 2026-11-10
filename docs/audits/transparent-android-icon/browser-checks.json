@@ -1,0 +1,8 @@
+{
+  "checks": [
+    "installed launch uses the supplied artwork and clears without hydration errors",
+    "actual route-loading component has the same artwork, scale, position and background as the splash",
+    "manifest selects versioned transparent regular artwork on the shared launch background",
+    "Apple/browser metadata references refreshed artwork while old icon URLs remain valid"
+  ]
+}

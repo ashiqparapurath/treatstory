@@ -1,3 +1,0 @@
-// Runs in the head before the first body paint. Ordinary browser visits stay unchanged.
-// The independent timeout clears the cover even if hydration/chunk loading fails.
-export const pwaLaunchScript = `(()=>{try{if(matchMedia('(display-mode: standalone), (display-mode: minimal-ui), (display-mode: fullscreen), (display-mode: window-controls-overlay)').matches||navigator.standalone===true||document.referrer.startsWith('android-app://')){document.documentElement.setAttribute('data-pwa-launch','loading');setTimeout(()=>document.documentElement.removeAttribute('data-pwa-launch'),3000);}}catch{}})();`;

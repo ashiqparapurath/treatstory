@@ -10,14 +10,22 @@ const layout = { regular: 0.84, maskable: 0.72 };
 const revision = createHash("sha256")
   .update(source)
   .update(
-    JSON.stringify({ background: branding.background, layout, opaque: true }),
+    JSON.stringify({
+      background: branding.background,
+      layout,
+      regularOpaque: false,
+    }),
   )
   .digest("hex")
   .slice(0, 12);
 const logo = await sharp(source, { density: 144 }).trim().png().toBuffer();
 const dir = new URL("public/icons/", root);
 await mkdir(dir, { recursive: true });
-async function render(size, maskable = false) {
+async function render(
+  size,
+  maskable = false,
+  opaque = maskable || size === 180,
+) {
   const extent = Math.round(
     size * (maskable ? layout.maskable : layout.regular),
   );
@@ -25,18 +33,15 @@ async function render(size, maskable = false) {
     .resize(extent, extent, { fit: "inside" })
     .png()
     .toBuffer();
-  return sharp({
+  const image = sharp({
     create: {
       width: size,
       height: size,
-      channels: 3,
-      background: branding.background,
+      channels: 4,
+      background: opaque ? branding.background : { r: 0, g: 0, b: 0, alpha: 0 },
     },
-  })
-    .composite([{ input: foreground, gravity: "centre" }])
-    .removeAlpha()
-    .png()
-    .toBuffer();
+  }).composite([{ input: foreground, gravity: "centre" }]);
+  return (opaque ? image.removeAlpha() : image).png().toBuffer();
 }
 const urls = {};
 for (const size of [180, 192, 512, 1024])
@@ -53,7 +58,7 @@ for (const size of [180, 192, 512, 1024])
 const sizes = [32, 48, 64, 256],
   pngs = await Promise.all(
     sizes.map(async (size) =>
-      sharp(await render(size))
+      sharp(await render(size, false, true))
         .ensureAlpha()
         .png()
         .toBuffer(),
@@ -87,15 +92,10 @@ await writeFile(
 );
 const manifestPath = new URL("public/manifest.json", root),
   manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+// Prefer transparent regular artwork; opaque maskable assets remain available only for legacy callers.
 manifest.icons = [
   { src: urls.icon192, type: "image/png", sizes: "192x192", purpose: "any" },
   { src: urls.icon512, type: "image/png", sizes: "512x512", purpose: "any" },
-  {
-    src: urls.maskable,
-    type: "image/png",
-    sizes: "512x512",
-    purpose: "maskable",
-  },
 ];
 manifest.background_color = branding.background;
 manifest.theme_color = branding.background;
