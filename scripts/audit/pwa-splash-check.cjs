@@ -110,7 +110,7 @@ const origin = "http://127.0.0.1:9032",
       page = await context.newPage();
     const artworkRequests = [];
     page.on("request", (request) => {
-      if (request.url().includes("/splash/"))
+      if (request.url().includes("/splash/startup/"))
         artworkRequests.push(request.url());
     });
     await page.goto(origin);
@@ -123,7 +123,7 @@ const origin = "http://127.0.0.1:9032",
     );
     assert.equal(artworkRequests.length, 0);
     checks.push(
-      "ordinary browser visit shows no splash and downloads no launch artwork",
+      "ordinary browser visit shows no launch cover or native startup-image downloads",
     );
     const startup = await page
       .locator('link[rel="apple-touch-startup-image"]')

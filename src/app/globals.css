@@ -150,6 +150,6 @@ html[data-pwa-launch] .pwa-launch-splash {
   position: fixed; inset: 0; width: 100vw; height: 100dvh; z-index: 10000; display: grid; place-items: center;
   opacity: 1; transition: opacity 160ms ease-out;
 }
-.pwa-launch-splash img { display: block; width: min(100vw, 640px); height: auto; max-height: 80dvh; object-fit: contain; }
+.pwa-launch-artwork { display: block; width: min(100vw, 640px); height: auto; max-height: 80dvh; object-fit: contain; }
 html[data-pwa-launch="ready"] .pwa-launch-splash { opacity: 0; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { html[data-pwa-launch] .pwa-launch-splash { transition: none; } }
