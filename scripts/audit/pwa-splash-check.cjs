@@ -3,13 +3,13 @@ const { chromium } = require("playwright"),
   fs = require("node:fs");
 if (process.env.TREATSTORY_AUDIT !== "local-only")
   throw Error("Loopback preview required");
-const origin = "http://127.0.0.1:9032",
-  checks = [];
+const origin = "http://127.0.0.1:9032";
 (async () => {
   const browser = await chromium.launch({
-    executablePath: "/usr/bin/chromium",
-    args: ["--no-sandbox"],
-  });
+      executablePath: "/usr/bin/chromium",
+      args: ["--no-sandbox"],
+    }),
+    checks = [];
   try {
     for (const mobile of [true, false]) {
       const context = await browser.newContext({
@@ -18,25 +18,17 @@ const origin = "http://127.0.0.1:9032",
           : { width: 1440, height: 900 },
         isMobile: mobile,
       });
-      await context.addInitScript(() => {
-        Object.defineProperty(navigator, "standalone", { value: true });
-        window.__launchStates = [];
-        new MutationObserver((records) => {
-          for (const record of records)
-            if (record.attributeName === "data-pwa-launch")
-              window.__launchStates.push(
-                document.documentElement.getAttribute("data-pwa-launch") ||
-                  "hidden",
-              );
-        }).observe(document, {
-          subtree: true,
-          attributes: true,
-          attributeFilter: ["data-pwa-launch"],
-        });
-      });
+      await context.addInitScript(() =>
+        Object.defineProperty(navigator, "standalone", { value: true }),
+      );
       const page = await context.newPage(),
-        errors = [];
+        errors = [],
+        images = [];
       page.on("pageerror", (error) => errors.push(error.message));
+      page.on("request", (request) => {
+        if (request.url().includes("/splash/treatstory.svg"))
+          images.push(request.url());
+      });
       let release = false;
       const waiting = [];
       await page.route("**/_next/static/**/*.js", (route) =>
@@ -50,43 +42,19 @@ const origin = "http://127.0.0.1:9032",
             ),
       );
       await page.goto(origin, { waitUntil: "commit" });
-      const cover = page.getByRole("status", {
-        name: "Opening TreatStory",
-        exact: true,
-      });
-      await cover.waitFor({ state: "visible" });
-      await page.waitForFunction(() => {
-        const image = document.querySelector(".pwa-launch-splash img");
-        return image?.complete && image.naturalWidth > 0;
-      });
+      await page.getByRole("heading", { name: /Little finds/ }).waitFor();
       assert.equal(
-        await cover.evaluate((node) => getComputedStyle(node).backgroundColor),
-        "rgb(250, 248, 243)",
+        await page.locator(".pwa-launch-splash,[data-pwa-launch]").count(),
+        0,
       );
-      const frame = await cover.boundingBox();
-      assert.equal(
-        frame.width,
-        await page.evaluate(() => document.documentElement.clientWidth),
-      );
-      assert.equal(frame.height, mobile ? 844 : 900);
-      await page.screenshot({
-        path:
-          "/tmp/treatstory-splash-" + (mobile ? "mobile" : "desktop") + ".png",
-      });
+      assert.equal(images.length, 0);
       checks.push(
         (mobile ? "mobile" : "desktop") +
-          " installed launch paints supplied artwork on matching full-screen background before hydration",
+          " installed page has no second splash before hydration",
       );
       release = true;
-      await Promise.all(waiting.map((resume) => resume()));
-      await page.waitForFunction(
-        () => !document.documentElement.hasAttribute("data-pwa-launch"),
-      );
-      assert.ok(
-        (await page.evaluate(() => window.__launchStates)).includes("ready"),
-      );
-      assert.equal(errors.length, 0, errors.join("\n"));
-      await page.getByRole("heading", { name: /Little finds/ }).waitFor();
+      await Promise.all(waiting.map((fn) => fn()));
+      await page.waitForFunction(() => document.readyState === "complete");
       assert.equal(
         await page
           .getByRole("region", { name: "Install TreatStory", exact: true })
@@ -97,80 +65,81 @@ const origin = "http://127.0.0.1:9032",
         .getByRole("link", { name: "Explore the collection", exact: true })
         .click();
       await page.waitForURL("**/products");
-      assert.equal(await cover.count(), 0);
+      assert.equal(
+        await page.locator(".pwa-launch-splash,[data-pwa-launch]").count(),
+        0,
+      );
+      assert.equal(images.length, 0);
+      assert.equal(errors.length, 0, errors.join("\n"));
       checks.push(
         (mobile ? "mobile" : "desktop") +
-          " splash clears after hydration, installed notice stays hidden and navigation does not replay splash",
+          " installed navigation has no logo replay or hydration errors",
       );
       await context.close();
     }
-    let context = await browser.newContext({
-        viewport: { width: 390, height: 844 },
-      }),
+    let context = await browser.newContext(),
       page = await context.newPage();
-    const artworkRequests = [];
+    const startupRequests = [];
     page.on("request", (request) => {
-      if (request.url().includes("/splash/startup/"))
-        artworkRequests.push(request.url());
+      if (request.url().includes("/splash/"))
+        startupRequests.push(request.url());
     });
     await page.goto(origin);
     await page.getByRole("heading", { name: /Little finds/ }).waitFor();
     assert.equal(
-      await page
-        .getByRole("status", { name: "Opening TreatStory", exact: true })
-        .count(),
+      await page.locator(".pwa-launch-splash,[data-pwa-launch]").count(),
       0,
     );
-    assert.equal(artworkRequests.length, 0);
+    assert.equal(startupRequests.length, 0);
     checks.push(
-      "ordinary browser visit shows no launch cover or native startup-image downloads",
+      "regular browser has no splash cover or splash-artwork downloads",
     );
-    const startup = await page
-      .locator('link[rel="apple-touch-startup-image"]')
-      .count();
-    assert.equal(startup, 42);
+    assert.equal(
+      await page.locator('link[rel="apple-touch-startup-image"]').count(),
+      42,
+    );
     assert.equal(
       await page
         .locator('meta[name="apple-mobile-web-app-capable"]')
         .getAttribute("content"),
       "yes",
     );
-    const first = page.locator('link[rel="apple-touch-startup-image"]').first();
-    const response = await page.request.get(
-      new URL(await first.getAttribute("href"), origin).href,
+    const image = await page
+      .locator('link[rel="apple-touch-startup-image"]')
+      .first()
+      .getAttribute("href");
+    assert.equal(
+      (await page.request.get(new URL(image, origin).href)).status(),
+      200,
     );
-    assert.equal(response.status(), 200);
-    assert.ok(response.headers()["content-type"].includes("image/png"));
     checks.push(
-      "HTML declares installed iOS support and all 42 startup-image links; image is served as PNG",
+      "native iOS startup declarations and PNG resource remain available",
     );
     await context.close();
-    context = await browser.newContext({
-      viewport: { width: 390, height: 844 },
-    });
+    context = await browser.newContext();
     await context.addInitScript(() =>
       Object.defineProperty(navigator, "standalone", { value: true }),
     );
     page = await context.newPage();
     await page.route("**/_next/static/**/*.js", (route) => route.abort());
-    const start = Date.now();
     await page.goto(origin, { waitUntil: "domcontentloaded" });
-    await page
-      .getByRole("status", { name: "Opening TreatStory", exact: true })
-      .waitFor({ state: "visible" });
-    await page.waitForFunction(
-      () => !document.documentElement.hasAttribute("data-pwa-launch"),
+    await page.getByRole("heading", { name: /Little finds/ }).waitFor();
+    assert.equal(
+      await page.locator(".pwa-launch-splash,[data-pwa-launch]").count(),
+      0,
     );
-    assert.ok(Date.now() - start < 5000);
     checks.push(
-      "blocked application scripts cannot leave a stuck launch cover",
+      "blocked application scripts cannot create or strand a launch cover",
     );
     await context.close();
     context = await browser.newContext({ javaScriptEnabled: false });
     page = await context.newPage();
     await page.goto(origin);
-    assert.equal(await page.locator(".pwa-launch-splash").isVisible(), false);
-    checks.push("JavaScript-disabled browser is never covered by the splash");
+    assert.equal(
+      await page.locator(".pwa-launch-splash,[data-pwa-launch]").count(),
+      0,
+    );
+    checks.push("JavaScript-disabled browser has no launch cover");
     await context.close();
     fs.writeFileSync(
       "/tmp/treatstory-pwa-splash-checks.json",

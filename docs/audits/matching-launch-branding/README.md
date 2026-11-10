@@ -1,5 +1,7 @@
 # One artwork for launcher, splash and route loading
 
+> Historical design: the in-app splash and branded loading fallback have now been removed. See [native-only launch](../native-only-launch/README.md) for the current behavior and verification.
+
 The supplied TreatStory / Since 2026 SVG now drives all launcher PNGs, Android maskable artwork, Apple Home Screen icon, browser favicon, custom launch cover and route-loading screen. Every surface uses the shared `#faf8f3` background.
 
 Inspection found that `src/app/loading.tsx` still displayed the previous `/icons/app-192.png` at 112px with separate brand text. That application fallback can explain an old-icon screen appearing after the custom SVG. It now displays the same responsive SVG at the same scale/position as the launch cover, with a small progress mark at the bottom. No minimum display delay was added.

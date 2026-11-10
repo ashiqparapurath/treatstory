@@ -1,28 +1,23 @@
-import branding from "@/lib/pwa-branding.json";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
   return (
     <main
       role="status"
-      aria-label="Loading TreatStory"
-      className="relative grid min-h-[100dvh] place-items-center"
-      style={{ backgroundColor: branding.background }}
+      aria-label="Loading page"
+      aria-busy={true}
+      className="section-shell space-y-6 py-8"
     >
-      <img
-        className="pwa-launch-artwork"
-        src={branding.artwork}
-        alt="TreatStory — Since 2026"
-        width={1562}
-        height={1007}
-        loading="eager"
-        fetchPriority="high"
-        decoding="sync"
-      />
-      <span
-        className="absolute bottom-[max(2rem,env(safe-area-inset-bottom))] left-1/2 h-1 w-12 -translate-x-1/2 animate-pulse rounded-full bg-[#b49a78]"
-        aria-hidden="true"
-      />
-      <span className="sr-only">Loading…</span>
+      <span className="sr-only">Loading page…</span>
+      <div className="space-y-3">
+        <Skeleton className="h-7 w-48" />
+        <Skeleton className="h-4 w-64 max-w-full" />
+      </div>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {[0, 1, 2, 3].map((id) => (
+          <Skeleton key={id} className="aspect-[4/5] rounded-2xl" />
+        ))}
+      </div>
     </main>
   );
 }

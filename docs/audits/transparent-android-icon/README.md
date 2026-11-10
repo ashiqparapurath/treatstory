@@ -15,8 +15,10 @@ After deployment, open the updated site and refresh/reinstall the PWA if the ins
 
 ## Verification
 
-Production build and TypeScript checks passed. All 81 tests passed, including icon dimensions, transparent padding/ink-only pixels, retained opaque Apple/legacy adaptive assets, ICO validity, and unchanged shared SVG markup. The existing local production-browser branding check verifies resource serving and installed/route-loading artwork; its output is recorded beside this report.
+Production build and TypeScript checks passed. All 79 current tests passed, including icon dimensions, transparent padding/ink-only pixels, retained opaque Apple/legacy adaptive assets, ICO validity, and unchanged shared SVG markup. The existing local production-browser branding check verifies resource serving and installed/route-loading artwork; its output is recorded beside this report.
 
 No artificial startup delay, dependencies, environment variables, database rules or production data changed.
 
 Four local production-browser branding/resource checks passed with the transparent icon manifest. They verify the shared SVG launch/loading rendering and new asset URLs, not the Android/OEM outline shown in the user's screenshot. On-device verification remains outstanding.
+
+The combined follow-up also removes the extra in-app splash and full-screen wordmark loading fallback. See [native-only launch](../native-only-launch/README.md) for the current 12 browser checks and neutral skeleton preview.

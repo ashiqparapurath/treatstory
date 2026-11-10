@@ -1,5 +1,7 @@
 # TreatStory PWA splash artwork
 
+> Historical design: the in-app splash and branded loading fallback have now been removed. See [native-only launch](../native-only-launch/README.md) for the current behavior and verification.
+
 The supplied `treatstory_splash_screen.svg` is used as the installed app's launch artwork. Its transparent canvas is placed on **#faf8f3**, matching the manifest background, theme color and application launch surface. The original path artwork and “Since 2026” lettering are preserved. The XML/remote DTD wrapper was removed; the asset contains only SVG paths.
 
 ## Launch behavior

@@ -1,0 +1,12 @@
+{
+  "checks": [
+    "mobile installed page has no second splash before hydration",
+    "mobile installed navigation has no logo replay or hydration errors",
+    "desktop installed page has no second splash before hydration",
+    "desktop installed navigation has no logo replay or hydration errors",
+    "regular browser has no splash cover or splash-artwork downloads",
+    "native iOS startup declarations and PNG resource remain available",
+    "blocked application scripts cannot create or strand a launch cover",
+    "JavaScript-disabled browser has no launch cover"
+  ]
+}

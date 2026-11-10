@@ -1,0 +1,8 @@
+{
+  "checks": [
+    "installed page contains no second in-app splash",
+    "route loading shows an unbranded page skeleton instead of another logo screen",
+    "served Chrome manifest icons have transparent canvas and no advertised opaque maskable tile",
+    "Apple/favicon and stable legacy icon URLs remain available"
+  ]
+}

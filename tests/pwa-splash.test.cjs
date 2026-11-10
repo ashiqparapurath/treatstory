@@ -23,50 +23,13 @@ function load(file, mocks = {}) {
   );
   return module.exports;
 }
-const { pwaLaunchScript } = load("src/lib/pwa-launch.ts");
-function launch({ mode = false, standalone = false, referrer = "" } = {}) {
-  const attributes = new Map(),
-    timers = [];
-  vm.runInNewContext(pwaLaunchScript, {
-    matchMedia: () => ({ matches: mode }),
-    navigator: { standalone },
-    document: {
-      referrer,
-      documentElement: {
-        setAttribute: (key, value) => attributes.set(key, value),
-        removeAttribute: (key) => attributes.delete(key),
-      },
-    },
-    setTimeout: (callback, ms) => timers.push({ callback, ms }),
-  });
-  return { attributes, timers };
-}
-test("ordinary browser visits never receive a launch cover or blocking timer", () => {
-  const result = launch();
-  assert.equal(result.attributes.size, 0);
-  assert.equal(result.timers.length, 0);
-});
-test("installed launches get a first-paint cover and an independent failure deadline", () => {
-  for (const context of [
-    { mode: true },
-    { standalone: true },
-    { referrer: "android-app://com.example.treatstory" },
-  ]) {
-    const result = launch(context);
-    assert.equal(result.attributes.get("data-pwa-launch"), "loading");
-    assert.equal(result.timers[0].ms, 3000);
-    result.timers[0].callback();
-    assert.equal(result.attributes.size, 0);
-  }
-});
-test("unsupported startup detection cannot block the page", () => {
-  assert.doesNotThrow(() =>
-    vm.runInNewContext(pwaLaunchScript, {
-      matchMedia: () => {
-        throw Error("Unavailable");
-      },
-    }),
-  );
+test("root layout does not inject a second in-app splash or artwork preload", () => {
+  const layout = fs.readFileSync("src/app/layout.tsx", "utf8");
+  assert.ok(!layout.includes("PwaLaunchSplash"));
+  assert.ok(!layout.includes("pwaLaunchScript"));
+  assert.ok(!layout.includes('as="image" href={branding.artwork}'));
+  assert.ok(layout.includes("pwaStartupImages"));
+  assert.ok(layout.includes("pwaIcons"));
 });
 test("native startup images have declared portrait/landscape dimensions and match app background", async () => {
   const { pwaStartupImages } = load("src/lib/pwa-startup-images.ts"),
@@ -181,25 +144,22 @@ test("Chrome launcher icons have transparent canvas while Apple and legacy adapt
   }
 });
 
-test("route-loading fallback uses the exact splash artwork instead of the old app icon", () => {
-  const branding = JSON.parse(fs.readFileSync("src/lib/pwa-branding.json"));
-  const { default: Loading } = load("src/app/loading.tsx", {
-    "@/lib/pwa-branding.json": branding,
-  });
-  const { PwaLaunchSplash } = load("src/components/pwa-launch-splash.tsx", {
-    "@/lib/pwa-branding.json": branding,
-  });
+test("route loading is a neutral skeleton without another full-screen logo", () => {
   const React = require("react"),
     { renderToStaticMarkup } = require("react-dom/server");
-  for (const component of [Loading, PwaLaunchSplash]) {
-    const html = renderToStaticMarkup(React.createElement(component));
-    assert.ok(html.includes('src="' + branding.artwork + '"'));
-    assert.ok(html.includes('class="pwa-launch-artwork"'));
-    assert.ok(html.includes("background-color:" + branding.background));
-    assert.ok(!html.includes("/icons/app-192.png"));
-  }
+  const { default: Loading } = load("src/app/loading.tsx", {
+    "@/components/ui/skeleton": {
+      Skeleton: (props) => React.createElement("div", props),
+    },
+  });
+  const html = renderToStaticMarkup(React.createElement(Loading));
+  assert.ok(html.includes('aria-label="Loading page"'));
+  assert.ok(html.includes('aria-busy="true"'));
+  assert.ok(!html.includes("<img"));
+  assert.ok(!html.includes("/splash/"));
+  assert.ok(!html.includes("/icons/"));
+  assert.ok(!html.includes("Since 2026"));
 });
-
 test("the refreshed browser icon contains valid PNG entries and the legacy URL matches", async () => {
   const { pwaIcons } = load("src/lib/pwa-icons.ts"),
     bytes = fs.readFileSync("public" + pwaIcons.favicon);
