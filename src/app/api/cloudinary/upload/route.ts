@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     form=await new Response(bounded as BodyInit,{headers:{'Content-Type':request.headers.get('content-type')||''}}).formData();
   }catch(error){if(error instanceof ApiError)return safeResponse(error);return json({error:'Could not read the selected image.'},400);}
   const kind = form.get('kind');
-  if (kind !== 'banner' && kind !== 'product' && kind !== 'reference') return json({ error: 'Invalid upload type.' }, 400);
+  if (kind !== 'banner' && kind !== 'product' && kind !== 'reference' && kind !== 'logo') return json({ error: 'Invalid upload type.' }, 400);
   const file = form.get('file');
   if (!(file instanceof Blob)) return json({ error: 'Choose an image to upload.' }, 400);
   const maxSize = kind === 'banner' ? MAX_BANNER_BYTES : MAX_PRODUCT_BYTES;
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     return json({ error: `Choose a JPG, PNG or WebP image under ${kind === 'banner' ? '1' : '2'} MB.` }, 413);
 
   try {
-    let allowed = kind === 'reference' || await canUpload(projectId, uid, idToken, kind);
+    let allowed = kind === 'reference' || await canUpload(projectId, uid, idToken, kind === 'logo' ? 'product' : kind);
     if (!allowed && kind === 'product') allowed = await canUpload(projectId, uid, idToken, 'banner'); // Admins can manage legacy products.
     if (!allowed) return json({ error: kind === 'banner'
       ? 'Only verified TreatStory administrators can upload banners.'
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
       });
     } catch (error) { return safeResponse(error); }
   }
-  const folder = kind === 'banner' ? `treatstory/banners/${uid}` : kind === 'reference' ? `treatstory/references/${uid}` : `treatstory/products/${uid}`;
+  const folder = kind === 'banner' ? `treatstory/banners/${uid}` : kind === 'reference' ? `treatstory/references/${uid}` : kind === 'logo' ? `treatstory/logos/${uid}` : `treatstory/products/${uid}`;
   const upload = new FormData();
   upload.append('file', new Blob([bytes], { type: detected }), `photo.${detected.split('/')[1] === 'jpeg' ? 'jpg' : detected.split('/')[1]}`);
   upload.append('folder', folder);
