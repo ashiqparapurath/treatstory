@@ -108,23 +108,45 @@ test("native startup images have declared portrait/landscape dimensions and matc
   );
 });
 
-test("install icons and launcher background match the supplied splash, with safe adaptive padding", async () => {
+test("Chrome launcher icons have transparent canvas while Apple and legacy adaptive assets stay valid", async () => {
   const branding = JSON.parse(fs.readFileSync("src/lib/pwa-branding.json")),
     manifest = JSON.parse(fs.readFileSync("public/manifest.json"));
+  assert.ok(manifest.icons.every((icon) => icon.purpose === "any"));
   for (const icon of manifest.icons) {
     assert.match(icon.src, /app-(192|512)(-maskable)?-[a-f0-9]{12}\.png$/);
     const metadata = await sharp("public" + icon.src).metadata();
     const size = Number(icon.sizes.split("x")[0]);
     assert.equal(metadata.width, size);
     assert.equal(metadata.height, size);
-    assert.equal(metadata.hasAlpha, false);
+    assert.equal(metadata.hasAlpha, true);
     const { data } = await sharp("public" + icon.src)
       .extract({ left: 0, top: 0, width: 1, height: 1 })
       .raw()
       .toBuffer({ resolveWithObject: true });
-    assert.equal("#" + Buffer.from(data).toString("hex"), branding.background);
+    assert.equal(data.length, 4);
+    assert.equal(data[3], 0);
+    const pixels = await sharp("public" + icon.src)
+      .ensureAlpha()
+      .raw()
+      .toBuffer();
+    let clear = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      if (pixels[i + 3] === 0) clear++;
+      else if (pixels[i + 3] > 8)
+        assert.ok(
+          pixels[i] < 10 && pixels[i + 1] < 10 && pixels[i + 2] < 10,
+          "only logo ink may be opaque; no colored tile",
+        );
+    }
+    assert.ok(clear > size * size * 0.7);
   }
-  const mask = manifest.icons.find((icon) => icon.purpose === "maskable");
+  const { pwaIcons } = load("src/lib/pwa-icons.ts");
+  const apple = await sharp("public" + pwaIcons.apple)
+    .extract({ left: 0, top: 0, width: 1, height: 1 })
+    .raw()
+    .toBuffer();
+  assert.equal("#" + apple.toString("hex"), branding.background);
+  const mask = { src: pwaIcons.maskable };
   const { data, info } = await sharp("public" + mask.src)
     .removeAlpha()
     .raw()

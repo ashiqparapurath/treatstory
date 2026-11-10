@@ -133,7 +133,7 @@ const loading = renderToStaticMarkup(
       assert.ok(response.headers()["content-type"].includes("image/png"));
     }
     checks.push(
-      "manifest selects the new versioned regular and Android maskable artwork on the shared background",
+      "manifest selects versioned transparent regular artwork on the shared launch background",
     );
     const apple = await page
         .locator('link[rel="apple-touch-icon"]')

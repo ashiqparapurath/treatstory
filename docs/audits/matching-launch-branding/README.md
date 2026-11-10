@@ -27,3 +27,7 @@ No dependencies, environment variables, database rules or production data change
 | Launch cover | Route-loading fallback |
 | --- | --- |
 | ![Launch cover](splash.png) | ![Matching route-loading artwork](loading.png) |
+
+## Transparent Chrome follow-up
+
+Chrome regular icons now use transparent padding and the manifest advertises only regular `any` icons to avoid selecting an opaque native icon tile. Apple/browser and legacy adaptive assets remain opaque. See [transparent Android icon](../transparent-android-icon/README.md) for this revision and the required physical-device check; removal of a system-generated outline is not guaranteed.
