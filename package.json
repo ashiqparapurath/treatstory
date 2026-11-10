@@ -14,7 +14,8 @@
     "audit:load": "tsx scripts/audit/load.ts",
     "audit:security": "tsx scripts/audit/security.ts",
     "audit:browser": "node scripts/audit/browser.cjs",
-    "audit:secrets": "python scripts/audit/scan-secrets.py"
+    "audit:secrets": "python scripts/audit/scan-secrets.py",
+    "splash": "node scripts/generate-pwa-splash.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "5.9.2",

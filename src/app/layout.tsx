@@ -1,5 +1,9 @@
 import type {Metadata, Viewport} from 'next';
 import{siteSocialMetadata}from'@/lib/social-metadata';
+import { PwaLaunchSplash } from '@/components/pwa-launch-splash';
+import { pwaLaunchScript } from '@/lib/pwa-launch';
+import { pwaStartupImages } from '@/lib/pwa-startup-images';
+import branding from '@/lib/pwa-branding.json';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AppInstallNotice } from '@/components/app-install-notice';
@@ -18,13 +22,14 @@ export const metadata: Metadata = {
   },
   description: 'Discover home bakes, handmade crafts, art and thoughtful finds from independent creators at TreatStory.',
   applicationName: 'TreatStory',
+  appleWebApp: { capable: true, title: 'TreatStory', statusBarStyle: 'default', startupImage: pwaStartupImages.map(({url,media})=>({url,media})) },
   icons: {
     icon: [{ url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' }],
     apple: [{ url: '/icons/app-180.png', sizes: '180x180', type: 'image/png' }],
   },
 };
 
-export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#faf8f3' };
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: branding.background };
 
 export default function RootLayout({
   children,
@@ -34,11 +39,13 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <head>
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <script dangerouslySetInnerHTML={{__html:pwaLaunchScript}} />
+        <link rel="preload" as="image" href={branding.artwork} media="(display-mode: standalone), (display-mode: minimal-ui), (display-mode: fullscreen), (display-mode: window-controls-overlay)" />
         <link rel="manifest" href="/manifest.json" crossOrigin="use-credentials" />
       </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable)}>
+        <PwaLaunchSplash />
         <FirebaseClientProvider>
           <CartProvider>
             {children}
