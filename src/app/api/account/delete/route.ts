@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       (raw as {confirm?: unknown}).confirm !== 'DELETE' || Object.keys(raw).length !== 1)
       throw new ApiError(400, 'Type DELETE to confirm permanent account deletion.');
 
-    const { auth, db, uid } = await verifiedUser(request);
+    const { auth, db, uid } = await verifiedUser(request, { allowDeleting: true });
     const token = request.headers.get('authorization')!.slice(7).trim();
     const verified = await auth.verifyIdToken(token, true);
     if (verified.uid !== uid || !verified.auth_time || Date.now() / 1000 - verified.auth_time > 300)
