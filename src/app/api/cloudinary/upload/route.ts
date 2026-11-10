@@ -77,6 +77,11 @@ export async function POST(request: NextRequest) {
     return json({ error: 'Your login session could not be verified. Sign in again.' }, 401);
   }
 
+  try {
+    if ((await getServerFirebase().db.collection('account_deletions').doc(uid).get()).exists)
+      return json({ error: 'This account is closing and cannot upload images.' }, 403);
+  } catch { return json({ error: 'Unable to check account status. Try again later.' }, 503); }
+
   const contentLength = Number(request.headers.get('content-length') || 0);
   if (contentLength > MAX_PRODUCT_BYTES + 50_000) return json({ error: 'Image upload is too large.' }, 413);
   let form: FormData;
