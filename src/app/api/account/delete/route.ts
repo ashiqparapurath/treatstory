@@ -46,28 +46,33 @@ async function purgePersonalData(db: FirebaseDb, uid: string) {
   }
   const writer = db.bulkWriter();
   writer.onWriteError(error => error.failedAttempts < 3);
+  // BulkWriter.close() resolves even when individual writes fail. Observe each
+  // write so a partial cleanup never proceeds to deleting the Auth identity.
+  const failures: Error[] = [];
+  const watch = (promise: Promise<unknown>) => { void promise.catch(error => { failures.push(error instanceof Error ? error : new Error('Data cleanup failed.')); }); };
   for (const order of buyerOrders.docs) {
-    writer.update(order.ref, {
+    watch(writer.update(order.ref, {
       buyerUid: 'deleted-account',
       customerName: 'Former TreatStory buyer',
       customerPhone: '',
       deliveryAddress: '',
       customerNote: '',
-    });
+    }));
   }
   for (const checkout of checkouts.docs) {
-    writer.update(checkout.ref, {
+    watch(writer.update(checkout.ref, {
       buyerUid: 'deleted-account',
       customerName: FieldValue.delete(),
       customerPhone: FieldValue.delete(),
       deliveryAddress: FieldValue.delete(),
       customerNote: FieldValue.delete(),
-    });
+    }));
   }
   for (const item of [...products.docs, ...reviews.docs, ...support.docs, ...uniqueDocs(quoteBuyer, quoteSeller), ...bookings.docs, ...mail.docs, ...quoteLimits.docs, ...supportLimits.docs]) {
-    writer.delete(item.ref);
+    watch(writer.delete(item.ref));
   }
   await writer.close();
+  if (failures.length) throw failures[0];
   // Delete nested items as well as parent docs (deleting a parent alone leaves subcollections).
   await Promise.all([
     db.recursiveDelete(db.collection('favorites').doc(uid)),
