@@ -32,7 +32,7 @@ function fileFormat(bytes: Uint8Array): 'image/jpeg' | 'image/png' | 'image/webp
   return null;
 }
 
-async function canUpload(projectId: string, uid: string, token: string, kind: 'banner' | 'product') {
+async function canUpload(projectId: string, uid: string, token: string, kind: 'banner' | 'product' | 'logo') {
   // Firestore REST checks read permissions with the SAME user ID token,
   // so this endpoint does not need a service-account private key.
   const docPath = kind === 'banner' ? 'roles_admin' : 'sellers';
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     return json({ error: `Choose a JPG, PNG or WebP image under ${kind === 'banner' ? '1' : '2'} MB.` }, 413);
 
   try {
-    let allowed = kind === 'reference' || await canUpload(projectId, uid, idToken, kind === 'logo' ? 'product' : kind);
+    let allowed = kind === 'reference' || await canUpload(projectId, uid, idToken, kind);
     if (!allowed && kind === 'product') allowed = await canUpload(projectId, uid, idToken, 'banner'); // Admins can manage legacy products.
     if (!allowed) return json({ error: kind === 'banner'
       ? 'Only verified TreatStory administrators can upload banners.'
