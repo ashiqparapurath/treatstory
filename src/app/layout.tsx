@@ -4,6 +4,7 @@ import { PwaLaunchSplash } from '@/components/pwa-launch-splash';
 import { pwaLaunchScript } from '@/lib/pwa-launch';
 import { pwaStartupImages } from '@/lib/pwa-startup-images';
 import branding from '@/lib/pwa-branding.json';
+import { pwaIcons } from '@/lib/pwa-icons';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AppInstallNotice } from '@/components/app-install-notice';
@@ -24,8 +25,8 @@ export const metadata: Metadata = {
   applicationName: 'TreatStory',
   appleWebApp: { capable: true, title: 'TreatStory', statusBarStyle: 'default', startupImage: pwaStartupImages.map(({url,media})=>({url,media})) },
   icons: {
-    icon: [{ url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' }],
-    apple: [{ url: '/icons/app-180.png', sizes: '180x180', type: 'image/png' }],
+    icon: [{ url: pwaIcons.favicon, sizes: 'any', type: 'image/x-icon' }],
+    apple: [{ url: pwaIcons.apple, sizes: '180x180', type: 'image/png' }],
   },
 };
 

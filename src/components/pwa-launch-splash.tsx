@@ -32,6 +32,7 @@ export function PwaLaunchSplash() {
       aria-live="polite"
     >
       <img
+        className="pwa-launch-artwork"
         src={branding.artwork}
         alt="TreatStory — Since 2026"
         width={1562}

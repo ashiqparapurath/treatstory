@@ -4,7 +4,7 @@
     "mobile splash clears after hydration, installed notice stays hidden and navigation does not replay splash",
     "desktop installed launch paints supplied artwork on matching full-screen background before hydration",
     "desktop splash clears after hydration, installed notice stays hidden and navigation does not replay splash",
-    "ordinary browser visit shows no splash and downloads no launch artwork",
+    "ordinary browser visit shows no launch cover or native startup-image downloads",
     "HTML declares installed iOS support and all 42 startup-image links; image is served as PNG",
     "blocked application scripts cannot leave a stuck launch cover",
     "JavaScript-disabled browser is never covered by the splash"
