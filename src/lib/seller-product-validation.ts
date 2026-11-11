@@ -87,7 +87,9 @@ export const saveProductRequest = z
       .string()
       .regex(/^[A-Za-z0-9_-]{1,128}$/)
       .optional(),
-    expectedUpdatedAt: z.number().finite().nonnegative().optional(),
+    // null is an explicit version marker for a legacy record without an
+    // updatedAt field; a missing marker must never allow a blind overwrite.
+    expectedUpdatedAt: z.number().finite().nonnegative().nullable().optional(),
     product: sellerProductSchema,
   })
   .strict();

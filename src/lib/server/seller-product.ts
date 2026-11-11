@@ -42,8 +42,13 @@ export async function saveSellerProduct(
             if (!existing.exists) throw new ApiError(404, "This product no longer exists.");
             if (existing.data()?.sellerId !== uid)
               throw new ApiError(403, "You can only manage your own products.");
+            const storedVersion = existing.data()?.updatedAt?.toMillis?.();
+            // For pre-versioned listings, explicitly require null. After the
+            // first save, future edits require the new Firestore timestamp.
             if (input.expectedUpdatedAt === undefined ||
-                existing.data()?.updatedAt?.toMillis?.() !== input.expectedUpdatedAt)
+                (storedVersion === undefined
+                  ? input.expectedUpdatedAt !== null
+                  : input.expectedUpdatedAt !== storedVersion))
               throw new ApiError(409, "This product changed since you opened it. Close the editor and reopen it to review current stock before saving.");
           }
           if ((quota.data()?.count || 0) >= 120)

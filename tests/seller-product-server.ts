@@ -126,6 +126,31 @@ async function main() {
   );
   console.log("PASS editing pre-SKU product with external image and two priced sizes");
 
+  // Pre-SKU listings without updatedAt use an explicit null marker.
+  const unversionedRef = db.collection("marketplace_products").doc();
+  await unversionedRef.set({
+    ...product,
+    createdAt: Timestamp.now(),
+  });
+  const unversionedUpdate = saveProductRequest.parse({
+    productId: unversionedRef.id,
+    expectedUpdatedAt: null,
+    product,
+  });
+  const unversionedSaved = await saveSellerProduct(db, uid, unversionedUpdate);
+  assert.match(unversionedSaved.sku, /^TS-[A-HJ-NP-Z2-9]{8}$/);
+  const nowVersioned = (await unversionedRef.get()).data()!;
+  assert.equal(typeof nowVersioned.updatedAt.toMillis, "function");
+  await assert.rejects(
+    () => saveSellerProduct(db, uid, unversionedUpdate),
+    (e) => (e as { status?: number }).status === 409,
+    "Null edit marker must become stale after the first save",
+  );
+  assert.equal(
+    (await db.collection("product_skus").doc(unversionedSaved.sku).get()).data()?.productId,
+    unversionedRef.id,
+  );
+
   await ref.update({updatedAt:new Timestamp(Math.floor(Date.now()/1000),123456789)});
   const stored = (await ref.get()).data()!;
   assert.equal(stored.weightOptions.length, 8);

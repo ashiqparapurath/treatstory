@@ -244,7 +244,7 @@ function SellerContent() {
       };
       const payload = { product: data, ...(editing ? {
         productId: editing.id,
-        expectedUpdatedAt: (editing.updatedAt as {toMillis?:()=>number}|undefined)?.toMillis?.(),
+        expectedUpdatedAt: (editing.updatedAt as {toMillis?:()=>number}|undefined)?.toMillis?.() ?? null,
       } : {}) };
       const validation = saveProductRequest.safeParse(payload);
       if (!validation.success) {
