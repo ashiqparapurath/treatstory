@@ -14,12 +14,16 @@
 
 ## Deployment notes
 
-1. Deploy the revised `firestore.rules` **with** the application update. Otherwise seller logo saving can fail, and stale sessions are not blocked by Firestore. The server endpoint is an additional gate, not a substitute for deployed rules.
+1. Deploy the revised `firestore.rules` **with** the application update. Otherwise seller logo saving can fail, and stale sessions are not blocked by Firestore. The server endpoint is an additional gate, not a substitute for deployed rules. **A Vercel redeploy alone does not deploy Firebase rules.** With Firebase CLI authenticated to the correct Firebase project, run `npx firebase-tools@14 deploy --only firestore:rules --project treatstory-online`. Inspect the target project and intended rules before confirming; this is a production authorization change.
 2. Confirm `FIREBASE_SERVICE_ACCOUNT_JSON` is available only as a server-side environment secret; `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` must also remain server-only.
 3. Test with dedicated demo buyer/seller accounts and Firestore/Auth emulators or isolated non-production Firebase project before deleting any real account. Do not use real customer identities to exercise irreversible deletion.
 4. Verify deletion is rejected for admin accounts, active orders, outstanding quotes, stale login sessions and concurrent checkout. Retry after simulated data-cleanup failure. Verify unrelated users and completed transaction records remain intact.
-5. Verify settings on narrow mobile (320px/375px), tablet and desktop; test uploading, removing, saving, reloading a logo, and a two-tab stale-save conflict. Check /shop/{uid} and browser tab favicon.
+5. Verify settings on narrow mobile (320px/375px), tablet and desktop; test uploading, removing, saving, reloading a logo, and a two-tab stale-save conflict. Check /shop/{uid} and browser tab favicon. The Firestore emulator test `tests/seller-store-rules.ts` exercises the exact client `runTransaction` settings payload, including `logoUrl`, and verifies that unauthorized writers and invalid logo URLs are denied. Existing sellers must have the correct `ownerUid`, active `status` and future `accessEndsAt`; their auth UID must match the seller document ID.
 6. Existing uploaded Cloudinary files require their own lifecycle policy. If legal data-erasure obligations apply, implement server-side Cloudinary asset deletion and retention controls before describing account deletion as complete erasure of all files.
+
+## Browser install notice
+
+Chrome may log `Banner not shown: beforeinstallpromptevent.preventDefault() called` because TreatStory intentionally defers the browser's native install prompt to its existing user-initiated Install button. This does **not** cause Firestore 403 errors. Keep the custom prompt behavior, manifest, PWA and installed-app icons unchanged. Its `prompt()` is called only when the user selects the install button, as required by Chrome.
 
 ## Further roadmap
 

@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { errorToast } from '@/lib/user-notices';
+import { getErrorNotice } from '@/lib/user-notices';
 
 type StoreDraft = {
   logoUrl: string;
@@ -131,8 +131,9 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
       setDirty(false);
       toast({ title: 'Store settings saved', description: 'Your storefront has been updated.' });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save changes.');
-      toast(errorToast(cause, 'save-store'));
+      const notice = getErrorNotice(cause, 'save-store');
+      setError(notice.description);
+      toast({ variant: 'destructive', title: notice.title, description: notice.description });
     } finally {
       setBusy(false);
     }

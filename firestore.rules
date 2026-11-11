@@ -175,11 +175,14 @@ service cloud.firestore {
         resource.data.status == 'active';
       allow list: if isAdmin() || resource.data.status == 'active';
       allow create, delete: if isAdmin();
+      // Owner edits are allowed only for active, unexpired sellers; the
+      // approved fields below include Cloudinary logos and storefront settings.
       allow update: if isAdmin() || (
         isSignedIn() &&
         sellerId == request.auth.uid &&
         resource.data.ownerUid == request.auth.uid &&
         resource.data.status == 'active' &&
+        resource.data.accessEndsAt > request.time &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'description', 'logoUrl', 'contactPhone', 'whatsappNumber', 'isOpen', 'updatedAt',
           'deliveryMethods', 'deliveryPincodes', 'deliveryFee', 'pickupAddress',
