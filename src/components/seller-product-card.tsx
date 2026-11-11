@@ -37,6 +37,7 @@ export function SellerProductCard({ product: p, addToBag, buyNow }: {
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/85 via-black/20 to-transparent"/>
       <Link href={`/product/seller:${encodeURIComponent(p.id)}`} aria-label={`View details and photos for ${p.name}`} className="absolute inset-0 z-10 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#c9ae85]"/>
+      {p.sku && <span className="pointer-events-none absolute left-2 top-2 z-20 rounded-full border border-white/30 bg-black/60 px-2.5 py-1.5 font-mono text-[10px] font-semibold tracking-wide text-white backdrop-blur-sm">{p.sku}</span>}
       <div className="absolute right-2 top-2 z-20"><FavoriteToggle compact productId={'seller:' + p.id} title={p.name} imageUrl={photos[0]} /></div>
       {photos.length > 1 && <>
         <button type="button" onClick={() => gallery.move(-1)} aria-label={`Previous photo of ${p.name}`} className="absolute left-2 top-1/2 z-20 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-white/30 backdrop-blur-xl text-[#29251f] shadow transition-opacity sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"><ChevronLeft className="h-4 w-4"/></button>

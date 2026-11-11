@@ -15,6 +15,7 @@ import { useScrollToTop } from '@/hooks/use-scroll-to-top';
 import { ProductImage } from '@/components/product-image';
 import { FavoriteToggle } from '@/components/favorite-toggle';
 import { ProductReviews } from '@/components/product-reviews';
+import { ProductSkuCopy } from '@/components/product-sku-copy';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
