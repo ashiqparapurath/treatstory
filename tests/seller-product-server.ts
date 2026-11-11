@@ -76,6 +76,56 @@ async function main() {
   assert.notEqual(other.sku, created.sku, "Separate listings need distinct SKUs");
   assert.equal((await db.doc("product_skus/" + other.sku).get()).data()?.productId, other.productId);
 
+  // An existing listing created before automatic SKUs has no code yet.
+  // Editing it should keep external photos and all size prices intact,
+  // and atomically reserve the first SKU without requiring a new listing.
+  const legacyRef = db.collection("marketplace_products").doc();
+  const legacyPhotos = [
+    "https://eatsdelightful.com/wp-content/uploads/2024/06/black-forest-cake-on-cake-stand-1-4-scaled.jpg",
+    "https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,c_limit,w_900/black-forest.jpg",
+  ];
+  await legacyRef.set({
+    ...product,
+    name: "Existing black forest cake",
+    price: 599,
+    imageUrls: legacyPhotos,
+    weightOptions: [
+      { value: 500, unit: "g", price: 599 },
+      { value: 1, unit: "kg", price: 1100 },
+    ],
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+    // No sku field: this represents a product saved before SKU rollout.
+  });
+  const legacyBefore = (await legacyRef.get()).data()!;
+  assert.equal(legacyBefore.sku, undefined, "Legacy listing has no SKU");
+  const legacyUpdate = saveProductRequest.parse({
+    productId: legacyRef.id,
+    expectedUpdatedAt: legacyBefore.updatedAt.toMillis(),
+    product: {
+      ...product,
+      name: "Existing black forest cake",
+      price: 599,
+      imageUrls: legacyPhotos,
+      weightOptions: [
+        { value: 500, unit: "g", price: 599 },
+        { value: 1, unit: "kg", price: 1100 },
+      ],
+    },
+  });
+  const legacySaved = await saveSellerProduct(db, uid, legacyUpdate);
+  assert.equal(legacySaved.productId, legacyRef.id);
+  assert.match(legacySaved.sku, /^TS-[A-HJ-NP-Z2-9]{8}$/);
+  const legacyAfter = (await legacyRef.get()).data()!;
+  assert.deepEqual(legacyAfter.imageUrls, legacyPhotos);
+  assert.deepEqual(legacyAfter.weightOptions, legacyUpdate.product.weightOptions);
+  assert.equal(legacyAfter.sku, legacySaved.sku);
+  assert.equal(
+    (await db.collection("product_skus").doc(legacySaved.sku).get()).data()?.productId,
+    legacyRef.id,
+  );
+  console.log("PASS editing pre-SKU product with external image and two priced sizes");
+
   await ref.update({updatedAt:new Timestamp(Math.floor(Date.now()/1000),123456789)});
   const stored = (await ref.get()).data()!;
   assert.equal(stored.weightOptions.length, 8);
