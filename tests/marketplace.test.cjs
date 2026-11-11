@@ -761,8 +761,48 @@ test('Instagram SKU codes normalize safely and match public catalog search', () 
   const serverSchema = fs.readFileSync('src/lib/server/seller-product.ts', 'utf8');
   const sellerDashboard = fs.readFileSync('src/app/seller/dashboard/page.tsx', 'utf8');
   assert.match(productApi, /invalidProductMessage\(parsed\.error\.issues\)/);
-  assert.match(productApi, /preparation days \(0–365\)/);
-  assert.match(serverSchema, /preparationDays: z\.number\(\)\.int\(\)\.min\(0\)\.max\(365\)/);
+  const sharedSchema = fs.readFileSync('src/lib/seller-product-validation.ts', 'utf8');
+  assert.match(sharedSchema, /preparation days \(0–365\)/);
+  assert.match(sharedSchema, /preparationDays: z\.number\(\)\.int\(\)\.min\(0\)\.max\(365\)/);
   assert.match(sellerDashboard, /preparationDays > 365/);
   assert.doesNotMatch(sellerDashboard, /TreatStory product save failed/);
+});
+
+
+// Ensures the browser sends exactly the same shape the API accepts, including
+// two independently priced size options and Cloudinary transform URLs.
+test('seller save validates with the server schema and does not split Cloudinary transform commas', () => {
+  const { parseProductImageUrls } = load('src/lib/product-image-urls.ts');
+  const url='https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,c_limit,w_900/product.png';
+  assert.deepEqual(Array.from(parseProductImageUrls(url)), [url]);
+  assert.deepEqual(Array.from(parseProductImageUrls(url + ',https://res.cloudinary.com/demo/image/upload/second.jpg')),
+    [url, 'https://res.cloudinary.com/demo/image/upload/second.jpg']);
+  assert.deepEqual(Array.from(parseProductImageUrls(url + '\\n' + url)), [url, url]);
+  const { saveProductRequest, invalidProductMessage } = load('src/lib/seller-product-validation.ts');
+  const product = {
+    sellerId:'seller-a',name:'Cake with two sizes',description:'Handmade',category:'Cakes',
+    price:400,imageUrls:parseProductImageUrls(url),showPrice:true,availability:'made-to-order',
+    stockQuantity:0,preparationDays:365,minimumOrderQuantity:1,
+    weightOptions:[{value:500,unit:'g',price:400},{value:1,unit:'kg',price:750}],
+    customizationOptions:[],advancePaymentRequired:false,careInstructions:'',
+    ingredients:'',allergens:[],dietaryTags:[],storageInstructions:'',status:'published'
+  };
+  assert.equal(saveProductRequest.safeParse({product}).success,true);
+  const invalidPhoto=saveProductRequest.safeParse({product:{...product,imageUrls:['https://unsafe.example/cake.jpg']}});
+  assert.equal(invalidPhoto.success,false,'unsupported image hosts remain rejected');
+  assert.match(invalidProductMessage(invalidPhoto.error.issues),/product photo links/);
+  const invalidSize=saveProductRequest.safeParse({product:{...product,weightOptions:[{value:500,unit:'g'}]}});
+  assert.equal(invalidSize.success,false);
+  assert.match(invalidProductMessage(invalidSize.error.issues),/size, weight, price or size-specific stock/);
+  const invalidPrep=saveProductRequest.safeParse({product:{...product,preparationDays:366}});
+  assert.equal(invalidPrep.success,false);
+  assert.match(invalidProductMessage(invalidPrep.error.issues),/preparation days \(0–365\)/);
+  const page=fs.readFileSync('src/app/seller/dashboard/page.tsx','utf8');
+  const editor=fs.readFileSync('src/components/seller-product-editor.tsx','utf8');
+  const server=fs.readFileSync('src/lib/server/seller-product.ts','utf8');
+  assert.match(page,/saveProductRequest.safeParse\(payload\)/);
+  assert.match(page,/JSON.stringify\(validation.data\)/);
+  assert.match(page,/parseProductImageUrls\(draft.imageUrls\)/);
+  assert.match(editor,/parseProductImageUrls\(draft.imageUrls\)/);
+  assert.match(server,/from "@\/lib\/seller-product-validation"/);
 });

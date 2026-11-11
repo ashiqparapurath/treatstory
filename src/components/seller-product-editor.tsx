@@ -4,6 +4,7 @@ import { useState, type Dispatch, type FormEvent, type SetStateAction } from 're
 import { Plus, Trash2, X, Sparkles, ChevronDown, ImagePlus, ArrowLeft, ArrowRight } from 'lucide-react';
 import type { MarketplaceProduct } from '@/lib/marketplace-types';
 import { ProductSkuCopy } from '@/components/product-sku-copy';
+import { parseProductImageUrls } from '@/lib/product-image-urls';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -65,7 +66,7 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
   if (!open) return null;
   const set = <K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) => setDraft(d => ({ ...d, [key]: value }));
   const allCategories = [...new Set([...presets, ...categories])].filter(Boolean).sort((a,b) => a.localeCompare(b));
-  const photos = draft.imageUrls.split(/\r?\n|,/).map(x => x.trim()).filter(Boolean);
+  const photos = parseProductImageUrls(draft.imageUrls);
   const photoCount = photos.length;
   const arrangePhotos = (next: string[]) => set('imageUrls', next.join('\n'));
   const shiftPhoto = (index: number, delta: number) => {

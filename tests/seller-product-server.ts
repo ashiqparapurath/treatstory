@@ -58,6 +58,14 @@ async function main() {
   const updatedMaximum = { ...product, preparationDays: 365, weightOptions: product.weightOptions.slice(0, 2) };
   assert.equal(saveProductRequest.safeParse({ product: updatedMaximum }).success, true, "Two sizes and 365 preparation days are valid");
   assert.equal(saveProductRequest.safeParse({ product: { ...updatedMaximum, preparationDays: 366 } }).success, false);
+  const withTwoSizes = {
+    ...product,
+    preparationDays: 365,
+    weightOptions: product.weightOptions.slice(0, 2),
+    imageUrls: ['https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,c_limit,w_900/cake.png'],
+  };
+  assert.equal(saveProductRequest.safeParse({ product: withTwoSizes }).success, true);
+  assert.equal(saveProductRequest.safeParse({ product: { ...withTwoSizes, preparationDays: 366 } }).success, false);
   const input = saveProductRequest.parse({ product });
   const created = await saveSellerProduct(db, uid, input);
   assert.match(created.sku, /^TS-[A-HJ-NP-Z2-9]{8}$/);

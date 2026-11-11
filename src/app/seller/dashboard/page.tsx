@@ -21,6 +21,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { MarketplaceProduct, SellerApplication } from '@/lib/marketplace-types';
 import { LayoutDashboard, Package, Settings, ShoppingBag, Plus, ArrowUpRight, Clock3, Store, Trash2, Pencil, CheckCircle2, AlertCircle, LogOut } from 'lucide-react';
 import { SellerProductEditor, emptyDraft, type ProductDraft } from '@/components/seller-product-editor';
+import { parseProductImageUrls } from '@/lib/product-image-urls';
+import { saveProductRequest, invalidProductMessage } from '@/lib/seller-product-validation';
 import { ProductSkuCopy } from '@/components/product-sku-copy';
 import { SellerStoreSettings } from '@/components/seller-store-settings';
 import { uploadTreatStoryPhoto } from '@/lib/cloudinary-upload';
@@ -138,7 +140,7 @@ function SellerContent() {
 
   async function uploadProductPhotos(files: File[]) {
     if (!user || !active || uploadingPhotos || busy || !files.length) return;
-    const currentCount = draft.imageUrls.split(/\r?\n|,/).filter(x => x.trim()).length;
+    const currentCount = parseProductImageUrls(draft.imageUrls).length;
     if (currentCount + files.length > 10) {
       toast({ variant: 'destructive', title: 'Maximum 10 photos', description: 'Remove some photos before adding more.' });
       return;
@@ -158,7 +160,7 @@ function SellerContent() {
         uploaded++;
         setDraft(previous => ({
           ...previous,
-          imageUrls: [...previous.imageUrls.split(/\r?\n|,/).map(v => v.trim()).filter(Boolean), url].join('\n'),
+          imageUrls: [...parseProductImageUrls(previous.imageUrls), url].join('\n'),
         }));
       }
       setUploadProgress(`${files.length} photo(s) uploaded`);
@@ -179,7 +181,7 @@ function SellerContent() {
     const basePrice = baseEntered ? Number(draft.price) : null;
     if (baseEntered && (!Number.isFinite(basePrice) || basePrice! < 0 || basePrice! > 10000000))
       return toast({ variant: 'destructive', title: 'Enter a valid base price' });
-    const imageUrls = draft.imageUrls.split(/\n|,/).map(v => v.trim()).filter(Boolean);
+    const imageUrls = parseProductImageUrls(draft.imageUrls);
     if (imageUrls.some(url => !/^https:\/\//i.test(url))) return toast({ variant: 'destructive', title: 'Image links must use HTTPS' });
     if (imageUrls.length > 10) return toast({ variant: 'destructive', title: 'Add up to 10 product photos' });
     const options = draft.customizationOptions.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
@@ -240,8 +242,19 @@ function SellerContent() {
 
         status: draft.status
       };
+      const payload = { product: data, ...(editing ? {
+        productId: editing.id,
+        expectedUpdatedAt: (editing.updatedAt as {toMillis?:()=>number}|undefined)?.toMillis?.(),
+      } : {}) };
+      const validation = saveProductRequest.safeParse(payload);
+      if (!validation.success) {
+        const message = invalidProductMessage(validation.error.issues);
+        setSaveError(message);
+        toast({ variant: 'destructive', title: 'Check product details', description: message });
+        return;
+      }
       const token=await user.getIdToken();
-      const response=await fetch('/api/seller/products',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({product:data,...(editing?{productId:editing.id,expectedUpdatedAt:(editing.updatedAt as {toMillis?:()=>number}|undefined)?.toMillis?.()}:{})})});
+      const response=await fetch('/api/seller/products',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(validation.data)});
       const result=await response.json();if(!response.ok)throw new ActionError(result.error||'Could not save product.',response.status);
       setCountVersion(v => v + 1);
       toast({title:draft.status==='draft'?'Product draft saved':editing?'Product updated':'Product published',description:draft.status==='draft'?`Your draft is saved with SKU ${result.sku}. Publish it when you are ready.`:`${draft.name.trim()} is saved. Share SKU ${result.sku} in your Instagram reel so buyers can find it.`});
