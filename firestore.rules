@@ -302,150 +302,7 @@ service cloud.firestore {
         'advancePaymentRequired', 'careInstructions', 'ingredients', 'allergens', 'dietaryTags', 'shelfLifeDays', 'storageInstructions',
         'status', 'createdAt', 'updatedAt', 'sku'
       ]) &&
-      (!('sku' in p) || (p.sku is string && p.sku.matches('^TS-[A-HJ-NP-Z2-9]{8}
-      p.name is string && p.name.size() >= 2 && p.name.size() <= 120 &&
-      p.description is string && p.description.size() <= 2000 &&
-      p.category is string && p.category.size() > 0 && p.category.size() <= 80 &&
-      p.price is number && p.price >= 0 && p.price <= 10000000 &&
-      p.imageUrls is list && p.imageUrls.size() <= 10 &&
-      (!changed.hasAny(['imageUrls']) || validProductImages(p.imageUrls)) &&
-      p.showPrice is bool &&
-      p.availability in ['available', 'unavailable', 'made-to-order'] &&
-      p.stockQuantity is int && p.stockQuantity >= 0 &&
-      p.preparationDays is int && p.preparationDays >= 0 &&
-      p.status in ['draft', 'published'] &&
-      (!('minimumOrderQuantity' in p) || (p.minimumOrderQuantity is int && p.minimumOrderQuantity >= 1 && p.minimumOrderQuantity <= 99)) &&
-      (!('weightValue' in p) || (p.weightValue is number && p.weightValue > 0 && p.weightValue <= 100000)) &&
-      (!('weightUnit' in p) || p.weightUnit in ['g', 'kg', 'ml', 'l', 'pieces']) &&
-      (!changed.hasAny(['weightOptions']) || !('weightOptions' in p) || validWeightOptions(p.weightOptions, previousWeights)) &&
-      (('weightValue' in p) == ('weightUnit' in p)) &&
-      (!('advancePaymentRequired' in p) || p.advancePaymentRequired is bool) &&
-      (!('careInstructions' in p) || (p.careInstructions is string && p.careInstructions.size() <= 500)) &&
-      (!changed.hasAny(['customizationOptions']) || !('customizationOptions' in p) || validCustomizationPrompts(p.customizationOptions)) &&
-      (!('ingredients' in p) || (p.ingredients is string && p.ingredients.size() <= 1000)) &&
-      (!('storageInstructions' in p) || (p.storageInstructions is string && p.storageInstructions.size() <= 500)) &&
-      (!('shelfLifeDays' in p) || (p.shelfLifeDays is int && p.shelfLifeDays >= 0 && p.shelfLifeDays <= 365)) &&
-      (!changed.hasAny(['allergens']) || !('allergens' in p) || validFoodLabels(p.allergens)) &&
-      (!changed.hasAny(['dietaryTags']) || !('dietaryTags' in p) || validFoodLabels(p.dietaryTags)) &&
-
-      p.createdAt is timestamp && p.updatedAt is timestamp;
-    }
-
-    // Registry records are server-only; private drafts cannot be discovered by SKU.
-    match /product_skus/{sku} { allow read, write: if false; }
-
-    match /marketplace_products/{productId} {
-      // Public queries must include where('status', '==', 'published').
-      // Seller dashboard queries must include where('sellerId', '==', auth.uid).
-      allow get, list: if isAdmin() ||
-        (isSignedIn() && resource.data.sellerId == request.auth.uid) ||
-        resource.data.status == 'published';
-      allow create: if sellerActive(request.resource.data.sellerId) &&
-        !('sku' in request.resource.data) &&
-        request.resource.data.sellerId == request.auth.uid &&
-        validMarketplaceProduct(request.resource.data, request.resource.data.keys().toSet(), []) &&
-        request.resource.data.createdAt == request.time &&
-        request.resource.data.updatedAt == request.time;
-      allow update: if sellerActive(resource.data.sellerId) &&
-        resource.data.sellerId == request.auth.uid &&
-        request.resource.data.sellerId == resource.data.sellerId &&
-        request.resource.data.get('sku', '') == resource.data.get('sku', '') &&
-        request.resource.data.createdAt == resource.data.createdAt &&
-        validMarketplaceProduct(request.resource.data, request.resource.data.diff(resource.data).affectedKeys(), resource.data.get('weightOptions', [])) &&
-        request.resource.data.updatedAt == request.time;
-      allow delete: if sellerActive(resource.data.sellerId) &&
-        resource.data.sellerId == request.auth.uid;
-      allow create, update, delete: if isAdmin();
-    }
-    // Order creation is server-only. Direct client writes bypass transactional inventory checks.
-
-    match /product_reviews/{reviewId} {
-      allow get, list: if isAdmin() ||
-        resource.data.status == 'published' ||
-        (isSignedIn() && resource.data.buyerUid == request.auth.uid);
-      allow create, update, delete: if false;
-    }
-    match /support_tickets/{ticketId} {
-      allow get, list: if isAdmin() ||
-        (isSignedIn() && resource.data.ownerUid == request.auth.uid);
-      allow create, update, delete: if false;
-    }
-    match /support_limits/{limitId} {
-      allow read, write: if false;
-    }
-    match /favorites/{uid}/items/{productId} {
-      allow get, list, delete: if isSignedIn() && request.auth.uid == uid;
-      allow create: if isSignedIn() && request.auth.uid == uid &&
-        request.resource.data.keys().hasOnly(['productId','title','imageUrl','createdAt']) &&
-        request.resource.data.keys().hasAll(['productId','title','imageUrl','createdAt']) &&
-        request.resource.data.productId == productId &&
-        request.resource.data.title is string &&
-        request.resource.data.title.size() >= 1 && request.resource.data.title.size() <= 120 &&
-        request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 2000 &&
-        request.resource.data.createdAt == request.time;
-      allow update: if false;
-    }
-    match /geocoding_limits/{id} { allow read, write: if false; }
-    match /customer_address_books/{uid} {
-      allow get: if isSignedIn() && request.auth.uid == uid;
-      allow list, create, update, delete: if false;
-    }
-    match /customer_addresses/{uid} {
-      allow get: if isSignedIn() && request.auth.uid == uid;
-      allow list, delete: if false;
-      allow create, update: if isSignedIn() && request.auth.uid == uid &&
-        request.resource.data.keys().hasOnly(['recipient','phone','line1','locality','district','state','pincode','updatedAt']) &&
-        request.resource.data.keys().hasAll(['recipient','phone','line1','locality','district','state','pincode','updatedAt']) &&
-        request.resource.data.recipient is string && request.resource.data.recipient.size() > 0 && request.resource.data.recipient.size() <= 120 &&
-        request.resource.data.phone is string && request.resource.data.phone.size() >= 5 && request.resource.data.phone.size() <= 40 &&
-        request.resource.data.line1 is string && request.resource.data.line1.size() >= 10 && request.resource.data.line1.size() <= 600 &&
-        request.resource.data.locality is string && request.resource.data.locality.size() <= 120 &&
-        request.resource.data.district is string && request.resource.data.district.size() > 0 && request.resource.data.district.size() <= 120 &&
-        request.resource.data.state is string && request.resource.data.state.size() > 0 && request.resource.data.state.size() <= 120 &&
-        request.resource.data.pincode is string && request.resource.data.pincode.matches('^[0-9]{6}$') &&
-        request.resource.data.updatedAt == request.time;
-    }
-
-    match /mail_outbox/{id} { allow read, write: if false; }
-    match /mail_limits/{id} { allow read, write: if false; }
-
-    match /checkout_limits/{id} { allow read, write: if false; }
-    match /checkout_orders/{checkoutId} {
-      allow read, write: if false;
-    }
-
-    match /seller_orders/{orderId} {
-      allow get, list: if isAdmin() ||
-        (isSignedIn() && resource.data.buyerUid == request.auth.uid) ||
-        (isSignedIn() && resource.data.sellerId == request.auth.uid);
-      allow create, update, delete: if false;
-    }
-    match /custom_quotes/{quoteId} {
-      allow get, list: if isAdmin() ||
-        (isSignedIn() && resource.data.buyerUid == request.auth.uid) ||
-        (isSignedIn() && resource.data.sellerId == request.auth.uid);
-      allow create, update, delete: if false;
-    }
-    match /quote_limits/{quotaId} {
-      allow read, write: if false;
-    }
-    match /seller_bookings/{bookingId} {
-      allow read, write: if false;
-    }
-    match /notifications/{uid}/items/{itemId} {
-      allow get, list: if isSignedIn() && request.auth.uid == uid;
-      allow create, update, delete: if false;
-    }
-    match /conversations/{conversationId}/{nested=**} {
-      allow read, write: if false;
-    }
-    match /audit_logs/{logId} {
-      allow read, write: if false;
-    }
-
-  }
-}
-))) &&
+      (!('sku' in p) || (p.sku is string && p.sku.matches('^TS-[A-HJ-NP-Z2-9]{8}$'))) &&
       p.sellerId is string &&
       p.name is string && p.name.size() >= 2 && p.name.size() <= 120 &&
       p.description is string && p.description.size() <= 2000 &&
@@ -475,6 +332,9 @@ service cloud.firestore {
       p.createdAt is timestamp && p.updatedAt is timestamp;
     }
 
+    // SKU reservations are server-owned; private drafts cannot be found through the registry.
+    match /product_skus/{sku} { allow read, write: if false; }
+
     match /marketplace_products/{productId} {
       // Public queries must include where('status', '==', 'published').
       // Seller dashboard queries must include where('sellerId', '==', auth.uid).
@@ -482,6 +342,7 @@ service cloud.firestore {
         (isSignedIn() && resource.data.sellerId == request.auth.uid) ||
         resource.data.status == 'published';
       allow create: if sellerActive(request.resource.data.sellerId) &&
+        !('sku' in request.resource.data) &&
         request.resource.data.sellerId == request.auth.uid &&
         validMarketplaceProduct(request.resource.data, request.resource.data.keys().toSet(), []) &&
         request.resource.data.createdAt == request.time &&
@@ -489,6 +350,7 @@ service cloud.firestore {
       allow update: if sellerActive(resource.data.sellerId) &&
         resource.data.sellerId == request.auth.uid &&
         request.resource.data.sellerId == resource.data.sellerId &&
+        request.resource.data.get('sku', '') == resource.data.get('sku', '') &&
         request.resource.data.createdAt == resource.data.createdAt &&
         validMarketplaceProduct(request.resource.data, request.resource.data.diff(resource.data).affectedKeys(), resource.data.get('weightOptions', [])) &&
         request.resource.data.updatedAt == request.time;
