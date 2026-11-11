@@ -751,6 +751,12 @@ test('Instagram SKU codes normalize safely and match public catalog search', () 
   const skuRoute = fs.readFileSync('src/app/api/products/sku/route.ts', 'utf8');
   assert.match(skuRoute, /Response\.json\(\{ sku, productId, name \}/);
   assert.doesNotMatch(shop + home, /<SkuLookup/);
+  assert.equal((shop.match(/aria-label="Search products"/g) || []).length, 1, 'Shop All should expose one unified normal search field');
+  assert.match(shop, /<SellerStorefrontProducts searchTerm=\{searchTerm\}/);
+  assert.match(shop, /<ProductGridContainer products=\{products\|\|\[\]\} externalSearchTerm=\{searchTerm\}/);
+  assert.match(shop, /exactSku \? <SkuSearchResult sku=\{exactSku\}/);
+  assert.match(sellerSearch, /searchTerm === undefined && <div/);
+  assert.match(legacySearch, /externalSearchTerm === undefined && <div/);
   const productApi = fs.readFileSync('src/app/api/seller/products/route.ts', 'utf8');
   const serverSchema = fs.readFileSync('src/lib/server/seller-product.ts', 'utf8');
   const sellerDashboard = fs.readFileSync('src/app/seller/dashboard/page.tsx', 'utf8');

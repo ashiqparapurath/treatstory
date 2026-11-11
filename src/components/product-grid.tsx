@@ -11,15 +11,16 @@ import { Button } from '@/components/ui/button';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
-interface ProductGridContainerProps { products: Product[]; hasMore?: boolean; loadingMore?: boolean; loadMore?: () => Promise<void>; }
+interface ProductGridContainerProps { products: Product[]; hasMore?: boolean; loadingMore?: boolean; loadMore?: () => Promise<void>; externalSearchTerm?: string; }
 interface ProductGridProps extends ProductGridContainerProps { categories: string[]; initialCategory: string | null; }
 
-function ProductGrid({ products, categories, initialCategory, hasMore, loadingMore, loadMore }: ProductGridProps) {
-  const [searchTerm, setSearchTerm] = useState('');
+function ProductGrid({ products, categories, initialCategory, hasMore, loadingMore, loadMore, externalSearchTerm }: ProductGridProps) {
+  const [ownSearchTerm, setOwnSearchTerm] = useState('');
+  const searchTerm = externalSearchTerm ?? ownSearchTerm;
   const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'All');
 
   const deferredSearch = useDeferredValue(searchTerm);
-  const sku = normalizeProductSku(deferredSearch);
+  const sku = externalSearchTerm === undefined ? normalizeProductSku(deferredSearch) : null;
   const [visibleCount, setVisibleCount] = useState(24);
   useEffect(() => setSelectedCategory(initialCategory || 'All'), [initialCategory]);
   useEffect(() => setVisibleCount(24), [deferredSearch, selectedCategory]);
@@ -38,7 +39,7 @@ function ProductGrid({ products, categories, initialCategory, hasMore, loadingMo
   return (
     <div>
       <div className="mb-7 flex flex-col gap-4 border-b border-[#e9e2d8] pb-6 lg:mb-9 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full lg:max-w-[340px]">
+        {externalSearchTerm === undefined && <div className="relative w-full lg:max-w-[340px]">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
@@ -46,9 +47,9 @@ function ProductGrid({ products, categories, initialCategory, hasMore, loadingMo
             aria-label="Search products"
             className="h-12 rounded-full border-[#e6ded2] bg-white pl-11 text-sm shadow-none placeholder:text-muted-foreground/70 focus-visible:ring-[#b99a70]"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setOwnSearchTerm(e.target.value)}
           />
-        </div>
+        </div>}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           <SlidersHorizontal className="mr-1 h-4 w-4 shrink-0 text-muted-foreground" />
           {categories.map((category) => (
