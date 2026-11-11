@@ -777,7 +777,7 @@ test('seller save validates with the server schema and does not split Cloudinary
   assert.deepEqual(Array.from(parseProductImageUrls(url)), [url]);
   assert.deepEqual(Array.from(parseProductImageUrls(url + ',https://res.cloudinary.com/demo/image/upload/second.jpg')),
     [url, 'https://res.cloudinary.com/demo/image/upload/second.jpg']);
-  assert.deepEqual(Array.from(parseProductImageUrls(url + '\\n' + url)), [url, url]);
+  assert.deepEqual(Array.from(parseProductImageUrls(url + String.fromCharCode(10) + url)), [url, url]);
   const { saveProductRequest, invalidProductMessage } = load('src/lib/seller-product-validation.ts');
   const product = {
     sellerId:'seller-a',name:'Cake with two sizes',description:'Handmade',category:'Cakes',
