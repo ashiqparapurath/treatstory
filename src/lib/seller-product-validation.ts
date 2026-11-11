@@ -4,27 +4,41 @@ import { z } from "zod";
 // Admin SDK or server-only dependencies.
 const unit = z.enum(["g", "kg", "ml", "l", "pieces"]);
 const price = z.number().finite().min(0).max(10000000);
-const image = z
-  .string()
-  .max(2048)
-  .url()
-  .refine((value) => {
+/**
+ * Product photos are rendered as browser-side, unoptimized <img> elements for
+ * hosts outside the trusted optimization list (see canOptimizeImage).
+ * Allow ordinary public HTTPS photo URLs, including WordPress photo hosts,
+ * without letting sellers supply local, IP-literal, credentialed or custom-port
+ * addresses. Do not use this predicate as authorization for server-side fetches.
+ */
+export function isPublicProductImageUrl(value: string): boolean {
+  try {
     const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    const parts = host.split(".");
+    const blocked = new Set([
+      "localhost", "local", "internal", "lan", "home", "test",
+      "invalid", "example", "onion", "arpa",
+    ]);
     return (
       url.protocol === "https:" &&
       !url.username &&
       !url.password &&
       !url.port &&
-      [
-        "res.cloudinary.com",
-        "firebasestorage.googleapis.com",
-        "images.unsplash.com",
-        "placehold.co",
-        "picsum.photos",
-        "lh3.googleusercontent.com",
-      ].includes(url.hostname)
+      parts.length >= 2 &&
+      !blocked.has(parts.at(-1) || "") &&
+      parts.every(part => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(part)) &&
+      /^(?:[a-z]{2,63}|xn--[a-z0-9-]{2,59})$/.test(parts.at(-1) || "")
     );
-  }, "Use a supported image host.");
+  } catch {
+    return false;
+  }
+}
+const image = z
+  .string()
+  .max(2048)
+  .url()
+  .refine(isPublicProductImageUrl, "Enter a public HTTPS image URL.");
 export const sellerProductSchema = z
   .object({
     sellerId: z.string().min(1).max(128),
@@ -86,7 +100,7 @@ export function invalidProductMessage(issues: Array<{ path: PropertyKey[] }>) {
     description: "description (up to 2,000 characters)",
     category: "category",
     price: "selling price",
-    imageUrls: "product photo links (supported HTTPS hosts only)",
+    imageUrls: "product photo links (public HTTPS addresses only; no localhost or private network URLs)",
     showPrice: "price visibility",
     availability: "availability",
     stockQuantity: "stock quantity",

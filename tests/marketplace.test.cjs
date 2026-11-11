@@ -788,8 +788,29 @@ test('seller save validates with the server schema and does not split Cloudinary
     ingredients:'',allergens:[],dietaryTags:[],storageInstructions:'',status:'published'
   };
   assert.equal(saveProductRequest.safeParse({product}).success,true);
+  const { isPublicProductImageUrl } = load('src/lib/seller-product-validation.ts');
+  const externalPhoto='https://eatsdelightful.com/wp-content/uploads/2024/06/black-forest-cake-on-cake-stand-1-4-scaled.jpg';
+  assert.equal(isPublicProductImageUrl(externalPhoto),true, 'WordPress-hosted photo URL is allowed');
+  assert.equal(saveProductRequest.safeParse({product:{...product,imageUrls:[externalPhoto,url]}}).success,true,
+    'seller can save a WordPress photo alongside a Cloudinary upload');
+  for (const badUrl of [
+    'http://eatsdelightful.com/cake.jpg',
+    'https://localhost/photo.jpg',
+    'https://127.0.0.1/photo.jpg',
+    'https://192.168.1.1/photo.jpg',
+    'https://[::1]/photo.jpg',
+    'https://10.0.0.1/photo.jpg',
+    'https://private.internal/photo.jpg',
+    'https://private.local/photo.jpg',
+    'https://unsafe.example/cake.jpg',
+    'https://user:secret@eatsdelightful.com/photo.jpg',
+    'https://eatsdelightful.com:8443/photo.jpg',
+  ]) {
+    assert.equal(isPublicProductImageUrl(badUrl),false,badUrl);
+    assert.equal(saveProductRequest.safeParse({product:{...product,imageUrls:[badUrl]}}).success,false,badUrl);
+  }
   const invalidPhoto=saveProductRequest.safeParse({product:{...product,imageUrls:['https://unsafe.example/cake.jpg']}});
-  assert.equal(invalidPhoto.success,false,'unsupported image hosts remain rejected');
+  assert.equal(invalidPhoto.success,false,'local and reserved image hosts remain rejected');
   assert.match(invalidProductMessage(invalidPhoto.error.issues),/product photo links/);
   const invalidSize=saveProductRequest.safeParse({product:{...product,weightOptions:[{value:500,unit:'g'}]}});
   assert.equal(invalidSize.success,false);
