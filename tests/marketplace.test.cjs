@@ -751,4 +751,12 @@ test('Instagram SKU codes normalize safely and match public catalog search', () 
   const skuRoute = fs.readFileSync('src/app/api/products/sku/route.ts', 'utf8');
   assert.match(skuRoute, /Response\.json\(\{ sku, productId, name \}/);
   assert.doesNotMatch(shop + home, /<SkuLookup/);
+  const productApi = fs.readFileSync('src/app/api/seller/products/route.ts', 'utf8');
+  const serverSchema = fs.readFileSync('src/lib/server/seller-product.ts', 'utf8');
+  const sellerDashboard = fs.readFileSync('src/app/seller/dashboard/page.tsx', 'utf8');
+  assert.match(productApi, /invalidProductMessage\(parsed\.error\.issues\)/);
+  assert.match(productApi, /preparation days \(0–365\)/);
+  assert.match(serverSchema, /preparationDays: z\.number\(\)\.int\(\)\.min\(0\)\.max\(365\)/);
+  assert.match(sellerDashboard, /preparationDays > 365/);
+  assert.doesNotMatch(sellerDashboard, /TreatStory product save failed/);
 });

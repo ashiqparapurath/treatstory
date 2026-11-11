@@ -10,3 +10,7 @@ Every product saved through the seller's **New product** action receives a serve
 - Existing products: legacy listings are not modified silently. Saving an edit to an old listing without a code will generate it. The seller dashboard marks listings that still need an SKU. Do not invent codes for old products before they are saved via the server.
 - Deploy: the website requires the configured server-side Firebase Admin credentials. **Deploy `firestore.rules` to `treatstory-online` separately**; a Vercel deployment alone cannot publish Firestore security rules. No new composite Firestore index is needed because a SKU lookup is a direct document read.
 - QA: test unique SKUs for two new products, stable SKUs after edits, ordinary name search, exact SKU search for a product beyond the first page, draft search 404, published search success, deleted product search 404, mobile search, copy-to-clipboard and denied client attempts to set or change SKU. Verify npm tests, emulator tests, TypeScript checks and production build.
+
+## Product save validation
+
+The seller editor and server now agree on preparation times of 0–365 days. If the server rejects a request with HTTP 400, the response contains only human-friendly form-field labels (not product content, tokens or provider internals); the editor preserves the unsaved draft and displays the error without an unhelpful `code: unknown` console message.

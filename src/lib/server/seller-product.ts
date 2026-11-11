@@ -43,7 +43,7 @@ export const sellerProductSchema = z
     showPrice: z.boolean(),
     availability: z.enum(["available", "unavailable", "made-to-order"]),
     stockQuantity: z.number().int().min(0).max(1000000),
-    preparationDays: z.number().int().min(0).max(90),
+    preparationDays: z.number().int().min(0).max(365),
     minimumOrderQuantity: z.number().int().min(1).max(99),
     weightOptions: z
       .array(

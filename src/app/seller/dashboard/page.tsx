@@ -247,8 +247,7 @@ function SellerContent() {
       toast({title:draft.status==='draft'?'Product draft saved':editing?'Product updated':'Product published',description:draft.status==='draft'?`Your draft is saved with SKU ${result.sku}. Publish it when you are ready.`:`${draft.name.trim()} is saved. Share SKU ${result.sku} in your Instagram reel so buyers can find it.`});
       setFormOpen(false);
     } catch (error) {
-      const code = (error as {code?: string})?.code || 'unknown';
-      console.error('TreatStory product save failed', { code, operation: editing ? 'update' : 'create', sizes: weights.length, allergens: allergens.length, dietaryLabels: dietaryTags.length });
+      // Expected validation responses are shown in the form; don't log them as opaque SDK failures.
       const notice=errorToast(error,'save-product');
       setSaveError(`${notice.title}. ${notice.description}`);toast(notice);
     }
