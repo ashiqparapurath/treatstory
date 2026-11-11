@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   applicationName: 'TreatStory',
   appleWebApp: { capable: true, title: 'TreatStory', statusBarStyle: 'default', startupImage: pwaStartupImages.map(({url,media})=>({url,media})) },
   icons: {
-    icon: [{ url: pwaIcons.favicon, sizes: 'any', type: 'image/x-icon' }],
+    icon: [{ url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' }],
     apple: [{ url: pwaIcons.apple, sizes: '180x180', type: 'image/png' }],
   },
 };
@@ -39,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <head>
-        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <link rel="manifest" href="/manifest.json" crossOrigin="use-credentials" />
       </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable)}>

@@ -33,7 +33,7 @@ export function getServerFirebase() {
   }
 }
 
-export async function verifiedUser(request: NextRequest) {
+export async function verifiedUser(request: NextRequest, options: { allowDeleting?: boolean } = {}) {
   const bearer = request.headers.get('authorization') || '';
   if (!bearer.startsWith('Bearer ') || !bearer.slice(7).trim()) throw new ApiError(401, 'Sign in to continue.');
   const firebase = getServerFirebase();
@@ -42,6 +42,8 @@ export async function verifiedUser(request: NextRequest) {
     const user = await firebase.auth.verifyIdToken(bearer.slice(7).trim(), true);
     uid = user.uid;
   } catch { throw new ApiError(401, 'Your session has expired. Please sign in again.'); }
+  if (!options.allowDeleting && (await firebase.db.collection('account_deletions').doc(uid).get()).exists)
+    throw new ApiError(403, 'This account is being deleted. Sign-in and account actions are disabled.');
   return { ...firebase, uid };
 }
 export class ApiError extends Error {

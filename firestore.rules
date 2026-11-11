@@ -28,7 +28,8 @@ service cloud.firestore {
      * @principle Verified Identity: Ensures that all authorization decisions are based on a verified user identity.
      */
     function isSignedIn() {
-      return request.auth != null;
+      return request.auth != null &&
+        !exists(/databases/$(database)/documents/account_deletions/$(request.auth.uid));
     }
 
     /**
@@ -50,6 +51,9 @@ service cloud.firestore {
      * @deny (write) A non-admin attempts to manage a product.
      * @principle Public Read, Admin Write: Allows public visibility of products while securing management.
      */
+    // Permanent, server-owned account deletion marker: deny stale authenticated sessions.
+    match /account_deletions/{uid} { allow read, write: if false; }
+
     match /products/{productId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -171,16 +175,24 @@ service cloud.firestore {
         resource.data.status == 'active';
       allow list: if isAdmin() || resource.data.status == 'active';
       allow create, delete: if isAdmin();
+      // Owner edits are allowed only for active, unexpired sellers; the
+      // approved fields below include Cloudinary logos and storefront settings.
       allow update: if isAdmin() || (
         isSignedIn() &&
         sellerId == request.auth.uid &&
         resource.data.ownerUid == request.auth.uid &&
         resource.data.status == 'active' &&
+        resource.data.accessEndsAt > request.time &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'description', 'contactPhone', 'whatsappNumber', 'isOpen', 'updatedAt',
+          'description', 'logoUrl', 'contactPhone', 'whatsappNumber', 'isOpen', 'updatedAt',
           'deliveryMethods', 'deliveryPincodes', 'deliveryFee', 'pickupAddress',
           'deliverySlots', 'dailyOrderCapacity', 'acceptanceHours'
         ]) &&
+        (!('logoUrl' in request.resource.data) ||
+          (request.resource.data.logoUrl is string &&
+            request.resource.data.logoUrl.size() <= 2048 &&
+            (request.resource.data.logoUrl == '' ||
+             request.resource.data.logoUrl.matches('^https://res[.]cloudinary[.]com/[A-Za-z0-9_-]+/image/upload/.*$')))) &&
         request.resource.data.description is string &&
         request.resource.data.description.size() <= 2000 &&
         request.resource.data.contactPhone is string &&

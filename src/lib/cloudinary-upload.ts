@@ -3,7 +3,7 @@ import { ActionError } from '@/lib/user-notices';
 
 import type { User } from 'firebase/auth';
 
-export type ImageKind = 'banner' | 'product' | 'reference';
+export type ImageKind = 'banner' | 'product' | 'reference' | 'logo';
 
 /** Uploads only after the server verifies the Firebase ID token and role. */
 export async function uploadTreatStoryPhoto(user: User, file: File, kind: ImageKind): Promise<string> {

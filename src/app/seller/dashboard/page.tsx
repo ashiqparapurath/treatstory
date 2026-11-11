@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { MarketplaceProduct, SellerApplication } from '@/lib/marketplace-types';
 import { LayoutDashboard, Package, Settings, ShoppingBag, Plus, ArrowUpRight, Clock3, Store, Trash2, Pencil, CheckCircle2, AlertCircle, LogOut } from 'lucide-react';
 import { SellerProductEditor, emptyDraft, type ProductDraft } from '@/components/seller-product-editor';
+import { SellerStoreSettings } from '@/components/seller-store-settings';
 import { uploadTreatStoryPhoto } from '@/lib/cloudinary-upload';
 
 type Section = 'overview' | 'products' | 'orders' | 'store';
@@ -65,20 +66,7 @@ function SellerContent() {
   const [uploadProgress, setUploadProgress] = useState('');
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState('');
-  const [storeDraft, setStoreDraft] = useState({ description: '', contactPhone: '', whatsappNumber: '', isOpen: true,
-    deliveryMethods: ['delivery'] as Array<'delivery'|'pickup'>, deliveryPincodes: '', deliveryFee: '0',
-    pickupAddress: '', deliverySlots: '', dailyOrderCapacity: '0', acceptanceHours: '24' });
-
   useEffect(() => { if (!isUserLoading && !user) router.replace('/login'); }, [isUserLoading, user, router]);
-  useEffect(() => {
-    if (seller) setStoreDraft({ description: seller.description, contactPhone: seller.contactPhone,
-      whatsappNumber: seller.whatsappNumber || '', isOpen: seller.isOpen,
-      deliveryMethods: seller.deliveryMethods?.length ? seller.deliveryMethods : ['delivery'],
-      deliveryPincodes: (seller.deliveryPincodes || []).join('\\n'), deliveryFee: String(seller.deliveryFee ?? 0),
-      pickupAddress: seller.pickupAddress || '', deliverySlots: (seller.deliverySlots || []).join('\\n'),
-      dailyOrderCapacity: String(seller.dailyOrderCapacity ?? 0), acceptanceHours: String(seller.acceptanceHours ?? 24) });
-  }, [seller]);
-
   // Overview uses aggregation queries; the full catalog is only downloaded when editing products.
   useEffect(() => {
     if (!db || !user || !seller || section !== 'overview') return;
@@ -274,31 +262,6 @@ function SellerContent() {
     finally { setBusy(false); }
   }
 
-  async function saveStore(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!db || !user || !active || busy) return;
-    const digits = storeDraft.whatsappNumber.replace(/[^0-9]/g, '');
-    if (digits && (digits.length < 8 || digits.length > 15)) { toast({ variant: 'destructive', title: 'Enter a valid WhatsApp number with country code' }); return; }
-    const codes = storeDraft.deliveryPincodes.split(/[\s,]+/).map(v=>v.trim()).filter(Boolean);
-    const slots = storeDraft.deliverySlots.split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
-    const deliveryFee = Number(storeDraft.deliveryFee), capacity = Number(storeDraft.dailyOrderCapacity), acceptanceHours = Number(storeDraft.acceptanceHours);
-    if (codes.length>10 || codes.some(v=>!/^\d{6}$/.test(v))) return toast({variant:'destructive',title:'Enter up to 10 valid six-digit PIN codes'});
-    if (slots.length>6 || slots.some(v=>v.length>60)) return toast({variant:'destructive',title:'Enter up to 6 short delivery slots'});
-    if (!storeDraft.deliveryMethods.length) return toast({variant:'destructive',title:'Enable pickup or delivery'});
-    if (!Number.isFinite(deliveryFee) || deliveryFee<0 || deliveryFee>5000 || !Number.isInteger(capacity) || capacity<0 || capacity>100 || !Number.isInteger(acceptanceHours) || acceptanceHours<1 || acceptanceHours>72) return toast({variant:'destructive',title:'Check delivery charge, daily capacity and reply deadline'});
-    setBusy(true);
-    try {
-      await updateDoc(doc(db, 'sellers', user.uid), {
-        description: storeDraft.description, contactPhone: storeDraft.contactPhone, whatsappNumber: digits,
-        isOpen: storeDraft.isOpen, deliveryMethods: storeDraft.deliveryMethods,
-        deliveryPincodes: codes, deliveryFee, pickupAddress: storeDraft.pickupAddress,
-        deliverySlots: slots, dailyOrderCapacity: capacity, acceptanceHours, updatedAt: serverTimestamp(),
-      });
-      toast({ title: 'Store settings saved' });
-    } catch(error) {toast(errorToast(error,'save-store'));}
-    finally { setBusy(false); }
-  }
-
   const menu: { key: Section; label: string; icon: typeof LayoutDashboard }[] = [
     { key: 'overview', label: 'Overview', icon: LayoutDashboard },
     { key: 'products', label: 'My products', icon: Package },
@@ -348,14 +311,7 @@ function SellerContent() {
             <><div className="space-y-3 md:hidden">{visible.map(p => <article key={p.id} className="rounded-2xl border bg-white p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words text-sm font-semibold">{p.name}</h3><p className="mt-1 text-xs text-muted-foreground">{p.category}</p>{p.advancePaymentRequired && <p className="mt-1 text-xs font-medium text-amber-800">Advance payment required</p>}{!!p.weightOptions?.length && <p className="mt-1 max-w-sm text-[11px] leading-5 text-[#806d56]">{sizePriceLabels(p)}</p>}</div><p className="shrink-0 text-sm font-semibold">{priceRange(p)}</p></div><div className="mt-3 flex flex-wrap gap-2 text-[11px]"><span className="rounded-full bg-[#f1ede6] px-3 py-1 capitalize">{p.availability.replaceAll('-', ' ')}</span><span className="rounded-full bg-[#f1ede6] px-3 py-1 capitalize">{p.status ?? 'draft'}</span></div><div className="mt-4 grid grid-cols-2 gap-2"><Button variant="outline" disabled={!active} onClick={() => openForm(p)} className="h-11"><Pencil className="mr-2 h-4 w-4" />Edit</Button><Button variant="outline" disabled={!active || busy} onClick={() => {setDeleteError('');setPendingDelete(p);}} className="h-11 text-red-700"><Trash2 className="mr-2 h-4 w-4" />Delete</Button></div></article>)}</div><div className="hidden overflow-hidden rounded-2xl border bg-white md:block"><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-[#f1ede6] text-xs uppercase tracking-wider text-muted-foreground"><tr><th className="px-5 py-4">Product</th><th className="px-5 py-4">Price</th><th className="px-5 py-4">Availability</th><th className="px-5 py-4">Visibility</th><th className="px-5 py-4">Actions</th></tr></thead><tbody>{visible.map(p => <tr key={p.id} className="border-t"><td className="min-w-[180px] px-5 py-4"><p className="font-medium">{p.name}</p><p className="text-xs text-muted-foreground">{p.category}</p>{p.advancePaymentRequired && <p className="mt-1 text-xs font-medium text-amber-800">Advance payment required</p>}{!!p.weightOptions?.length && <p className="mt-1 max-w-sm text-[11px] leading-5 text-[#806d56]">{sizePriceLabels(p)}</p>}</td><td className="px-5 py-4">{priceRange(p)}</td><td className="px-5 py-4 capitalize">{p.availability.replaceAll('-', ' ')}</td><td className="px-5 py-4 capitalize">{p.status ?? 'draft'}</td><td className="px-5 py-4"><div className="flex gap-2"><Button size="sm" variant="outline" disabled={!active} onClick={() => openForm(p)} aria-label={`Edit ${p.name}`}><Pencil className="h-4 w-4" /></Button><Button size="sm" variant="outline" disabled={!active || busy} onClick={() => {setDeleteError('');setPendingDelete(p);}} aria-label={`Delete ${p.name}`}><Trash2 className="h-4 w-4" /></Button></div></td></tr>)}</tbody></table></div></div></>}
         </div>}
         {section === 'orders' && <OrderManagement mode="seller" />}
-        {section === 'store' && <form onSubmit={saveStore} className="space-y-5 rounded-2xl border bg-white p-4 sm:space-y-6 sm:rounded-3xl sm:p-8"><div><h2 className="text-xl font-medium">Business profile</h2><p className="mt-1 text-sm text-muted-foreground">Only editable store details appear here. Business identity and access are controlled by TreatStory.</p></div><div><Label>Business name</Label><Input value={seller.businessName} disabled className="mt-2" /></div><div><Label htmlFor="storeDescription">About your store</Label><Textarea id="storeDescription" rows={5} maxLength={2000} value={storeDraft.description} onChange={e => setStoreDraft(s => ({ ...s, description: e.target.value }))} className="mt-2" /></div><div><Label htmlFor="storePhone">Contact phone</Label><Input id="storePhone" maxLength={40} value={storeDraft.contactPhone} onChange={e => setStoreDraft(s => ({ ...s, contactPhone: e.target.value }))} className="mt-2" /></div><div><Label htmlFor="storeWhatsapp">WhatsApp orders · business number</Label><Input id="storeWhatsapp" type="tel" inputMode="tel" maxLength={20} placeholder="919876543210 (include country code)" value={storeDraft.whatsappNumber} onChange={e => setStoreDraft(s => ({...s, whatsappNumber:e.target.value}))} className="mt-2" /><p className="mt-1 text-xs text-muted-foreground">Buyers can contact your store directly from product pages. Digits only, with country code. Leave empty to hide the WhatsApp button.</p></div><div className="rounded-2xl border bg-[#faf8f4] p-4 sm:p-6"><h3 className="text-base font-semibold">Delivery, pickup & booking</h3><p className="mt-2 text-xs leading-5 text-muted-foreground">You manage your own delivery. Set PIN codes and schedules buyers can choose at checkout. Leave coverage empty to accept requests from any location. Set capacity to zero for no daily limit.</p><div className="mt-4 space-y-4">
-          <div className="flex flex-wrap gap-4 text-xs"><label className="flex items-center gap-2"><input type="checkbox" checked={storeDraft.deliveryMethods.includes('delivery')} onChange={e=>setStoreDraft(v=>({...v,deliveryMethods:e.target.checked?[...new Set([...v.deliveryMethods,'delivery' as const])]:v.deliveryMethods.filter(x=>x!=='delivery')}))}/>Seller delivery</label><label className="flex items-center gap-2"><input type="checkbox" checked={storeDraft.deliveryMethods.includes('pickup')} onChange={e=>setStoreDraft(v=>({...v,deliveryMethods:e.target.checked?[...new Set([...v.deliveryMethods,'pickup' as const])]:v.deliveryMethods.filter(x=>x!=='pickup')}))}/>Customer pickup</label></div>
-          <div className="grid gap-4 sm:grid-cols-2"><label className="space-y-1 text-xs font-medium">Delivery fee (₹)<Input type="number" min={0} max={5000} step="0.01" value={storeDraft.deliveryFee} onChange={e=>setStoreDraft(v=>({...v,deliveryFee:e.target.value}))}/></label><label className="space-y-1 text-xs font-medium">Daily order capacity (0 = unlimited)<Input type="number" min={0} max={100} value={storeDraft.dailyOrderCapacity} onChange={e=>setStoreDraft(v=>({...v,dailyOrderCapacity:e.target.value}))}/></label></div>
-          <label className="block space-y-1 text-xs font-medium">Delivery PIN codes (up to 10; comma or newline separated)<Textarea rows={2} placeholder="673001, 673002" value={storeDraft.deliveryPincodes} onChange={e=>setStoreDraft(v=>({...v,deliveryPincodes:e.target.value}))}/></label>
-          <label className="block space-y-1 text-xs font-medium">Pickup address<Input maxLength={500} value={storeDraft.pickupAddress} onChange={e=>setStoreDraft(v=>({...v,pickupAddress:e.target.value}))} placeholder="Where customers can collect their order"/></label>
-          <label className="block space-y-1 text-xs font-medium">Delivery / pickup time slots (one per line, up to 6)<Textarea rows={3} value={storeDraft.deliverySlots} onChange={e=>setStoreDraft(v=>({...v,deliverySlots:e.target.value}))} placeholder={'Morning (9–12)\\nAfternoon (2–5)'}/></label>
-          <label className="block max-w-xs space-y-1 text-xs font-medium">Accept incoming orders within (hours)<Input type="number" min={1} max={72} value={storeDraft.acceptanceHours} onChange={e=>setStoreDraft(v=>({...v,acceptanceHours:e.target.value}))}/></label>
-        </div></div><label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={storeDraft.isOpen} onChange={e => setStoreDraft(s => ({ ...s, isOpen: e.target.checked }))} />Accepting enquiries</label><Button type="submit" disabled={!active || busy} className="rounded-full">Save changes</Button></form>}
+        {section === 'store' && db && user && <SellerStoreSettings seller={seller} user={user} db={db} active={active} />}
       </main>
     </div>
     <ConfirmActionDialog open={!!pendingDelete} onOpenChange={open=>{if(!open)setPendingDelete(null);}} title="Delete this product?" description={`${pendingDelete?.name || 'This product'} will be removed from your shop. This cannot be undone.`} confirmLabel="Delete product" pendingLabel="Deleting…" destructive busy={busy} error={deleteError} onConfirm={()=>pendingDelete?removeProduct(pendingDelete):undefined} />

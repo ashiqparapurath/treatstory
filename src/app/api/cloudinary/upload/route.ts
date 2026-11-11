@@ -32,7 +32,7 @@ function fileFormat(bytes: Uint8Array): 'image/jpeg' | 'image/png' | 'image/webp
   return null;
 }
 
-async function canUpload(projectId: string, uid: string, token: string, kind: 'banner' | 'product') {
+async function canUpload(projectId: string, uid: string, token: string, kind: 'banner' | 'product' | 'logo') {
   // Firestore REST checks read permissions with the SAME user ID token,
   // so this endpoint does not need a service-account private key.
   const docPath = kind === 'banner' ? 'roles_admin' : 'sellers';
@@ -77,6 +77,11 @@ export async function POST(request: NextRequest) {
     return json({ error: 'Your login session could not be verified. Sign in again.' }, 401);
   }
 
+  try {
+    if ((await getServerFirebase().db.collection('account_deletions').doc(uid).get()).exists)
+      return json({ error: 'This account is closing and cannot upload images.' }, 403);
+  } catch { return json({ error: 'Unable to check account status. Try again later.' }, 503); }
+
   const contentLength = Number(request.headers.get('content-length') || 0);
   if (contentLength > MAX_PRODUCT_BYTES + 50_000) return json({ error: 'Image upload is too large.' }, 413);
   let form: FormData;
@@ -85,7 +90,7 @@ export async function POST(request: NextRequest) {
     form=await new Response(bounded as BodyInit,{headers:{'Content-Type':request.headers.get('content-type')||''}}).formData();
   }catch(error){if(error instanceof ApiError)return safeResponse(error);return json({error:'Could not read the selected image.'},400);}
   const kind = form.get('kind');
-  if (kind !== 'banner' && kind !== 'product' && kind !== 'reference') return json({ error: 'Invalid upload type.' }, 400);
+  if (kind !== 'banner' && kind !== 'product' && kind !== 'reference' && kind !== 'logo') return json({ error: 'Invalid upload type.' }, 400);
   const file = form.get('file');
   if (!(file instanceof Blob)) return json({ error: 'Choose an image to upload.' }, 400);
   const maxSize = kind === 'banner' ? MAX_BANNER_BYTES : MAX_PRODUCT_BYTES;
@@ -124,7 +129,7 @@ export async function POST(request: NextRequest) {
       });
     } catch (error) { return safeResponse(error); }
   }
-  const folder = kind === 'banner' ? `treatstory/banners/${uid}` : kind === 'reference' ? `treatstory/references/${uid}` : `treatstory/products/${uid}`;
+  const folder = kind === 'banner' ? `treatstory/banners/${uid}` : kind === 'reference' ? `treatstory/references/${uid}` : kind === 'logo' ? `treatstory/logos/${uid}` : `treatstory/products/${uid}`;
   const upload = new FormData();
   upload.append('file', new Blob([bytes], { type: detected }), `photo.${detected.split('/')[1] === 'jpeg' ? 'jpg' : detected.split('/')[1]}`);
   upload.append('folder', folder);

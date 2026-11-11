@@ -54,6 +54,8 @@ export function getErrorNotice(error: unknown, context: NoticeContext = 'save'):
     return {title:'Please sign in again',description:'Your session could not be verified. Sign in again, then retry this action.'};
   if (['auth/too-many-requests','resource-exhausted','storage/quota-exceeded'].includes(code) || status === 429)
     return {title:'Please pause and try again later',description:publicMessage(error) || 'Too many attempts have been made. Wait before retrying this action.'};
+  if ((code === 'permission-denied' || status === 403) && context === 'save-store')
+    return {title:'Store settings were not saved',description:'Your changes are still here. Check that your seller access is active. If it is, contact TreatStory support to review store permissions.'};
   if (code === 'permission-denied' || code === 'storage/unauthorized' || status === 403)
     return {title:context === 'seller-access' ? 'Administrator access is required' : 'This account cannot make that change',description:publicMessage(error) || 'Check that you are signed in to the correct account. If access should be available, contact TreatStory support.'};
   if (['auth/network-request-failed','unavailable','deadline-exceeded','storage/retry-limit-exceeded'].includes(code) || e?.name === 'AbortError' ||
