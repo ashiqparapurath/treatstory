@@ -241,7 +241,11 @@ function escapeHtml_(value) {
   });
 }
 
-/** Compact, table-based email layout; no remote images, fonts or scripts are needed. */
+/** Approved Concept 01: the original TreatStory_Email_Design_Preview.html.
+ * Table-based, image-free, responsive transactional email. All 31 events share
+ * the same design; the catalog retains the correct per-event messages and actions.
+ * Do not remove escaping, the secure account-link fallback or plain-text output.
+ */
 function renderEmail_(mail, properties) {
   var template = EMAIL_TEMPLATES[mail.template];
   var data = mail.data;
@@ -249,30 +253,57 @@ function renderEmail_(mail, properties) {
   var label = data.label || template.button;
   var origin = validatedAppUrl_(properties);
   var security = mail.template === 'password_reset' || mail.template === 'verify_email';
+  var orderEvent = /^order_/.test(mail.template) || mail.template === 'new_order' || mail.template === 'payment_recorded';
   var reference = data.reference || '';
-  var accent = template.tone === 'green' ? '#477358' : template.tone === 'amber' ? '#92703b' : '#9a805f';
+  var accent = template.tone === 'green' ? '#426d58' : template.tone === 'amber' ? '#976b35' : '#a68b67';
+  var accentBg = template.tone === 'green' ? '#f1f5f0' : template.tone === 'amber' ? '#f9f5ed' : '#f8f5ef';
   var details = (data.details || []).map(function (row) {
     var total = row.label === 'Order total';
-    var style = total ? 'font-weight:bold;color:#222;background:#faf9f6;' : '';
-    return '<tr><td width="36%" style="padding:9px 10px 9px 0;border-bottom:1px solid #eee;font-size:13px;line-height:1.6;vertical-align:top;color:#81776b;' + style + '">' + escapeHtml_(row.label) + '</td><td style="padding:9px 0;border-bottom:1px solid #eee;font-size:13px;line-height:1.6;text-align:right;overflow-wrap:anywhere;word-break:break-word;' + style + '">' + escapeHtml_(row.value) + '</td></tr>';
+    var color = total ? '#25231f' : '#292722';
+    return '<tr>' +
+      '<td class="detail-key" width="43%" style="padding:13px 6px 13px 0;border-bottom:1px solid #ece8e1;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#827a70;vertical-align:top;' + (total ? 'font-weight:bold;' : '') + '">' + escapeHtml_(row.label) + '</td>' +
+      '<td style="padding:13px 0;border-bottom:1px solid #ece8e1;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;font-weight:600;text-align:right;color:' + color + ';vertical-align:top;overflow-wrap:anywhere;word-break:break-word">' + escapeHtml_(row.value) + '</td>' +
+      '</tr>';
   }).join('');
-  var html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + escapeHtml_(title) + '</title></head>' +
-    '<body style="margin:0;background:#f5f5f3;font-family:Arial,Helvetica,sans-serif;color:#302b25">' +
-    '<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;overflow:hidden;opacity:0">' + escapeHtml_((reference ? reference + ' · ' : '') + data.message.slice(0,140)) + '</div>' +
-    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 12px">' +
-    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border:1px solid #e7e5df;border-radius:12px">' +
-    '<tr><td style="padding:24px 24px 18px;border-bottom:1px solid #eee"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:top"><a href="' + escapeHtml_(origin) + '" style="font-family:Georgia,serif;font-size:26px;color:#302b25;text-decoration:none">TreatStory<span style="color:#ad8a58">.</span></a></td>' +
-    (reference ? '<td style="text-align:right;vertical-align:top"><span style="font-size:9px;letter-spacing:1px;color:#91877c">ORDER ID</span><br><span style="font-size:11px;line-height:1.8;font-weight:bold;white-space:nowrap">' + escapeHtml_(reference) + '</span></td>' : '') + '</tr></table></td></tr>' +
-    '<tr><td style="padding:22px 24px 24px"><p style="margin:0 0 10px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:' + accent + '">' + escapeHtml_(template.tag) + '</p>' +
-    '<h1 style="margin:0 0 12px;font-size:23px;line-height:1.35;font-weight:600;letter-spacing:-0.4px">' + escapeHtml_(title) + '</h1>' +
-    '<p style="margin:0 0 18px;font-size:14px;line-height:1.75;color:#70675c;overflow-wrap:anywhere">' + escapeHtml_(data.message).replace(/\n/g,'<br>') + '</p>' +
-    (details ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px">' + details + '</table>' : '') +
-    '<table role="presentation" cellpadding="0" cellspacing="0"><tr><td bgcolor="#302b25" style="border-radius:8px"><a href="' + escapeHtml_(data.href) + '" style="display:inline-block;padding:14px 20px;font-size:13px;line-height:18px;font-weight:bold;color:#fff;text-decoration:none">' + escapeHtml_(label) + '</a></td></tr></table>' +
-    '<p style="margin:18px 0 0;font-size:12px;line-height:1.75;color:#84786a">' + escapeHtml_(template.note) + '</p>' +
-    (security ? '<p style="margin:16px 0 0;font-size:10px;line-height:1.7;color:#91877c">If the button does not open, copy this secure link:<br><a href="' + escapeHtml_(data.href) + '" style="color:#81715c;word-break:break-all">' + escapeHtml_(data.href) + '</a></p>' : '') + '</td></tr>' +
-    '<tr><td style="padding:16px 24px;border-top:1px solid #eee"><p style="margin:0;font-size:10px;line-height:1.7;color:#a09383">TreatStory &middot; Little finds, lovely stories.<br>Sent for your account or recent activity.</p></td></tr></table></td></tr></table></body></html>';
+  var preheader = (reference ? reference + ' · ' : '') + data.message.slice(0,140);
+  var html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>' + escapeHtml_(title) + '</title>' +
+    '<style type="text/css">@media only screen and (max-width:600px){.outer{padding:12px 8px 28px!important}.mail{width:100%!important;max-width:100%!important}.mail-header{padding:25px 23px 22px!important}.mail-content{padding:30px 23px 32px!important}.mail-title{font-size:29px!important;line-height:1.16!important}.mail-footer{padding:22px 23px 26px!important}.mail-tagline{display:none!important}.button-table{width:100%!important}.button-cell{display:block!important;text-align:center!important}.button-link{display:block!important;padding:17px 13px!important}.reference-value{white-space:normal!important;word-break:break-word!important}.detail-key{width:41%!important}.mail-note{line-height:1.6!important}}' +
+    '@media (prefers-reduced-motion:reduce){*{transition:none!important}}</style></head>' +
+    '<body style="margin:0;padding:0;background:#f3f2ef;color:#282520;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%">' +
+    '<div style="display:none!important;visibility:hidden;font-size:1px;line-height:1px;max-height:0;max-width:0;overflow:hidden;opacity:0;mso-hide:all">' + escapeHtml_(preheader) + '</div>' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background:#f3f2ef"><tr><td class="outer" align="center" style="padding:38px 20px 54px">' +
+    '<table role="presentation" class="mail" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#fff;border:1px solid #e7e3db">' +
+    '<tr><td class="mail-header" style="padding:29px 46px 24px;border-bottom:1px solid #efebe5"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
+    '<td style="vertical-align:middle"><a href="' + escapeHtml_(origin) + '" style="font-family:Georgia,Times New Roman,serif;font-size:26px;line-height:1.3;letter-spacing:-1.15px;color:#292621;text-decoration:none;white-space:nowrap">TreatStory<span style="color:#ae906c">.</span></a></td>' +
+    '<td class="mail-tagline" align="right" style="vertical-align:middle;font-family:Arial,Helvetica,sans-serif;font-size:9px;font-weight:bold;letter-spacing:1.4px;color:#aea69a">LITTLE FINDS. LOVELY STORIES.</td>' +
+    '</tr></table></td></tr>' +
+    '<tr><td class="mail-content" style="padding:42px 46px 41px">' +
+    '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td width="20" height="3" bgcolor="#b09573" style="height:3px;background:#b09573;font-size:1px;line-height:1px"></td><td width="5"></td><td width="5" height="3" bgcolor="#dfd5c9" style="height:3px;background:#dfd5c9;font-size:1px;line-height:1px"></td></tr></table>' +
+    '<p style="margin:24px 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:10px;line-height:1.5;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:' + accent + '">' + escapeHtml_(template.tag) + '</p>' +
+    '<h1 class="mail-title" style="margin:0 0 21px;font-family:Georgia,Times New Roman,serif;font-size:36px;line-height:1.18;font-weight:normal;letter-spacing:-1.05px;color:#25231f">' + escapeHtml_(title) + '</h1>' +
+    '<p style="margin:0 0 29px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.83;color:#615d57;overflow-wrap:anywhere;word-break:break-word">' + escapeHtml_(data.message).replace(/\n/g, '<br>') + '</p>' +
+    (reference ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px"><tr><td style="padding:17px 20px;background:' + accentBg + ';border-left:3px solid ' + accent + '">' +
+      '<div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:bold;letter-spacing:1.5px;color:' + accent + '">' + (orderEvent ? 'ORDER REFERENCE' : 'REFERENCE') + '</div>' +
+      '<div class="reference-value" style="margin-top:8px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;font-weight:600;letter-spacing:0.3px;color:#302c25">' + escapeHtml_(reference) + '</div></td></tr></table>' : '') +
+    (details ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px;border-top:1px solid #ece8e1;border-collapse:collapse">' + details + '</table>' : '') +
+    '<table role="presentation" class="button-table" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 27px"><tr><td class="button-cell" align="center" bgcolor="#292722" style="background:#292722;border-radius:5px">' +
+    '<a class="button-link" href="' + escapeHtml_(data.href) + '" style="display:inline-block;padding:17px 23px;border-radius:5px;background:#292722;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;font-weight:bold;color:#fff;text-decoration:none">' + escapeHtml_(label) + ' &rarr;</a></td></tr></table>' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fbfaf8;border-left:2px solid #d6c9b5"><tr><td style="padding:15px 17px"><p class="mail-note" style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.8;color:#6c655d">' + escapeHtml_(template.note) + '</p></td></tr></table>' +
+    (security ? '<p style="margin:24px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.7;color:#948c81">If the button does not open, copy this secure link:<br><a href="' + escapeHtml_(data.href) + '" style="color:#6a6056;word-break:break-all;overflow-wrap:anywhere">' + escapeHtml_(data.href) + '</a></p>' : '') +
+    '</td></tr><tr><td class="mail-footer" style="padding:25px 46px 29px;border-top:1px solid #efebe5">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;color:#4e4942">TreatStory</td>' +
+    '<td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#aaa095">MADE WITH CARE IN KERALA</td></tr></table>' +
+    '<p style="margin:13px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.8;color:#999187">Little finds, lovely stories.<br>This email is about your account or recent activity.</p>' +
+    '</td></tr></table></td></tr></table></body></html>';
   var detailText = (data.details || []).map(function (row) { return row.label + ': ' + row.value; }).join('\n');
-  return {subject:'TreatStory · ' + title + (reference ? ' · ' + reference : ''),html:html,text:title + (reference ? '\nOrder ID: ' + reference : '') + '\n\n' + data.message + (detailText ? '\n\n' + detailText : '') + '\n\n' + label + ': ' + data.href + '\n\n' + template.note + '\n\nTreatStory · Little finds, lovely stories.'};
+  return {
+    subject: 'TreatStory · ' + title + (reference ? ' · ' + reference : ''),
+    html: html,
+    text: title + (reference ? '\n' + (orderEvent ? 'Order ID: ' : 'Reference: ') + reference : '') +
+      '\n\n' + data.message + (detailText ? '\n\n' + detailText : '') +
+      '\n\n' + label + ': ' + data.href + '\n\n' + template.note +
+      '\n\nTreatStory · Little finds, lovely stories.'
+  };
 }
 
 /** Public previews contain only sample text and no account records, recipients, tokens or secrets. */

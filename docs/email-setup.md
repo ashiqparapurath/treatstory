@@ -191,3 +191,38 @@ This is a read-only version marker: it does not send email or inspect accounts. 
 The older reset flow returned “Check your inbox” after reaching three requests without creating a job. The fixed flow returns 429 with visible wait/retry guidance instead. Quota and the outbox job now commit in one transaction, so failed writes do not use attempts. Versioned quota counters avoid carrying over the older flow's attempts that may have failed before queuing. The request limit remains three per identity/hour and 100 globally/hour. The client also rejects HTTP-200 HTML or JSON without `ok: true`, preventing a redirect/login page from producing a false success.
 
 After confirming `outbox-v2`, submit one fresh reset request. A successful response follows a committed private intent. If no job appears, inspect only the status/response JSON for `/api/email/account` in browser Network; do not share its request body, email address, credentials or action links. A 429 means wait for the rate-limit window; a 503/configuration error needs the corresponding Vercel/server configuration investigated. This update is in the website API/client; the prior Apps Script deployment can remain in place.
+
+## Approved email visual design — Concept 01 (11 November 2026)
+
+The shared renderer in `apps-script/Code.gs` follows the approved
+`TreatStory_Email_Design_Preview.html` concept, applied uniformly to all 31
+existing transactional templates. It keeps the original template catalog
+(headings, notes, action labels and status meaning), subject line format,
+escaped dynamic content, plain-text fallback and secure action links.
+
+Design details:
+
+- 600px maximum desktop body, white email canvas on warm gray background
+- Georgia-serif TreatStory wordmark/heading, system sans-serif body and labels
+- Thin bronze divider, restrained green/amber accents for event statuses
+- Visible reference panel when supplied, neat detail rows and compact dark CTA
+- Mobile media query (600px) with 23px horizontal padding and full-width CTA
+- No image, script, remotely loaded font, tracking pixel or external asset
+- Responsive table-based layout and predominantly inline CSS for mail clients
+
+The security messages retain the generated reset/verification action URL both
+in the primary button and as an escaped, copyable fallback. The preview gallery
+continues to use **sample data only**; it does not send mail or expose tokens.
+All 31 templates use the same `renderEmail_` function, so adding an event
+does not require duplicating the markup.
+
+**Deployment is separate from GitHub:** after merging and reviewing the script,
+copy the full updated `apps-script/Code.gs` into the existing Google Apps Script
+project and select **Deploy → Manage deployments → Edit → New version → Deploy**.
+Saving in GitHub or in the Apps Script editor alone does not change live mail.
+Keep all Script Properties and the existing deployment URL unchanged.
+
+Verify the native gallery via your deployed script's `/exec?preview=1` with
+desktop and mobile browsers. Before enabling real messages, send controlled
+verification, order, seller and cancellation test events to accounts you own and
+check Gmail, Apple Mail and Outlook because email client CSS support varies.

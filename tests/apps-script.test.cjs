@@ -76,5 +76,43 @@ test('account link validation tolerates copied HTTPS host values and diagnoses m
 });
 test('clean order template includes a searchable reference, totals and schedule in HTML, subject and plain text',()=>{
   const f=fixture();const mail={template:'order_received',data:{title:'Order received',reference:'TS-A1B2C3D4E5F6',message:'Seller confirmation pending.',href:'https://treatstory.vercel.app/orders?order=private-order-id',details:[{label:'Product',value:'Cake'},{label:'Order total',value:'₹550.50'},{label:'Requested for',value:'15 Nov 2026 · 10 AM–12 PM'}]}};
-  const rendered=f.context.renderEmail_(mail,{getProperty:key=>f.properties.get(key)});assert.match(rendered.subject,/TS-A1B2C3D4E5F6/);assert.match(rendered.html,/ORDER ID/);assert.match(rendered.html,/₹550.50/);assert.match(rendered.text,/Order ID: TS-A1B2C3D4E5F6/);assert.match(rendered.text,/15 Nov 2026/);assert.doesNotMatch(rendered.html,/copy this secure link/);
+  const rendered=f.context.renderEmail_(mail,{getProperty:key=>f.properties.get(key)});assert.match(rendered.subject,/TS-A1B2C3D4E5F6/);assert.match(rendered.html,/ORDER REFERENCE/);assert.match(rendered.html,/₹550.50/);assert.match(rendered.text,/Order ID: TS-A1B2C3D4E5F6/);assert.match(rendered.text,/15 Nov 2026/);assert.doesNotMatch(rendered.html,/copy this secure link/);
+});
+
+test('approved Concept 01 has a responsive image-free design across all 31 templates',()=>{
+  const f=fixture();const store={getProperty:key=>f.properties.get(key)};
+  const keys=Object.keys(f.context.EMAIL_TEMPLATES);
+  assert.equal(keys.length,31);
+  for(const key of keys){
+    const security=key==='verify_email'||key==='password_reset';
+    const href=security?'https://fixture.firebaseapp.com/__/auth/action?oobCode=private&mode=resetPassword':'https://treatstory.vercel.app/account';
+    const data={title:'Demo',message:'A handmade creation is waiting.\nPlease review the details.',href,reference:key.startsWith('order_')?'TS-ORDER123':'',details:[{label:'Order total',value:'₹850'},{label:'Customer note',value:'Please ring the bell'}]};
+    const html=f.context.renderEmail_({template:key,data},store).html;
+    assert.match(html,/class="mail"/,key);
+    assert.match(html,/max-width:600px/,key);
+    assert.match(html,/max-width:600px\)\{/,key);
+    assert.match(html,/class="mail-title"/,key);
+    assert.match(html,/class="button-link"/,key);
+    assert.match(html,/Little finds, lovely stories/,key);
+    assert.match(html,/MADE WITH CARE IN KERALA/,key);
+    assert.match(html,/A handmade creation is waiting\.<br>Please review/,key);
+    assert.doesNotMatch(html,/<script|<img\b|src="https?:/i,key);
+    assert.equal(html.includes('copy this secure link'),security,key);
+    assert.ok(html.includes('href="'+href.replace(/&/g,'&amp;')+'"'),key);
+  }
+  const green=f.context.renderEmail_({template:'order_accepted',data:{title:'x',message:'Accepted',href:'https://treatstory.vercel.app/account'}},store).html;
+  const amber=f.context.renderEmail_({template:'order_cancelled',data:{title:'x',message:'Cancelled',href:'https://treatstory.vercel.app/account'}},store).html;
+  assert.match(green,/#426d58/);
+  assert.match(amber,/#976b35/);
+});
+
+test('redesigned security email escapes generated action URLs and preserves text fallback',()=>{
+  const f=fixture();const store={getProperty:key=>f.properties.get(key)};
+  const href='https://fixture.firebaseapp.com/__/auth/action?oobCode=private&mode=resetPassword';
+  const rendered=f.context.renderEmail_({template:'password_reset',data:{title:'Reset',message:'Do not share your link',href}},store);
+  assert.match(rendered.html,/oobCode=private&amp;mode=resetPassword/);
+  assert.doesNotMatch(rendered.html,/href="[^"]*oobCode=private&mode=/);
+  assert.match(rendered.html,/copy this secure link/);
+  assert.ok(rendered.text.includes(href));
+  assert.ok(rendered.text.includes('If you did not request a reset'));
 });
