@@ -57,7 +57,14 @@ async function main() {
   );
   const input = saveProductRequest.parse({ product });
   const created = await saveSellerProduct(db, uid, input);
+  assert.match(created.sku, /^TS-[A-HJ-NP-Z2-9]{8}$/);
   const ref = db.doc("marketplace_products/" + created.productId);
+  assert.equal((await ref.get()).data()?.sku, created.sku);
+  assert.equal((await db.doc("product_skus/" + created.sku).get()).data()?.productId, created.productId);
+  const other = await saveSellerProduct(db, uid, input);
+  assert.notEqual(other.sku, created.sku, "Separate listings need distinct SKUs");
+  assert.equal((await db.doc("product_skus/" + other.sku).get()).data()?.productId, other.productId);
+
   await ref.update({updatedAt:new Timestamp(Math.floor(Date.now()/1000),123456789)});
   const stored = (await ref.get()).data()!;
   assert.equal(stored.weightOptions.length, 8);
@@ -68,7 +75,9 @@ async function main() {
     expectedUpdatedAt: stored.updatedAt.toMillis(),
     product: { ...input.product, name: "Edited maximum cake" },
   };
-  await saveSellerProduct(db, uid, edit);
+  const edited = await saveSellerProduct(db, uid, edit);
+  assert.equal(edited.sku, created.sku, "SKU is immutable across edits");
+  assert.equal((await ref.get()).data()?.sku, created.sku);
   await assert.rejects(
     () => saveSellerProduct(db, uid, edit),
     (e) => (e as { status: number }).status === 409,
@@ -86,6 +95,7 @@ async function main() {
       weightOptions: [{ value: 1, unit: "g", price: 0, extra: true }],
     },
     { ...product, role: "admin" },
+    { ...product, sku: "TS-ABCDEF23" },
   ])
     assert.equal(
       saveProductRequest.safeParse({ product: invalid }).success,

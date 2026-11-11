@@ -46,6 +46,8 @@ export interface Seller {
 
 export interface MarketplaceProduct {
   id: string;
+  /** Server-issued, permanent public code. Older listings may lack it until edited. */
+  sku?: string;
   sellerId: string;
   status: 'draft' | 'published';
   createdAt?: unknown;

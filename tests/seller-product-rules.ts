@@ -33,6 +33,7 @@ async function run(){
  await assert.rejects(()=>updateDoc(target,{weightOptions:[{value:1,unit:'g',price:-1}],updatedAt:serverTimestamp()}),denied,'price-only fast path must reject negative prices');
  await assert.rejects(()=>updateDoc(target,{weightOptions:[{value:1,unit:'g',price:null}],updatedAt:serverTimestamp()}),denied,'price-only fast path must reject null prices');
  await assert.rejects(()=>updateDoc(target,{createdAt:serverTimestamp(),updatedAt:serverTimestamp()}),denied,'creation time must stay immutable');
+ await assert.rejects(()=>updateDoc(target,{sku:'TS-ABCDEF23',updatedAt:serverTimestamp()}),denied,'a seller cannot forge a new SKU');
  await assert.rejects(()=>updateDoc(target,{weightOptions:[{value:1,unit:'kg'}],updatedAt:serverTimestamp()}),denied,'size prices must remain required');
  await assert.rejects(()=>updateDoc(target,{allergens:[123],updatedAt:serverTimestamp()}),denied,'non-string labels must be rejected');
  await assert.rejects(()=>updateDoc(target,{dietaryTags:['x'.repeat(41)],updatedAt:serverTimestamp()}),denied,'oversized labels must be rejected');
