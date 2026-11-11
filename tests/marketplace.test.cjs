@@ -735,6 +735,20 @@ test('Instagram SKU codes normalize safely and match public catalog search', () 
   assert.match(rules, /request\.resource\.data\.get\('sku', ''\) == resource\.data\.get\('sku', ''\)/);
   const shop = fs.readFileSync('src/app/products/page.tsx', 'utf8');
   const home = fs.readFileSync('src/app/page.tsx', 'utf8');
-  assert.match(shop, /<SkuLookup \/>/);
-  assert.match(home, /<SkuLookup compact \/>/);
+  assert.doesNotMatch(shop, /SkuLookup|Seen a creation in an Instagram reel/);
+  assert.doesNotMatch(home, /SkuLookup|Saw it on Instagram/);
+  const legacySearch = fs.readFileSync('src/components/product-grid.tsx', 'utf8');
+  const sellerSearch = fs.readFileSync('src/components/seller-storefront-products.tsx', 'utf8');
+  for (const existingSearch of [legacySearch, sellerSearch]) {
+    assert.match(existingSearch, /normalizeProductSku\(deferredSearch\)/);
+    assert.match(existingSearch, /<SkuSearchResult sku=\{sku\}/);
+    assert.match(existingSearch, /name or SKU/);
+  }
+  const result = fs.readFileSync('src/components/sku-search-result.tsx', 'utf8');
+  assert.match(result, /controller\.abort\(\)/);
+  assert.match(result, /response\.status === 404/);
+  assert.match(result, /View product details/);
+  const skuRoute = fs.readFileSync('src/app/api/products/sku/route.ts', 'utf8');
+  assert.match(skuRoute, /Response\.json\(\{ sku, productId, name \}/);
+  assert.doesNotMatch(shop + home, /<SkuLookup/);
 });

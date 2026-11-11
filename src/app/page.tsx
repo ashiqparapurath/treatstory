@@ -2,7 +2,6 @@
 import { usePublicCatalog } from '@/firebase/firestore/use-public-catalog';
 
 import { Header } from '@/components/header';
-import { SkuLookup } from '@/components/sku-lookup';
 import { SellerStorefrontProducts } from '@/components/seller-storefront-products';
 import { ProductGridContainer } from '@/components/product-grid';
 import Link from 'next/link';
@@ -98,7 +97,6 @@ export default function Home() {
                 <Link href="/products" className="editorial-button">Explore the collection <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 <Link href="/about" className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground underline decoration-[#c7b08e] underline-offset-4 transition-colors hover:text-[#9b7d55]">Our story</Link>
               </div>
-              <SkuLookup compact />
               <div className="mt-6 hidden items-center gap-4 border-t border-[#e8e0d5] pt-5 sm:flex">
                 <div className="flex -space-x-2">
                   <span className="h-7 w-7 rounded-full border-2 border-background bg-[#d9c8b1]" />

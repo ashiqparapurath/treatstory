@@ -18,6 +18,9 @@ export async function GET(request: NextRequest) {
     const product = await db.collection("marketplace_products").doc(productId).get();
     if (!product.exists || product.data()?.sku !== sku || product.data()?.status !== "published")
       return Response.json({ error: "No published product matches this code." }, { status: 404, headers });
-    return Response.json({ sku, productId }, { headers });
+    const name = product.data()?.name;
+    if (typeof name !== 'string' || !name.trim())
+      return Response.json({ error: "No published product matches this code." }, { status: 404, headers });
+    return Response.json({ sku, productId, name }, { headers });
   } catch(error) { return safeResponse(error); }
 }
