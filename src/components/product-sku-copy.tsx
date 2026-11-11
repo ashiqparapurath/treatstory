@@ -8,7 +8,7 @@ export function ProductSkuCopy({ sku }: { sku: string }) {
   async function copy() {
     try {
       await navigator.clipboard.writeText(sku);
-      toast({ title: 'Product code copied', description: sku + ' is ready to add to your reel or caption.' });
+      toast({ title: 'Product code copied', description: sku + ' is ready to share.' });
     } catch {
       toast({ variant: 'destructive', title: 'Could not copy code', description: 'Select the code and copy it manually.' });
     }

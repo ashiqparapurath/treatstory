@@ -710,3 +710,31 @@ test('responsive hero files match their content hashes and declared dimensions',
  const{createHash}=require('node:crypto'),sharp=require('sharp');const{heroImages}=load('src/lib/hero-images.ts');
  for(const[layout,formats]of Object.entries(heroImages))for(const[format,files]of Object.entries(formats))for(const file of files){const bytes=fs.readFileSync('public'+file.src),hash=createHash('sha256').update(bytes).digest('hex').slice(0,12),meta=await sharp(bytes).metadata();assert.ok(file.src.includes(hash));assert.equal(bytes.length,file.bytes);assert.equal(meta.width,file.width);assert.equal(meta.format,format==='avif'?'heif':format);const ratio=layout==='mobile'?1.3:layout==='tablet'?1.18:1.4;assert.ok(Math.abs(meta.width/meta.height-ratio)<.004);}
 });
+
+
+test('Instagram SKU codes normalize safely and match public catalog search', () => {
+  const { normalizeProductSku, SKU_ALPHABET } = load('src/lib/product-sku.ts');
+  assert.equal(SKU_ALPHABET.length, 32);
+  assert.equal(normalizeProductSku(' ts-ab23cd45 '), 'TS-AB23CD45');
+  assert.equal(normalizeProductSku('TS AB23 CD45'), 'TS-AB23CD45');
+  for (const invalid of ['TS-AB23', 'TS-00000000', 'TS-IIIIIIII', 'other', '', 'TS-ABCDE123456', 'TS-AB23CD4/']) {
+    assert.equal(normalizeProductSku(invalid), null, invalid);
+  }
+  const { matchesProductSearch } = load('src/lib/catalog-search.ts');
+  assert.equal(matchesProductSearch({name:'Cake',sku:'TS-AB23CD45'}, 'ab23cd45'), true);
+  assert.equal(matchesProductSearch({name:'Cake'}, 'AB23CD45'), false);
+  const lookup = fs.readFileSync('src/app/api/products/sku/route.ts', 'utf8');
+  assert.match(lookup, /product_skus/);
+  assert.match(lookup, /status !== "published"/);
+  assert.match(lookup, /product\.data\(\)\?\.sku !== sku/);
+  const seller = fs.readFileSync('src/lib/server/seller-product.ts', 'utf8');
+  assert.match(seller, /tx\.create\(reservation/);
+  assert.match(seller, /sku, createdAt/);
+  const rules = fs.readFileSync('firestore.rules', 'utf8');
+  assert.match(rules, /match \/product_skus\/\{sku\} \{ allow read, write: if false;/);
+  assert.match(rules, /request\.resource\.data\.get\('sku', ''\) == resource\.data\.get\('sku', ''\)/);
+  const shop = fs.readFileSync('src/app/products/page.tsx', 'utf8');
+  const home = fs.readFileSync('src/app/page.tsx', 'utf8');
+  assert.match(shop, /<SkuLookup \/>/);
+  assert.match(home, /<SkuLookup compact \/>/);
+});
