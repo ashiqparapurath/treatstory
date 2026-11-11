@@ -300,8 +300,9 @@ service cloud.firestore {
         'showPrice', 'availability', 'stockQuantity', 'preparationDays',
         'minimumOrderQuantity', 'weightValue', 'weightUnit', 'weightOptions', 'customizationOptions',
         'advancePaymentRequired', 'careInstructions', 'ingredients', 'allergens', 'dietaryTags', 'shelfLifeDays', 'storageInstructions',
-        'status', 'createdAt', 'updatedAt'
+        'status', 'createdAt', 'updatedAt', 'sku'
       ]) &&
+      (!('sku' in p) || (p.sku is string && p.sku.matches('^TS-[A-HJ-NP-Z2-9]{8}$'))) &&
       p.sellerId is string &&
       p.name is string && p.name.size() >= 2 && p.name.size() <= 120 &&
       p.description is string && p.description.size() <= 2000 &&
@@ -331,6 +332,9 @@ service cloud.firestore {
       p.createdAt is timestamp && p.updatedAt is timestamp;
     }
 
+    // SKU reservations are server-owned; private drafts cannot be found through the registry.
+    match /product_skus/{sku} { allow read, write: if false; }
+
     match /marketplace_products/{productId} {
       // Public queries must include where('status', '==', 'published').
       // Seller dashboard queries must include where('sellerId', '==', auth.uid).
@@ -338,6 +342,7 @@ service cloud.firestore {
         (isSignedIn() && resource.data.sellerId == request.auth.uid) ||
         resource.data.status == 'published';
       allow create: if sellerActive(request.resource.data.sellerId) &&
+        !('sku' in request.resource.data) &&
         request.resource.data.sellerId == request.auth.uid &&
         validMarketplaceProduct(request.resource.data, request.resource.data.keys().toSet(), []) &&
         request.resource.data.createdAt == request.time &&
@@ -345,6 +350,7 @@ service cloud.firestore {
       allow update: if sellerActive(resource.data.sellerId) &&
         resource.data.sellerId == request.auth.uid &&
         request.resource.data.sellerId == resource.data.sellerId &&
+        request.resource.data.get('sku', '') == resource.data.get('sku', '') &&
         request.resource.data.createdAt == resource.data.createdAt &&
         validMarketplaceProduct(request.resource.data, request.resource.data.diff(resource.data).affectedKeys(), resource.data.get('weightOptions', [])) &&
         request.resource.data.updatedAt == request.time;

@@ -3,6 +3,8 @@
 import { useState, type Dispatch, type FormEvent, type SetStateAction } from 'react';
 import { Plus, Trash2, X, Sparkles, ChevronDown, ImagePlus, ArrowLeft, ArrowRight } from 'lucide-react';
 import type { MarketplaceProduct } from '@/lib/marketplace-types';
+import { ProductSkuCopy } from '@/components/product-sku-copy';
+import { parseProductImageUrls } from '@/lib/product-image-urls';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,7 +46,8 @@ export function suggestProductDescription(d: Pick<ProductDraft, 'name' | 'catego
   return details.join(' ').slice(0, 2000);
 }
 
-export function SellerProductEditor({ open, editing, busy, enabled, draft, setDraft, categories, onClose, onSubmit, onUploadPhotos, uploading, uploadProgress, saveError }: {
+export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, setDraft, categories, onClose, onSubmit, onUploadPhotos, uploading, uploadProgress, saveError }: {
+  sku?: string;
   saveError?: string;
   open: boolean;
   editing: boolean;
@@ -63,7 +66,7 @@ export function SellerProductEditor({ open, editing, busy, enabled, draft, setDr
   if (!open) return null;
   const set = <K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) => setDraft(d => ({ ...d, [key]: value }));
   const allCategories = [...new Set([...presets, ...categories])].filter(Boolean).sort((a,b) => a.localeCompare(b));
-  const photos = draft.imageUrls.split(/\r?\n|,/).map(x => x.trim()).filter(Boolean);
+  const photos = parseProductImageUrls(draft.imageUrls);
   const photoCount = photos.length;
   const arrangePhotos = (next: string[]) => set('imageUrls', next.join('\n'));
   const shiftPhoto = (index: number, delta: number) => {
@@ -76,7 +79,7 @@ export function SellerProductEditor({ open, editing, busy, enabled, draft, setDr
   return <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" role="presentation" onMouseDown={e => { if(e.target === e.currentTarget) onClose(); }}>
     <div role="dialog" aria-modal="true" aria-label={editing ? 'Edit listing' : 'New listing'} className="flex h-[min(96dvh,920px)] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl bg-[#fbf9f6] shadow-2xl sm:h-[min(94dvh,940px)] sm:rounded-3xl">
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#e8e0d5] bg-white px-4 py-3 sm:px-7 sm:py-5">
-        <div><p className="text-[10px] font-semibold uppercase tracking-widest text-[#a68a64]">Seller studio · Catalog</p><h2 className="mt-0.5 text-xl font-semibold sm:text-2xl">{editing ? 'Edit your creation' : 'Add a creation'}</h2></div>
+        <div><p className="text-[10px] font-semibold uppercase tracking-widest text-[#a68a64]">Seller studio · Catalog</p><h2 className="mt-0.5 text-xl font-semibold sm:text-2xl">{editing ? 'Edit your creation' : 'Add a creation'}</h2><div className="mt-2">{sku ? <ProductSkuCopy sku={sku} /> : <p className="text-[11px] text-muted-foreground">A unique product SKU will be generated when you save.</p>}</div></div>
         <button type="button" onClick={onClose} aria-label="Close product editor" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f5f1eb]"><X className="h-5 w-5" /></button>
       </div>
       <form id="sellerProductForm" onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">

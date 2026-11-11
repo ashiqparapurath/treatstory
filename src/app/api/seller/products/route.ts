@@ -9,6 +9,7 @@ import {
   saveProductRequest,
   saveSellerProduct,
 } from "@/lib/server/seller-product";
+import { invalidProductMessage } from "@/lib/seller-product-validation";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
     if (!parsed.success)
       throw new ApiError(
         400,
-        "Check product fields and image links before saving.",
+        invalidProductMessage(parsed.error.issues),
       );
     return Response.json(await saveSellerProduct(db, uid, parsed.data), {
       headers: { "Cache-Control": "no-store" },
