@@ -86,9 +86,9 @@ export function Header() {
             <span className="relative inline-flex h-5 w-6 items-center justify-center">
               {item.label === 'Profile' && pendingRole ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <item.icon className="h-5 w-5" />}
               {(item.label === 'More' || item.label === 'Profile') && actionPending && <span aria-label="Pending activity" className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-[#fcfaf6] bg-[#aa6447]"/>}
-              {item.label === 'Cart' && cartCount > 0 && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full border border-[#fcfaf6] bg-[#9a805f]" aria-hidden="true"/>}
+
             </span>
-            <span className="truncate">{item.label}</span>
+            <span className="truncate">{item.label === 'Cart' && cartCount ? `Cart (${cartCount})` : item.label}</span>
           </Link>
         ))}
       </nav>

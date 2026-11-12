@@ -87,6 +87,8 @@ test('mobile bottom nav has five balanced destinations, role shortcut, More and 
   const hook = fs.readFileSync('src/hooks/use-mobile-attention.ts', 'utf8');
   const firebase = fs.readFileSync('src/firebase/provider.tsx', 'utf8');
   assert.match(header, /grid-cols-5/);
+  assert.match(header, /item.label === 'Cart' && cartCount/);
+  assert.doesNotMatch(header, /item.label === 'Cart' && cartCount > 0 && <span/);
   assert.match(header, /label: 'More', icon: Menu, active: pathname === '\/more'/);
   assert.match(header, /label: 'Profile', icon: UserRound, active: isMobileProfilePath/);
   assert.match(header, /href: profileHref/);
