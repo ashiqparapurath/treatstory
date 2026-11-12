@@ -64,6 +64,7 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
   uploadProgress: string;
 }) {
   const [suggestion, setSuggestion] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [categoryActiveIndex, setCategoryActiveIndex] = useState(0);
   if (!open) return null;
@@ -88,7 +89,8 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
         <button type="button" onClick={onClose} aria-label="Close product editor" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f5f1eb]"><X className="h-5 w-5" /></button>
       </div>
       <form id="sellerProductForm" onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4 sm:space-y-5 sm:px-7 sm:py-6">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4 sm:space-y-4 sm:px-7 sm:py-5">
+          <p className="text-xs leading-5 text-[#776a5d]">Start with the essentials. Add sizes, photos and advanced details only when needed.</p>
           {saveError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{saveError}</p>}
           <section className="space-y-3 rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6">
             <h3 className="text-sm font-semibold">Essential details</h3>
@@ -130,9 +132,9 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
               {suggestion && <div className="rounded-xl bg-[#f3eee6] p-3"><p className="text-xs leading-5 text-[#5e5040]">{suggestion}</p><div className="mt-2 flex gap-2"><Button type="button" size="sm" onClick={() => { set('description',suggestion); setSuggestion(''); }}>Use suggestion</Button><Button type="button" size="sm" variant="outline" onClick={() => setSuggestion('')}>Dismiss</Button></div><p className="mt-2 text-[10px] text-muted-foreground">Template suggestion based only on the details you've entered; review its accuracy before publishing.</p></div>}
             </div>
           </section>
-          <section className="rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6"><h3 className="mb-3 text-sm font-semibold">Payment requirements</h3>
-              <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={draft.advancePaymentRequired} onChange={e => set('advancePaymentRequired', e.target.checked)} />Advance payment required before preparation</label><p className="text-xs text-muted-foreground sm:col-span-2">Arrange the advance directly with the buyer. TreatStory does not collect online payments.</p>
-          </section>
+          <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-5"><summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold [&::-webkit-details-marker]:hidden">Payment requirements <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180"/></summary><div className="mt-3">
+              <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={draft.advancePaymentRequired} onChange={e => set('advancePaymentRequired', e.target.checked)} />Advance payment required before preparation</label><p className="text-xs text-muted-foreground sm:col-span-2">Arrange the advance directly with the buyer. TreatStory does not collect online payments.</p></div>
+          </details>
           <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Photos & gallery <span className="flex items-center gap-2 text-xs font-normal text-[#8b795e]">{photoCount} photo(s)<ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></span></summary>
             <div className="mt-4 space-y-3">
@@ -146,8 +148,8 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
               <details className="rounded-xl border border-dashed p-3"><summary className="cursor-pointer text-xs font-medium text-[#71604b]">Or paste image URLs manually</summary><div className="mt-2 space-y-2"><Label htmlFor="creatorImages">HTTPS image links (one per line)</Label><Textarea id="creatorImages" rows={3} maxLength={5000} placeholder={"https://example.com/cake-front.jpg\nhttps://example.com/cake-detail.jpg"} value={draft.imageUrls} onChange={e => set('imageUrls',e.target.value)} /><p className="text-xs text-muted-foreground">You can still use previously hosted photo links. Photos from direct uploads are added here automatically.</p></div></details>
             </div>
           </details>
-          <section className="space-y-4 rounded-2xl border-2 border-[#b99b72] bg-[#fffdf8] p-4 sm:p-6" aria-labelledby="variant-pricing-title">
-            <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#98764d]">One product · Multiple prices</p><h3 id="variant-pricing-title" className="mt-1 text-base font-semibold">Weight, size & variant pricing</h3></div><span className="rounded-full bg-[#f0e7da] px-3 py-1.5 text-xs font-semibold text-[#715637]">{draft.weightOptions.length} {draft.weightOptions.length === 1 ? 'size' : 'sizes'}</span></div>
+          <details className="group rounded-2xl border border-[#e4d6c5] bg-white p-4 sm:p-5" open={draft.weightOptions.length > 0 ? true : undefined} aria-labelledby="variant-pricing-title">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden"><span id="variant-pricing-title">Weight, size & variant pricing</span><span className="flex items-center gap-2 text-xs font-normal text-[#8b795e]">{draft.weightOptions.length} sizes <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180"/></span></summary><div className="mt-4 space-y-4">
             <p className="text-xs leading-5 text-[#6d6050]">Example: add <strong>500 g at ₹450</strong> and <strong>1 kg at ₹800</strong> under the same cake product. Enter a price for each size. Each size can also have its own stock; leaving stock blank uses the product's shared stock.</p>
             <div className="space-y-3">
               {draft.weightOptions.map((option,i) => <div key={i} className="grid grid-cols-2 items-end gap-3 rounded-xl border border-[#e3d1ba] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_100px_120px_120px_36px]">
@@ -167,9 +169,9 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
               {!!draft.weightOptions.length && <div role="status" className="rounded-xl bg-[#f5ede2] p-3 text-xs leading-6 text-[#5e503f]"><strong>Price preview:</strong> {draft.weightOptions.map((option,i) => `${option.value || 'Size '+(i+1)} ${option.unit}: ₹${option.price.trim() === '' ? 'set price' : option.price}`).join(' · ')}. Each size is saved under this single product.</div>}
               <label className="block max-w-xs space-y-1 text-xs font-medium">Minimum order quantity (units)<Input type="number" min={1} max={99} value={draft.minimumOrderQuantity} onChange={e=>set('minimumOrderQuantity',e.target.value)}/></label>
             </div>
-          </section>
-          <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Availability & personalization <ChevronDown className="h-4 w-4 transition group-open:rotate-180"/></summary>
+          </div></details>
+          <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-5">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Advanced listing details <ChevronDown className="h-4 w-4 transition group-open:rotate-180"/></summary>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div className="space-y-1 text-xs font-medium"><Label htmlFor="seller-editor-availability" className="text-xs">Availability</Label>
                   <Select value={draft.availability} onValueChange={value=>set('availability',value as ProductDraft['availability'])}>
