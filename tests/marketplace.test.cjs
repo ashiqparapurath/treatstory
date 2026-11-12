@@ -898,7 +898,7 @@ test('homepage banners are short on mobile and Our Story uses its editorial bann
   assert.match(about,/our-story-banner\\.webp/);
   assert.match(about,/aspect-\\[3\\/2\\]/);
   assert.match(about,/bg-\\[length:200%_auto\\]/);
-  assert.match(about,/The Story Behind <em>TreatStory<\\/em>/);
+  assert.ok(about.includes('The Story Behind <em>TreatStory</em>'));
   assert.match(about,/our-story-creators\\.svg/);
   assert.doesNotMatch(about,/src="\/img\/landing-hero\.webp"/);
   assert.match(svg,/The creations behind TreatStory/);
