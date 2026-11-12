@@ -32,6 +32,7 @@ export default function LoginPage() {
   const { toast } = useToast();
   const [registerHref, setRegisterHref] = useState('/register');
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const next = new URLSearchParams(window.location.search).get('next');
     if (next && next.startsWith('/') && !next.startsWith('//') && !next.includes('\\') && !/^\/(login|register)([/?#]|$)/.test(next)) setRegisterHref('/register?next=' + encodeURIComponent(next));
   }, []);

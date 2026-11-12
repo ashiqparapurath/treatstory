@@ -26,6 +26,7 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [signInHref, setSignInHref] = useState('/login');
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const next = new URLSearchParams(window.location.search).get('next');
     if (next && next.startsWith('/') && !next.startsWith('//') && !next.includes('\\') && !/^\/(login|register)([/?#]|$)/.test(next)) setSignInHref('/login?next=' + encodeURIComponent(next));
   }, []);
