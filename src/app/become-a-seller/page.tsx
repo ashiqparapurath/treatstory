@@ -63,10 +63,10 @@ export default function BecomeSellerPage() {
   return (
     <div className="min-h-screen bg-[#fcfaf6] text-[#30291f]">
       <Header />
-      <main className="section-shell mx-auto max-w-6xl pb-28 pt-6 sm:pt-10">
-        <section aria-labelledby="seller-page-heading" className="relative overflow-hidden rounded-[26px] bg-[#ede4d8] sm:rounded-[34px]">
-          <div className="pointer-events-none absolute -right-20 -top-44 h-96 w-96 rounded-full bg-[#fff7ea]/80 blur-3xl" aria-hidden="true" />
-          <div className="relative grid items-center gap-8 px-6 py-9 sm:px-10 sm:py-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-12 lg:px-14 lg:py-16">
+      <main className="section-shell mx-auto max-w-6xl pb-28 pt-5 sm:pt-10">
+        <section aria-labelledby="seller-page-heading" className="relative overflow-hidden rounded-none bg-transparent sm:rounded-[34px] sm:bg-[#ede4d8]">
+          <div className="pointer-events-none absolute -right-20 -top-44 hidden h-96 w-96 rounded-full bg-[#fff7ea]/80 blur-3xl sm:block" aria-hidden="true" />
+          <div className="relative grid items-center gap-8 px-0 py-3 sm:px-10 sm:py-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-12 lg:px-14 lg:py-16">
             <div className="min-w-0">
               <p className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.21em] text-[#8d704e]">
                 <Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -91,9 +91,11 @@ export default function BecomeSellerPage() {
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#897152]" aria-hidden="true" />
                 Seller access is reviewed before activation.
               </p>
-              <div aria-label="Marketplace creator categories" className="mt-5 flex flex-wrap gap-2 sm:hidden">
-                {['Home bakes', 'Art', 'Handmade'].map(category => (
-                  <span key={category} className="rounded-full border border-[#cebca6]/65 bg-[#fff8ed]/70 px-3 py-1.5 text-[10px] font-semibold tracking-wide text-[#7c6144]">{category}</span>
+              <div aria-label="Marketplace creator categories" className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 sm:hidden">
+                {['Home bakes', 'Art', 'Handmade'].map((category, index) => (
+                  <span key={category} className="inline-flex items-center gap-2 text-[11px] font-medium tracking-wide text-[#806b52]">
+                    {index > 0 && <span aria-hidden="true" className="text-[#b8a48a]">·</span>}{category}
+                  </span>
                 ))}
               </div>
             </div>
@@ -127,14 +129,14 @@ export default function BecomeSellerPage() {
           </div>
         </section>
 
-        <section id="seller-application" aria-label="Seller application" className="scroll-mt-28 mt-8 sm:mt-10">
+        <section id="seller-application" aria-label="Seller application" className="scroll-mt-28 mt-8 border-t border-[#ece4d9] pt-7 sm:mt-10 sm:border-0 sm:pt-0">
           {isUserLoading || (user && isRoleLoading) ? (
             <div role="status" aria-live="polite" className="flex min-h-24 items-center gap-3 text-sm text-[#746958]">
               <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#d8c9b6] border-t-[#65513a]" aria-hidden="true" />
               Checking your account…
             </div>
           ) : seller ? (
-            <section role="status" className="space-y-4 rounded-[24px] bg-[#f0f3ea] p-6 sm:p-9">
+            <section role="status" className="space-y-4 bg-transparent px-0 py-2 sm:rounded-[24px] sm:bg-[#f0f3ea] sm:p-9">
               <CheckCircle2 className="h-7 w-7 text-[#648056]" aria-hidden="true" />
               <h2 className="text-2xl font-medium">Your seller space is ready.</h2>
               <p className="max-w-xl text-sm leading-7 text-[#67735d]">You already have seller access. Open your dashboard to manage your creations, store and orders.</p>
@@ -143,11 +145,11 @@ export default function BecomeSellerPage() {
               </Link>
             </section>
           ) : roleError ? (
-            <section role="alert" className="rounded-[24px] bg-amber-50 p-6 text-sm leading-7 text-amber-950">
+            <section role="alert" className="bg-transparent px-0 py-2 text-sm leading-7 text-amber-950 sm:rounded-[24px] sm:bg-amber-50 sm:p-6">
               We couldn’t check your seller account access right now. Refresh this page or contact support if the problem continues.
             </section>
           ) : !user ? (
-            <section aria-labelledby="seller-account-heading" className="grid min-w-0 gap-7 rounded-[24px] bg-[#f6f1e9] px-5 py-7 sm:rounded-[30px] sm:px-9 sm:py-10 md:grid-cols-[1fr_auto] md:items-center md:gap-12">
+            <section aria-labelledby="seller-account-heading" className="grid min-w-0 gap-5 bg-transparent px-0 py-0 sm:gap-7 sm:rounded-[30px] sm:bg-[#f6f1e9] sm:px-9 sm:py-10 md:grid-cols-[1fr_auto] md:items-center md:gap-12">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.19em] text-[#967854]">Your first step</p>
                 <h2 id="seller-account-heading" className="mt-2 text-2xl font-medium leading-tight tracking-tight sm:text-[28px]">Ready to make your creations discoverable?</h2>
@@ -160,13 +162,13 @@ export default function BecomeSellerPage() {
                 <Link href="/register?next=%2Fbecome-a-seller" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#30291f] px-5 text-sm font-semibold text-white transition hover:bg-[#554737]">
                   Create account <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
                 </Link>
-                <Link href="/login?next=%2Fbecome-a-seller" className="inline-flex min-h-12 w-full items-center justify-center whitespace-nowrap rounded-full bg-white/75 px-4 text-sm font-semibold text-[#433629] transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9f805a]">
+                <Link href="/login?next=%2Fbecome-a-seller" className="inline-flex min-h-12 w-full items-center justify-center whitespace-nowrap bg-transparent px-2 text-sm font-semibold text-[#433629] underline decoration-[#c5ae91] underline-offset-4 transition hover:text-[#70583d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9f805a] sm:rounded-full sm:bg-white/75 sm:px-4 sm:no-underline sm:hover:bg-white">
                   I already have an account
                 </Link>
               </div>
             </section>
           ) : !user.displayName?.trim() ? (
-            <section className="rounded-[26px] bg-[#f3ede4] p-6 sm:p-9">
+            <section className="bg-transparent p-0 sm:rounded-[26px] sm:bg-[#f3ede4] sm:p-9">
               <p className="text-[10px] font-bold uppercase tracking-[0.19em] text-[#967854]">Almost ready</p>
               <h2 className="mt-2 text-2xl font-medium">Add your name to your profile.</h2>
               <p className="mt-3 max-w-xl text-sm leading-7 text-[#73685b]">Your name helps us identify your application. Once your profile is complete, you can return here to share your business details.</p>
@@ -175,7 +177,7 @@ export default function BecomeSellerPage() {
               </Link>
             </section>
           ) : submitted ? (
-            <section role="status" className="rounded-[26px] bg-[#edf2e9] p-6 sm:p-9">
+            <section role="status" className="bg-transparent p-0 sm:rounded-[26px] sm:bg-[#edf2e9] sm:p-9">
               <CheckCircle2 className="h-8 w-8 text-[#688259]" aria-hidden="true" />
               <h2 className="mt-4 text-2xl font-medium">Your story is on its way.</h2>
               <p className="mt-3 max-w-xl text-sm leading-7 text-[#617459]">We've received your application. We'll review the details and contact you using your TreatStory account email.</p>
@@ -188,7 +190,7 @@ export default function BecomeSellerPage() {
               <p className="text-[10px] font-bold uppercase tracking-[0.19em] text-[#9f805a]">Your application</p>
               <h2 id="seller-form-heading" className="mt-2 text-2xl font-medium tracking-tight sm:text-3xl">Tell us about your creations.</h2>
               <p className="mt-3 max-w-xl text-sm leading-7 text-[#73685b]">A few details about your business will help us understand what you make. Your application will be reviewed before you can start selling.</p>
-              <form onSubmit={submit} className="mt-8 space-y-6 rounded-[24px] bg-white p-5 shadow-[0_8px_32px_rgba(55,42,28,0.035)] sm:p-9">
+              <form onSubmit={submit} className="mt-7 space-y-6 bg-transparent p-0 shadow-none sm:mt-8 sm:rounded-[24px] sm:bg-white sm:p-9 sm:shadow-[0_8px_32px_rgba(55,42,28,0.035)]">
                 <div className="space-y-2">
                   <Label htmlFor="businessName">Business / studio name</Label>
                   <Input id="businessName" required minLength={2} maxLength={120} value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="e.g. Little Bloom Bakery" className="min-h-12 bg-white" />
@@ -217,7 +219,7 @@ export default function BecomeSellerPage() {
           )}
         </section>
 
-        <section aria-label="Benefits for creators" className="mt-14 sm:mt-20">
+        <section aria-label="Benefits for creators" className="mt-12 sm:mt-20">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.19em] text-[#a0835d]">Made for independent creators</p>
@@ -231,9 +233,9 @@ export default function BecomeSellerPage() {
               { icon: ShoppingBag, title: 'A clearer way to manage orders', description: 'View incoming orders and keep track of each customer request.' },
               { icon: Palette, title: 'A home for handmade work', description: 'Share the details that make your baking, artwork and crafts unique.' },
             ].map(({ icon: Icon, title, description }) => (
-              <div key={title} className="group border-t border-[#dcd1c3] pt-5">
+              <div key={title} className="group border-0 pt-0 sm:border-t sm:border-[#dcd1c3] sm:pt-5">
                 <div className="flex items-start gap-3 sm:block">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f0e6d9] text-[#846748] sm:mb-5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-transparent text-[#846748] sm:mb-5 sm:h-11 sm:w-11 sm:rounded-xl sm:bg-[#f0e6d9]">
                     <Icon className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div>
@@ -246,7 +248,7 @@ export default function BecomeSellerPage() {
           </div>
         </section>
 
-        <section id="how-it-works" className="scroll-mt-28 mt-14 border-t border-[#e8dfd3] pt-12 sm:mt-20 sm:pt-16">
+        <section id="how-it-works" className="scroll-mt-28 mt-14 border-0 pt-0 sm:mt-20 sm:border-t sm:border-[#e8dfd3] sm:pt-16">
           <div className="max-w-xl">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9f805a]">Simple from the start</p>
             <h2 className="mt-2 text-2xl font-medium tracking-[-0.035em] sm:text-3xl">A simple way to get started.</h2>
@@ -259,7 +261,7 @@ export default function BecomeSellerPage() {
               ['03', 'We review your application', 'Seller access is enabled after approval.'],
             ].map(([number, title, description]) => (
               <li key={number} className="flex min-w-0 gap-4 sm:block">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#d9c7b1] font-serif text-[15px] italic text-[#9b7f5d] sm:mb-5">{number}</span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center font-serif text-[18px] italic text-[#9b7f5d] sm:mb-5 sm:h-10 sm:w-10 sm:rounded-full sm:border sm:border-[#d9c7b1] sm:text-[15px]">{number}</span>
                 <div className="min-w-0">
                   <h3 className="text-sm font-semibold text-[#352d25]">{title}</h3>
                   <p className="mt-1.5 text-[13px] leading-6 text-[#756a5e]">{description}</p>
@@ -269,7 +271,7 @@ export default function BecomeSellerPage() {
           </ol>
         </section>
 
-        <p className="mt-12 border-t border-[#eee6db] pt-7 text-center text-[11px] tracking-wide text-[#9e907f] sm:mt-16">Little finds, lovely stories. Made by people like you.</p>
+        <p className="mt-12 border-0 pt-0 text-center text-[11px] tracking-wide text-[#9e907f] sm:mt-16 sm:border-t sm:border-[#eee6db] sm:pt-7">Little finds, lovely stories. Made by people like you.</p>
       </main>
     </div>
   );
