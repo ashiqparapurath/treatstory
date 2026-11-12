@@ -148,7 +148,11 @@ test('More menu links start a session-backed in-app navigation trail', () => {
   assert.match(history,/aria-label="More navigation history"/);
   assert.match(history,/router.push\(previous/);
   assert.match(history,/Back to More/);
-  assert.match(layout,/<MoreNavigationTrail \/>/);
+  const header=fs.readFileSync('src/components/header.tsx','utf8');
+  assert.match(header,/<MoreNavigationTrail \/>/);
+  assert.doesNotMatch(layout,/<MoreNavigationTrail \/>/);
+  assert.match(history,/className="bg-\[#fcfaf6\] md:hidden"/);
+  assert.doesNotMatch(history,/\bfixed\b|\bshadow-/,'Back should be an integrated inline row, never a floating pill');
   assert.match(page,/bg-transparent/,'More lists should use borderless surfaces');
   assert.doesNotMatch(page,/overflow-hidden rounded-2xl border border-\[#e8e0d5\]/);
 });

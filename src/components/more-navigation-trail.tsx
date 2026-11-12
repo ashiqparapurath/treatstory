@@ -22,14 +22,17 @@ function JourneyContent() {
   }, [pathname, params]);
   if (!previous) return null;
   return (
-    <nav aria-label="More navigation history" className="pointer-events-none fixed left-3 top-[76px] z-40 md:hidden">
-      <button type="button" onClick={() => {
-        const journey = readMoreJourney();
-        if (journey.length > 1) storeMoreJourney(journey.slice(0, -1));
-        router.push(previous, {scroll:true});
-      }} className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-full bg-[#fffdfa]/95 px-4 text-xs font-semibold text-[#524536] shadow-[0_4px_22px_rgba(37,31,24,.15)] backdrop-blur-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#a28a66]">
-        <ArrowLeft className="h-4 w-4" /> {previous === '/more' ? 'Back to More' : 'Back'}
-      </button>
+    <nav aria-label="More navigation history" className="bg-[#fcfaf6] md:hidden">
+      <div className="section-shell flex min-h-12 items-center">
+        <button type="button" onClick={() => {
+          const journey = readMoreJourney();
+          if (journey.length > 1) storeMoreJourney(journey.slice(0, -1));
+          router.push(previous, {scroll:true});
+        }} className="inline-flex min-h-11 items-center gap-2 bg-transparent px-0 text-xs font-semibold text-[#76614a] transition-colors hover:text-[#30271f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a28a66]">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          {previous === '/more' ? 'Back to More' : 'Back'}
+        </button>
+      </div>
     </nav>
   );
 }

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ShoppingBag, ArrowUpRight, UserRound, Bell, Home, Search, Menu, LoaderCircle } from 'lucide-react';
 import { mobileProfileHref, isMobileProfilePath, mobileNavIsActive } from '@/lib/mobile-navigation';
 import { useMobileAttention } from '@/hooks/use-mobile-attention';
+import { MoreNavigationTrail } from '@/components/more-navigation-trail';
 import { useCart } from '@/context/cart-context';
 import { Badge } from '@/components/ui/badge';
 import { useAccountRole, useUser } from '@/firebase';
@@ -70,6 +71,7 @@ export function Header() {
           </nav>
         </div>
       </header>
+      <MoreNavigationTrail />
       <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 rounded-t-3xl border border-white/70 bg-[#fcfaf6]/95 px-1 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_4px_30px_rgba(35,29,23,0.18)] backdrop-blur-xl md:hidden">
         {[
           { href: '/', label: 'Home', icon: Home, active: pathname === '/' },
