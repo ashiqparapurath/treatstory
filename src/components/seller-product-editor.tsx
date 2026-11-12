@@ -64,7 +64,6 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
   uploadProgress: string;
 }) {
   const [suggestion, setSuggestion] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [categoryActiveIndex, setCategoryActiveIndex] = useState(0);
   if (!open) return null;
