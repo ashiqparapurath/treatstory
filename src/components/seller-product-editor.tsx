@@ -64,6 +64,8 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
   uploadProgress: string;
 }) {
   const [suggestion, setSuggestion] = useState('');
+  const [newPhotoLink, setNewPhotoLink] = useState('');
+  const [photoLinkError, setPhotoLinkError] = useState('');
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [categoryActiveIndex, setCategoryActiveIndex] = useState(0);
   if (!open) return null;
@@ -74,6 +76,20 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
   const photos = parseProductImageUrls(draft.imageUrls);
   const photoCount = photos.length;
   const arrangePhotos = (next: string[]) => set('imageUrls', next.join('\n'));
+  const addPhotoLink = () => {
+    const link = newPhotoLink.trim();
+    let parsed: URL;
+    try { parsed = new URL(link); } catch { setPhotoLinkError('Enter a complete HTTPS image URL.'); return; }
+    if (parsed.protocol !== 'https:' || !parsed.hostname || parsed.username || parsed.password) {
+      setPhotoLinkError('Use a secure HTTPS image URL without credentials.');
+      return;
+    }
+    if (photos.length >= 10) { setPhotoLinkError('You can add a maximum of 10 product photos.'); return; }
+    if (photos.includes(link)) { setPhotoLinkError('This image is already added.'); return; }
+    arrangePhotos([...photos, link]);
+    setNewPhotoLink('');
+    setPhotoLinkError('');
+  };
   const shiftPhoto = (index: number, delta: number) => {
     const target = index + delta;
     if (target < 0 || target >= photos.length) return;
@@ -161,7 +177,15 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
                 <span role="status" aria-live="polite" className="text-xs text-muted-foreground">{uploadProgress || `${photoCount} / 10 photos`}</span>
               </div>
               {photoCount > 0 && <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{photos.map((url, i) => <div key={url + i} className="space-y-1 overflow-hidden rounded-xl border border-[#e8e0d5] bg-[#f7f4ef] p-2"><div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-[#ebe3d8]"><img src={url} alt={`Product photo ${i + 1}`} className="h-full w-full object-cover" loading="lazy" /></div><div className="flex items-center justify-between gap-1"><span className="truncate text-[10px] text-muted-foreground">{i === 0 ? 'Cover' : `Photo ${i + 1}`}</span><div className="flex gap-1"><button type="button" onClick={() => shiftPhoto(i,-1)} disabled={i===0||uploading} aria-label={`Move photo ${i+1} left`} className="grid h-7 w-7 place-items-center rounded-md border bg-white disabled:opacity-30"><ArrowLeft className="h-3.5 w-3.5" /></button><button type="button" onClick={() => shiftPhoto(i,1)} disabled={i===photos.length-1||uploading} aria-label={`Move photo ${i+1} right`} className="grid h-7 w-7 place-items-center rounded-md border bg-white disabled:opacity-30"><ArrowRight className="h-3.5 w-3.5" /></button><button type="button" onClick={() => arrangePhotos(photos.filter((_, n) => n !== i))} disabled={uploading} aria-label={`Remove photo ${i+1}`} className="grid h-7 w-7 place-items-center rounded-md border bg-white text-red-600 disabled:opacity-30"><X className="h-3.5 w-3.5" /></button></div></div></div>)}</div>}
-              <details className="rounded-xl border border-dashed p-3"><summary className="cursor-pointer text-xs font-medium text-[#71604b]">Or paste image URLs manually</summary><div className="mt-2 space-y-2"><Label htmlFor="creatorImages">HTTPS image links (one per line)</Label><Textarea id="creatorImages" rows={3} maxLength={5000} placeholder={"https://example.com/cake-front.jpg\nhttps://example.com/cake-detail.jpg"} value={draft.imageUrls} onChange={e => set('imageUrls',e.target.value)} /><p className="text-xs text-muted-foreground">You can still use previously hosted photo links. Photos from direct uploads are added here automatically.</p></div></details>
+              <div className="rounded-xl border border-[#e8e0d5] bg-[#faf8f5] p-3 sm:p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-semibold text-[#352c23]">Add image by link</p><p className="mt-1 text-[11px] text-[#87786a]">Add one HTTPS image link at a time. Repeat for more photos.</p></div><span className="text-[11px] tabular-nums text-[#87786a]">{photoCount} / 10</span></div>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <Input id="creatorImageLink" type="url" inputMode="url" autoComplete="url" aria-label="Image URL" aria-invalid={!!photoLinkError} aria-describedby={photoLinkError ? 'creatorImageLinkError' : undefined} placeholder="https://example.com/my-product.jpg" value={newPhotoLink} disabled={uploading || busy || !enabled || photoCount >= 10} onChange={e => { setNewPhotoLink(e.target.value); if (photoLinkError) setPhotoLinkError(''); }} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addPhotoLink(); } }} className="h-11 min-w-0 flex-1 rounded-xl bg-white" />
+                  <Button type="button" variant="outline" className="h-11 shrink-0 rounded-xl border-[#cbb89e] bg-white" onClick={addPhotoLink} disabled={uploading || busy || !enabled || photoCount >= 10 || !newPhotoLink.trim()}><Plus className="mr-2 h-4 w-4" />Add link</Button>
+                </div>
+                {photoLinkError && <p id="creatorImageLinkError" role="alert" className="mt-2 text-xs text-red-700">{photoLinkError}</p>}
+                <p className="mt-2 text-[11px] leading-5 text-[#87786a]">New links appear in the gallery above. Reorder photos with the arrow controls; the first becomes the cover.</p>
+              </div>
             </div>
           </details>
           <details className="group rounded-2xl border border-[#e4d6c5] bg-white p-4 sm:p-5" open={draft.weightOptions.length > 0 ? true : undefined} aria-labelledby="variant-pricing-title">
