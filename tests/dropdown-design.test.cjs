@@ -22,7 +22,7 @@ test('open dropdown menus are custom TreatStory overlays, not native system pick
   assert.match(select,/focus-visible:ring-\[#a98d69\]/);
   assert.match(select,/focus:bg-\[#f2ebe2\]/);
   for (const [name,source] of [['support',support],['seller',seller],['address',address]]) {
-    assert.match(source, /<Select /,name+' must render Radix Select, not the system popup');
+    assert.match(source, /<Select\b/,name+' must render Radix Select, not the system popup');
     assert.match(source, /<SelectTrigger/,name);
     assert.match(source, /<SelectContent position="popper" sideOffset=\{6\}/,name);
     assert.match(source, /<SelectItem/,name);
