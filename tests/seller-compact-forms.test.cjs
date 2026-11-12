@@ -38,3 +38,11 @@ test('stock quantity and listing status use matching labeled control geometry', 
  assert.match(editor,/grid items-start gap-3 sm:grid-cols-2/);
  assert.match(editor,/flex min-w-0 flex-col gap-1\.5/);
 });
+
+test('image links can be added individually with validation and gallery actions', () => {
+ const editor=read('src/components/seller-product-editor.tsx');
+ for (const marker of ['newPhotoLink','addPhotoLink','photoLinkError','Add link','Add image by link','creatorImageLink','aria-invalid={!!photoLinkError}','photos.includes(link)','photos.length >= 10','arrangePhotos([...photos, link])','shiftPhoto(i,-1)','shiftPhoto(i,1)']) assert.ok(editor.includes(marker),marker);
+ assert.match(editor,/parsed\.protocol !== 'https:'/);
+ assert.match(editor,/type="button" variant="outline" className="h-11 shrink-0 rounded-xl/);
+ assert.doesNotMatch(editor,/Or paste image URLs manually/);
+});
