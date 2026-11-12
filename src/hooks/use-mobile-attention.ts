@@ -38,7 +38,7 @@ export function useMobileAttention(uid: string | null, role: MobileRole, roleRea
       values[type] = flag;
       setState({ uid, role, value: { ...values } });
     };
-    const unsubscribe = [];
+    const unsubscribe: Array<() => void> = [];
     if (role === 'seller') {
       unsubscribe.push(onSnapshot(
         query(collection(db, 'seller_orders'), where('sellerId', '==', uid), where('status', '==', 'pending'), limit(1)),
