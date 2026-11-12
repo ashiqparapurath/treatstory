@@ -7,3 +7,11 @@ test('mobile homepage hides decorative hero, keeps copy and desktop hero', () =>
   assert.match(source,/relative z-10 order-1 max-w-xl/);
   for(const marker of ['<HeroImage alt=', 'Little finds.', 'Lovely stories.', 'Explore the collection', '<BannerCarousel />', '<SellerStorefrontProducts']) assert.ok(source.includes(marker),marker);
 });
+
+test('mobile header blends into the page without a separator', () => {
+  const header=fs.readFileSync('src/components/header.tsx','utf8');
+  assert.match(header,/border-b-0 bg-background shadow-none/);
+  assert.match(header,/md:border-b md:border-\[#e9e2d8\]/);
+  assert.match(header,/md:shadow-\[0_3px_18px/);
+  assert.match(header,/sticky top-0 z-40/);
+});
