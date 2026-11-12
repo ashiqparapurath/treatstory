@@ -21,7 +21,7 @@ const BannerList = dynamic(() => import('@/components/admin/banner-list').then(m
 const BannerDialog = dynamic(() => import('@/components/admin/banner-dialog').then(m => m.BannerDialog), { loading: () => <SectionSkeleton /> });
 const CategoryList = dynamic(() => import('@/components/admin/category-list').then(m => m.CategoryList), { loading: () => <SectionSkeleton /> });
 const CategoryDialog = dynamic(() => import('@/components/admin/category-dialog').then(m => m.CategoryDialog), { loading: () => <SectionSkeleton /> });
-const EnquirySettingsForm = dynamic(() => import('@/components/admin/enquiry-settings-form').then(m => m.EnquirySettingsForm), { loading: () => <SectionSkeleton /> });
+const PlatformSettings = dynamic(() => import('@/components/admin/platform-settings').then(m => m.PlatformSettings), { loading: () => <SectionSkeleton /> });
 const SupportInbox = dynamic(() => import('@/components/admin/support-inbox').then(m => m.SupportInbox), { loading: () => <SectionSkeleton /> });
 const ReviewModeration = dynamic(() => import('@/components/admin/review-moderation').then(m => m.ReviewModeration), { loading: () => <SectionSkeleton /> });
 import { LayoutDashboard, Store, ClipboardList, Package, ImageIcon, Tags, Settings, LogOut, ArrowUpRight, ShieldCheck, Headset, Star, Users } from 'lucide-react';
@@ -117,7 +117,7 @@ function AdminContent() {
         {tab === 'products' && <ProductList />}
         {tab === 'banners' && <BannerList />}
         {tab === 'categories' && <CategoryList />}
-        {tab === 'settings' && <EnquirySettingsForm />}
+        {tab === 'settings' && <PlatformSettings />}
       </main>
     </div>
   </div>;
