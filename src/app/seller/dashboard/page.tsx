@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { MarketplaceProduct, SellerApplication } from '@/lib/marketplace-types';
-import { LayoutDashboard, Package, Settings, ShoppingBag, Plus, ArrowUpRight, Clock3, Store, Trash2, Pencil, CheckCircle2, AlertCircle, LogOut, Search, ImageIcon } from 'lucide-react';
+import { LayoutDashboard, Package, Settings, ShoppingBag, Plus, ArrowUpRight, Clock3, Store, Trash2, Pencil, CheckCircle2, AlertCircle, LogOut, Search, ImageIcon, LifeBuoy } from 'lucide-react';
 import { SellerProductEditor, emptyDraft, type ProductDraft } from '@/components/seller-product-editor';
 import { parseProductImageUrls } from '@/lib/product-image-urls';
 import { saveProductRequest, invalidProductMessage } from '@/lib/seller-product-validation';
@@ -294,6 +294,7 @@ function SellerContent() {
       <aside className="min-w-0 space-y-3 lg:space-y-5">
         <div className="rounded-2xl border border-[#e6dfd5] bg-white p-4 sm:p-5"><div className="flex items-center gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#29251f] text-[#f5eadb]"><Store className="h-5 w-5" /></div><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9a8061]">Seller workspace</p><h2 className="mt-0.5 truncate text-base font-semibold text-[#29251f]" title={seller.businessName}>{seller.businessName}</h2></div></div><div className="mt-4 flex items-center gap-2 border-t border-[#f0ece6] pt-3 text-xs text-[#63594c]"><span className={`h-2 w-2 shrink-0 rounded-full ${active ? 'bg-emerald-500' : 'bg-amber-500'}`} />{active ? 'Store active' : 'Access restricted'}</div><p className="mt-1 text-[11px] text-[#87796a]">{seller.accessType === 'trial' ? 'Trial' : 'Full'} access · Until {dateText(seller.accessEndsAt)}</p></div>
         <nav aria-label="Seller workspace" className="grid grid-cols-4 gap-1 rounded-2xl border border-[#e6dfd5] bg-white p-1.5 lg:flex lg:flex-col lg:gap-1 lg:border-0 lg:bg-transparent lg:p-0">{menu.map(item => <button key={item.key} aria-current={section === item.key ? "page" : undefined} onClick={() => setSection(item.key)} className={`flex min-h-[66px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl px-1 py-2 text-center text-[10px] font-medium transition sm:text-xs lg:min-h-11 lg:w-full lg:flex-row lg:justify-start lg:gap-3 lg:px-4 lg:py-3 lg:text-left lg:text-sm ${section === item.key ? 'bg-[#eae2d7] font-semibold text-[#29251f]' : 'text-[#756a5d] hover:bg-[#eee8e0]'}`}><item.icon className="h-5 w-5 shrink-0 lg:h-4 lg:w-4" /><span className="break-words">{item.label}</span></button>)}</nav>
+        <Link href="/support" className="hidden min-h-11 items-center gap-2 rounded-xl border border-[#e6dfd5] bg-white px-4 text-sm font-medium text-[#665544] transition hover:border-[#baa48a] hover:bg-[#faf7f2] lg:flex"><LifeBuoy className="h-4 w-4 text-[#a68a64]" />Help &amp; Support <ArrowUpRight className="ml-auto h-4 w-4" /></Link>
         <Link href="/account" className="hidden items-center gap-2 px-4 text-xs text-muted-foreground hover:text-foreground lg:inline-flex"><LogOut className="h-4 w-4" />Account & sign out</Link>
       </aside>
       <main className="min-w-0 space-y-5 sm:space-y-7">

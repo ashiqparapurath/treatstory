@@ -57,12 +57,12 @@ export function EnquirySettingsForm() {
     if (enquirySettings) {
       form.reset({
         whatsappNumber: enquirySettings.whatsappNumber || '',
-        prefilledText: enquirySettings.prefilledText || "Hello AS PRODUCTION, I'd like to enquire about the following items:\n\n{{items}}\n\nTotal: {{total}}",
+        prefilledText: enquirySettings.prefilledText || "Hello TreatStory, I'd like to enquire about the following items:\n\n{{items}}\n\nTotal: {{total}}",
       });
     } else {
         form.reset({
             whatsappNumber: '',
-            prefilledText: "Hello AS PRODUCTION, I'd like to enquire about the following items:\n\n{{items}}\n\nTotal: {{total}}",
+            prefilledText: "Hello TreatStory, I'd like to enquire about the following items:\n\n{{items}}\n\nTotal: {{total}}",
         });
     }
   }, [enquirySettings, form]);
@@ -123,7 +123,7 @@ export function EnquirySettingsForm() {
     <Card className="max-w-2xl">
         <CardHeader>
             <CardTitle>Enquiry Settings</CardTitle>
-            <CardDescription>Manage the contact details for WhatsApp enquiries from the cart.</CardDescription>
+            <CardDescription>Legacy catalog only · Used by the cart's WhatsApp enquiry action, not seller orders.</CardDescription>
         </CardHeader>
         <CardContent>
             <Form {...form}>

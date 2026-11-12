@@ -105,8 +105,21 @@ service cloud.firestore {
      * @deny (write) A non-admin attempts to change a setting.
      */
     match /settings/{settingId} {
-        allow read: if settingId == 'enquiry' || isAdmin();
-        allow write: if isAdmin();
+        allow read: if settingId in ['enquiry', 'support'] || isAdmin();
+        // The support document is public but only administrators may edit it.
+        allow create, update: if isAdmin() && (
+          settingId != 'support' ||
+          (request.resource.data.keys().hasOnly(['contactEmail','publicNotice','updatedAt']) &&
+           request.resource.data.keys().hasAll(['contactEmail','publicNotice','updatedAt']) &&
+           request.resource.data.contactEmail is string &&
+           request.resource.data.contactEmail.size() <= 254 &&
+           (request.resource.data.contactEmail == '' ||
+            request.resource.data.contactEmail.matches('^[^ @]+@[^ @]+[.][^ @]+$')) &&
+           request.resource.data.publicNotice is string &&
+           request.resource.data.publicNotice.size() <= 300 &&
+           request.resource.data.updatedAt == request.time)
+        );
+        allow delete: if isAdmin();
     }
 
     // New multi-vendor collections are restricted until the corresponding

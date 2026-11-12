@@ -16,9 +16,9 @@ type Counts = {
 const blank: Counts = { active: null, restricted: null, pending: null, catalog: null, published: null, delayed: null, unavailable: null, categories: null };
 
 function Metric({ label, value, icon: Icon, caption }: { label: string; value: number | null; icon: typeof Store; caption: string }) {
-  return <article className="rounded-2xl border border-[#e8e1d6] bg-white p-4 sm:p-5">
+  return <article className="rounded-2xl border border-[#e6dfd5] bg-white p-4 sm:p-5">
     <div className="flex items-center justify-between"><span className="text-xs font-medium text-muted-foreground">{label}</span><Icon className="h-4 w-4 text-[#a68a64]" /></div>
-    <p className="mt-4 text-3xl font-semibold tracking-tight text-[#2c261f]">{value ?? '…'}</p>
+    <p className="mt-5 text-3xl font-semibold tabular-nums tracking-tight text-[#29251f]">{value ?? '…'}</p>
     <p className="mt-2 text-xs text-muted-foreground">{caption}</p>
   </article>;
 }
@@ -79,23 +79,31 @@ export function AdminOverview({ navigate }: { navigate?: (tab: string) => void }
   ];
   const categories = counts.categories ?? {};
   const max = Math.max(1, ...Object.values(categories));
-  return <section className="space-y-5 sm:space-y-7">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a68a64]">Operations overview</p><h2 className="mt-1 text-xl font-medium sm:text-2xl">Marketplace at a glance</h2><p className="mt-1 text-xs text-muted-foreground">Lightweight database counts · Refresh to update</p></div><Button variant="outline" size="sm" className="rounded-full" onClick={() => setRefresh(v => v + 1)}><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button></div>
-    <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">{metrics.map(m => <Metric key={m.label} {...m} />)}</div>
-    {errors.length > 0 && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">Some counts are temporarily unavailable. Please refresh or contact support.</p>}
-    <div className="grid gap-3 sm:grid-cols-2">
-      <button onClick={() => navigate?.('orders')} className="flex items-center justify-between gap-3 rounded-2xl border border-[#e8e1d6] bg-white p-4 text-left sm:p-5"><span><span className="block text-xs text-muted-foreground">Pending over 24 hours</span><strong className="mt-2 block text-2xl">{counts.delayed ?? '…'}</strong><span className="mt-1 block text-xs text-[#8c734f]">Review delayed orders</span></span><Clock3 className="h-5 w-5 text-[#a68a64]" /></button>
-      <button onClick={() => navigate?.('catalog')} className="flex items-center justify-between gap-3 rounded-2xl border border-[#e8e1d6] bg-white p-4 text-left sm:p-5"><span><span className="block text-xs text-muted-foreground">Published but unavailable</span><strong className="mt-2 block text-2xl">{counts.unavailable ?? '…'}</strong><span className="mt-1 block text-xs text-[#8c734f]">Review product availability</span></span><Package className="h-5 w-5 text-[#a68a64]" /></button>
+  return <section className="space-y-5 sm:space-y-6">
+    <div className="relative overflow-hidden rounded-2xl bg-[#29251f] p-5 text-white sm:p-7">
+      <div aria-hidden="true" className="pointer-events-none absolute -right-14 -top-24 h-64 w-64 rounded-full border border-white/10 sm:h-80 sm:w-80" />
+      <div className="relative flex flex-wrap items-center justify-between gap-5">
+        <div className="max-w-lg"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#cbb28c]">Marketplace command center</p><h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">A clearer view of everything.</h2><p className="mt-2 max-w-md text-sm leading-6 text-white/70">Keep creators supported, orders moving and the catalog healthy.</p><span className="mt-4 inline-flex rounded-full border border-white/20 px-3 py-1.5 text-[11px] text-white/80">Admin operations · Seller network</span></div>
+        <Button type="button" variant="outline" onClick={() => setRefresh(v => v + 1)} className="h-11 rounded-xl border-white/25 bg-white text-[#29251f] hover:bg-[#f0e6d9]"><RefreshCw className="mr-2 h-4 w-4" />Refresh overview</Button>
+      </div>
     </div>
-    <div className="grid gap-5 xl:grid-cols-[1.2fr_1fr]">
-      <div className="rounded-2xl border border-[#e8e1d6] bg-white p-5 sm:p-7"><div className="flex items-center justify-between"><div><p className="text-xs font-medium text-[#a68a64]">Seller onboarding</p><h3 className="mt-1 text-xl font-medium">Applications queue</h3></div><ClipboardList className="h-5 w-5 text-[#a68a64]" /></div>
-        <div className="mt-5 space-y-3">{queueError ? <button className="text-xs underline" onClick={retryQueue}>Application queue unavailable ({(queueError as { code?: string }).code || 'unknown'}) · Retry</button> : queueLoading ? <p className="text-sm text-muted-foreground">Loading recent applications…</p> : !queue?.length ? <p className="rounded-xl bg-[#f7f5f1] p-4 text-sm text-muted-foreground">No applications awaiting review.</p> : recentQueue.map(a => <div key={a.id} className="flex items-center justify-between gap-3 border-b pb-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{a.businessName}</p><p className="mt-1 text-xs text-muted-foreground">{a.businessCategory} · {a.contactEmail}</p></div><span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-medium text-amber-800">Pending</span></div>)}</div>
+    <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a68a64]">Marketplace health</p><h3 className="mt-1 text-lg font-semibold text-[#29251f]">Your platform at a glance</h3></div><p className="text-[11px] text-[#867766]">Database counts · Refresh to update</p></div>
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{metrics.map(m => <Metric key={m.label} {...m} />)}</div>
+    {errors.length > 0 && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">Some counts are temporarily unavailable. Please refresh or contact support.</p>}
+    <div className="space-y-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a68a64]">Priority queue</p><h3 className="mt-1 text-lg font-semibold text-[#29251f]">Needs your attention</h3></div><div className="grid gap-3 sm:grid-cols-2">
+      <button onClick={() => navigate?.('orders')} className="flex min-h-32 items-center justify-between gap-3 rounded-2xl border border-[#e6dfd5] bg-white p-5 text-left transition hover:border-[#baa48a]"><span><span className="block text-xs text-muted-foreground">Pending over 24 hours</span><strong className="mt-2 block text-2xl">{counts.delayed ?? '…'}</strong><span className="mt-1 block text-xs text-[#8c734f]">Review delayed orders</span></span><Clock3 className="h-5 w-5 text-[#a68a64]" /></button>
+      <button onClick={() => navigate?.('catalog')} className="flex min-h-32 items-center justify-between gap-3 rounded-2xl border border-[#e6dfd5] bg-white p-5 text-left transition hover:border-[#baa48a]"><span><span className="block text-xs text-muted-foreground">Published but unavailable</span><strong className="mt-2 block text-2xl">{counts.unavailable ?? '…'}</strong><span className="mt-1 block text-xs text-[#8c734f]">Review product availability</span></span><Package className="h-5 w-5 text-[#a68a64]" /></button>
+    </div>
+    </div>
+    <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
+      <div className="rounded-2xl border border-[#e6dfd5] bg-white p-5 sm:p-6"><div className="flex items-center justify-between"><div><p className="text-xs font-medium text-[#a68a64]">Seller onboarding</p><h3 className="mt-1 text-xl font-medium">Applications queue</h3></div><ClipboardList className="h-5 w-5 text-[#a68a64]" /></div>
+        <div className="mt-5 divide-y divide-[#eee8df]">{queueError ? <button className="text-xs underline" onClick={retryQueue}>Application queue unavailable ({(queueError as { code?: string }).code || 'unknown'}) · Retry</button> : queueLoading ? <p className="text-sm text-muted-foreground">Loading recent applications…</p> : !queue?.length ? <p className="rounded-xl bg-[#f7f5f1] p-4 text-sm text-muted-foreground">No applications awaiting review.</p> : recentQueue.map(a => <div key={a.id} className="flex items-center justify-between gap-3 py-3 first:pt-0"><div className="min-w-0"><p className="truncate text-sm font-medium">{a.businessName}</p><p className="mt-1 text-xs text-muted-foreground">{a.businessCategory} · {a.contactEmail}</p></div><span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-medium text-amber-800">Pending</span></div>)}</div>
         <button onClick={() => navigate?.('applications')} className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#856b48] hover:underline">Review all applications <ArrowUpRight className="h-4 w-4" /></button>
       </div>
-      <div className="rounded-2xl border border-[#e8e1d6] bg-white p-5 sm:p-7"><div className="flex items-center justify-between"><div><p className="text-xs font-medium text-[#a68a64]">Business mix</p><h3 className="mt-1 text-xl font-medium">Seller categories</h3></div><Layers3 className="h-5 w-5 text-[#a68a64]" /></div>
+      <div className="rounded-2xl border border-[#e6dfd5] bg-white p-5 sm:p-6"><div className="flex items-center justify-between"><div><p className="text-xs font-medium text-[#a68a64]">Business mix</p><h3 className="mt-1 text-xl font-medium">Seller categories</h3></div><Layers3 className="h-5 w-5 text-[#a68a64]" /></div>
         <div className="mt-6 space-y-4">{counts.categories === null ? <p className="text-sm text-muted-foreground">Loading category counts…</p> : Object.values(categories).every(n => n === 0) ? <p className="text-sm text-muted-foreground">No sellers yet.</p> : Object.entries(categories).filter(([, value]) => value > 0).sort((a,b) => b[1]-a[1]).map(([name, count]) => <div key={name}><div className="mb-2 flex justify-between text-xs"><span className="capitalize">{name.replaceAll('-', ' ')}</span><span className="font-semibold">{count}</span></div><div className="h-2 overflow-hidden rounded-full bg-[#eee9e1]"><div className="h-full rounded-full bg-[#aa8d67]" style={{ width: `${count/max*100}%` }} /></div></div>)}</div>
       </div>
     </div>
-    <div className="flex items-start gap-3 rounded-2xl border border-[#e8e1d6] bg-[#f2ede4] p-4"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#967b58]" /><p className="text-xs leading-5 text-[#5b5145]">Order value is not confirmed revenue. Payment and settlement analytics will require protected backend tracking.</p></div>
+    <div className="flex items-start gap-3 rounded-2xl border border-[#e6dfd5] bg-[#f3eee6] p-4"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#967b58]" /><p className="text-xs leading-5 text-[#5b5145]">Order value is not confirmed revenue. Payment and settlement analytics will require protected backend tracking.</p></div>
   </section>;
 }

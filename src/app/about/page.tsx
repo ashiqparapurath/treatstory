@@ -1,23 +1,39 @@
 import { Header } from '@/components/header';
 import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 export default function AboutPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
       <main className="flex-1">
-        <section className="section-shell py-12 sm:py-20">
-          <div className="mx-auto max-w-4xl text-center">
-            <p className="eyebrow inline-flex items-center gap-2 text-[#a68a64]"><Sparkles className="h-3.5 w-3.5" /> A little about us</p>
-            <h1 className="mt-5 text-5xl font-medium leading-[1.02] tracking-[-0.06em] sm:text-7xl">Every find has a <span className="font-serif italic font-normal text-[#a68a64]">story.</span></h1>
-            <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-muted-foreground sm:text-lg">TreatStory is a place for thoughtful discoveries — a growing collection of pieces for everyday life, meaningful moments and everything in between.</p>
-          </div>
-          <div className="relative mt-12 aspect-[4/3] sm:aspect-[16/9] overflow-hidden rounded-[26px] bg-[#e8dfd2] sm:mt-16">
-            <Image src="/img/our-story-creators.svg" alt="An illustrated editorial still life of a handmade berry cake, embroidered flowers, pottery and wrapped gifts celebrating Kerala creators" fill unoptimized sizes="(max-width: 639px) calc(100vw - 32px), (max-width: 1023px) calc(100vw - 48px), (max-width: 1439px) calc(100vw - 80px), 1360px" className="object-cover object-center" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
-            <p className="absolute bottom-5 left-5 text-sm font-medium text-white sm:bottom-8 sm:left-8 sm:text-lg">Made for the moments that make a day.</p>
+        <section className="section-shell py-8 sm:py-12 lg:py-16">
+          <div
+            className="relative isolate overflow-hidden rounded-[22px] bg-[#f3e7db] shadow-sm sm:rounded-[30px]"
+          >
+            {/* Desktop keeps the original editorial banner; mobile crops out its embedded lettering
+                so that the accessible HTML heading and copy appear only once. */}
+            <div
+              className="hidden aspect-[3/2] w-full bg-cover bg-center sm:block"
+              style={{ backgroundImage: "url('/img/our-story-banner.webp'), url('/img/our-story-creators.svg')" }}
+            />
+            <div className="sm:hidden">
+              <div
+                role="img"
+                aria-label="Handmade cake, flowers, a wrapped gift and a crocheted bag by Kerala creators"
+                className="aspect-[5/4] w-full bg-no-repeat bg-right bg-[length:200%_auto]"
+                style={{ backgroundImage: "url('/img/our-story-banner.webp'), url('/img/our-story-creators.svg')" }}
+              />
+              <div className="space-y-4 bg-[#f7ede3] px-6 py-8 text-[#30261d]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#99734e]">Our story</p>
+                <h1 className="font-serif text-[clamp(2.1rem,8vw,3.4rem)] leading-[1.05] tracking-tight">
+                  The Story Behind <em>TreatStory</em>
+                </h1>
+                <p className="text-[15px] leading-7">
+                  A Kerala-born marketplace that brings together talented home bakers, crafters, and handmade creators, giving their creations a bigger, brighter audience.
+                </p>
+              </div>
+            </div>
           </div>
           <div className="mx-auto mt-14 grid max-w-4xl gap-10 sm:mt-20 sm:grid-cols-2 sm:gap-16">
             <div><p className="eyebrow text-[#a68a64]">Our point of view</p><h2 className="mt-3 text-2xl font-medium tracking-tight sm:text-3xl">Thoughtful things, without the fuss.</h2></div>

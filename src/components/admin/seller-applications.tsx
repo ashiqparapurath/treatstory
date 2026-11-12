@@ -73,16 +73,16 @@ export function SellerApplications() {
   if (loadError) return <LoadError retry={retryLoad} error={loadError} />;
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-4 sm:space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div><h2 className="text-2xl font-semibold">Seller applications</h2><p className="text-sm text-muted-foreground">Review new businesses before granting marketplace access.</p></div>
-        <div className="space-y-1"><Label htmlFor="trialDays">Trial duration (days)</Label><Input id="trialDays" className="w-40" type="number" min={1} max={365} value={durationDays} onChange={e => setDurationDays(Math.min(365, Math.max(1, Number(e.target.value) || 1)))} /></div>
+        <div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a68a64]">Creator onboarding</p><h2 className="mt-1 text-lg font-semibold text-[#29251f]">Applications awaiting review</h2><p className="mt-1 text-xs text-[#817568]">Review new businesses before granting marketplace access.</p></div>
+        <div className="space-y-1"><Label htmlFor="trialDays">Trial duration (days)</Label><Input id="trialDays" className="h-11 w-36 rounded-xl bg-white" type="number" min={1} max={365} value={durationDays} onChange={e => setDurationDays(Math.min(365, Math.max(1, Number(e.target.value) || 1)))} /></div>
       </div>
       {isLoading ? <p className="text-sm text-muted-foreground">Loading applications…</p> :
-        pending.length === 0 ? <p className="rounded-2xl border p-8 text-sm text-muted-foreground">No pending seller applications.</p> :
-        <div className="grid gap-4">
+        pending.length === 0 ? <p className="rounded-2xl border border-[#e6dfd5] bg-white p-8 text-sm text-muted-foreground">No pending seller applications.</p> :
+        <div className="grid gap-3">
           {pending.map(application => (
-            <article key={application.id} className="rounded-2xl border bg-card p-5">
+            <article key={application.id} className="rounded-2xl border border-[#e6dfd5] bg-white p-5 transition hover:border-[#bba48a] sm:p-6">
               <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold">{application.businessName}</h3>
@@ -91,9 +91,9 @@ export function SellerApplications() {
                   <p className="text-sm">{application.contactEmail} · {application.contactPhone}</p>
                   {!application.ownerUid && <p className="text-xs font-medium text-amber-800">Guest application · Contact applicant to arrange account registration before approval</p>}
                 </div>
-                <div className="flex shrink-0 gap-2">
-                  <Button variant="outline" disabled={working !== null} onClick={() => review(application, false)}>Reject</Button>
-                  <Button disabled={!application.ownerUid || working !== null} onClick={() => review(application, true)}>{working === application.id ? 'Saving…' : 'Approve trial'}</Button>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button variant="outline" className="h-10 rounded-xl" disabled={working !== null} onClick={() => review(application, false)}>Reject</Button>
+                  <Button className="h-10 rounded-xl bg-[#29251f] text-white" disabled={!application.ownerUid || working !== null} onClick={() => review(application, true)}>{working === application.id ? 'Saving…' : 'Approve trial'}</Button>
                 </div>
               </div>
             </article>

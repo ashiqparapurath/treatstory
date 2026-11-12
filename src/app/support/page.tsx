@@ -3,15 +3,15 @@ import { ActionError } from '@/lib/user-notices';
 import { errorToast } from '@/lib/user-notices';
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { collection, query, where, limit } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { collection, doc, query, where, limit } from 'firebase/firestore';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { LifeBuoy } from 'lucide-react';
+import { LifeBuoy, Mail, Info } from 'lucide-react';
 
 type Ticket = { id:string;subject:string;category:string;message:string;status:string;response?:string;orderId?:string;createdAt?:{toDate?:()=>Date};updatedAt?:{toDate?:()=>Date} };
 export default function SupportPage(){
@@ -23,6 +23,8 @@ export default function SupportPage(){
   const [message,setMessage]=useState('');
   const [orderId,setOrderId]=useState('');
   const [busy,setBusy]=useState(false);
+  const supportSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'support') : null, [db]);
+  const { data: supportSettings } = useDoc<{contactEmail?:string;publicNotice?:string}>(supportSettingsRef);
   const ref=useMemoFirebase(()=>db&&user?query(collection(db,'support_tickets'),where('ownerUid','==',user.uid),limit(50)):null,[db,user?.uid]);
   const {data,error,isLoading}=useCollection<Ticket>(ref);
   async function submit(e:FormEvent){
@@ -38,6 +40,10 @@ export default function SupportPage(){
     finally{setBusy(false);}
   }
   return <div className="min-h-screen bg-[#f8f6f2]"><Header/><main className="section-shell pb-24 pt-12"><div className="flex items-start gap-3"><LifeBuoy className="mt-1 h-8 w-8 text-[#a68a64]"/><div><p className="eyebrow text-[#a68a64]">We are here to help</p><h1 className="mt-3 text-4xl font-medium">TreatStory support</h1><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">For orders, delivery, cancellations, payments or account questions, contact the TreatStory team. Your ticket is private to you and administrators.</p></div></div>
+    {(supportSettings?.publicNotice || supportSettings?.contactEmail) && <aside aria-label="Support contact information" className="mt-6 max-w-3xl space-y-3 rounded-2xl border border-[#e6dfd5] bg-white p-4 sm:p-5">
+      {supportSettings.publicNotice && <p className="flex items-start gap-2 text-sm leading-6 text-[#594c3e]"><Info className="mt-1 h-4 w-4 shrink-0 text-[#a68a64]" /><span className="whitespace-pre-wrap break-words">{supportSettings.publicNotice}</span></p>}
+      {supportSettings.contactEmail && <a className="inline-flex min-h-10 items-center gap-2 break-all text-sm font-semibold text-[#806747] underline underline-offset-4" href={`mailto:${encodeURIComponent(supportSettings.contactEmail)}`}><Mail className="h-4 w-4 shrink-0" />Email TreatStory support: {supportSettings.contactEmail}</a>}
+    </aside>}
     {!user&&!isUserLoading?<Link href="/login" className="editorial-button mt-7">Sign in to request support</Link>:<div className="mt-9 grid gap-8 lg:grid-cols-2">
       <form onSubmit={submit} className="space-y-4 rounded-3xl border bg-white p-5 sm:p-8">
         <h2 className="text-xl font-semibold">New support request</h2>
