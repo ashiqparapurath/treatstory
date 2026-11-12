@@ -8,6 +8,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { getErrorNotice, validateEmail, type UserNotice } from '@/lib/user-notices';
 import { requestAccountMail } from '@/lib/account-mail';
 import { ToastAction } from '@/components/ui/toast';
+import { GoogleSignInButton } from '@/components/google-sign-in-button';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -137,6 +138,14 @@ export default function LoginPage() {
             {resetMode && resetSent && <p role="status" className="border-l-[3px] border-[#b19b79] bg-[#f5f0e8] px-3 py-3 text-sm leading-6 text-[#5c4b37] sm:rounded-xl sm:border sm:border-[#e1d8ca]">If an account exists for this email, you’ll receive a reset link. Check your inbox and spam folder.</p>}
             <Button type="submit" disabled={isLoading || !auth} className="mt-1 h-[54px] w-full rounded-[15px] bg-[#1c1c1e] text-[15px] font-semibold text-white transition-colors hover:bg-[#35353a] focus-visible:ring-2 focus-visible:ring-[#9a846d] sm:mt-2 sm:h-12 sm:rounded-full sm:bg-[#29251f] sm:text-sm sm:hover:bg-[#51463a]">{isLoading ? (resetMode ? 'Sending…' : 'Signing in…') : <>{resetMode ? 'Send reset link' : 'Sign in'} <ArrowRight className="ml-2 h-4 w-4" /></>}</Button>
           </form>
+          {!resetMode && <div className="mt-6 space-y-5">
+            <div className="flex items-center gap-3" aria-hidden="true">
+              <span className="h-px flex-1 bg-[#dedee3] sm:bg-[#e7ded2]" />
+              <span className="text-xs font-medium text-[#8e8e93]">or</span>
+              <span className="h-px flex-1 bg-[#dedee3] sm:bg-[#e7ded2]" />
+            </div>
+            <GoogleSignInButton auth={auth} disabled={isLoading} onSuccess={() => toast({ title: 'Signed in with Google' })} />
+          </div>}
           {resetMode && <button type="button" onClick={() => { setResetMode(false); setResetSent(false); setFormError(null); }} className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 text-sm font-medium text-[#6f583d] hover:text-[#29251f]"><ArrowLeft className="h-4 w-4" /> Back to sign in</button>}
           <div className="mt-10 pt-2 sm:mt-7 sm:border-t sm:border-[#e7ded2] sm:pt-5"><p className="text-center text-[14px] leading-6 text-[#8e8e93] sm:text-sm sm:text-[#7a7167]">New to TreatStory? <Link href="/register" className="inline-flex min-h-10 items-center font-semibold text-[#80684c] transition-colors hover:text-[#27272a] sm:min-h-8 sm:text-[#29251f] sm:underline sm:decoration-[#bca07b] sm:underline-offset-4">Create an account</Link></p></div>
           <p className="mt-5 hidden items-center justify-center gap-2 text-center text-[11px] leading-5 text-[#958a7c] sm:flex"><ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" /> Secure sign-in for customers and creators</p>
