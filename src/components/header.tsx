@@ -36,7 +36,7 @@ export function Header() {
   return (
     <>
 
-      <header className="sticky top-0 z-40 border-b border-[#e9e2d8] bg-[#fcfaf6]/95 shadow-[0_3px_18px_rgba(48,36,22,0.035)] backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b-0 bg-background shadow-none md:border-b md:border-[#e9e2d8] md:bg-[#fcfaf6]/95 md:shadow-[0_3px_18px_rgba(48,36,22,0.035)] md:backdrop-blur-xl">
         <div className="section-shell">
           <div className="grid h-[64px] grid-cols-[1fr_auto_1fr] items-center md:h-[72px]">
             <div className="flex items-center justify-start">
