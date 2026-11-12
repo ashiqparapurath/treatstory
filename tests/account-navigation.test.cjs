@@ -12,17 +12,24 @@ const moduleRef={exports:{}};
 vm.runInNewContext(code,{module:moduleRef,exports:moduleRef.exports,require:id=>id==='lucide-react'?iconMocks:require(id)});
 const {morePageSections}=moduleRef.exports;
 
-test('More account entries lead to distinct focused pages, never anchors in the profile overview',()=>{
+test('More shows a single Account settings hub, not duplicate nested settings',()=>{
   for(const role of ['admin','seller','customer']){
     const account=morePageSections(role,true,{orders:false,applications:false}).account;
     const hrefs=Array.from(account,item=>item.href);
-    assert.deepEqual(hrefs,[
-      '/account/settings','/account/personal','/account/delivery','/notifications','/account/privacy',
-    ]);
+    assert.deepEqual(hrefs,['/account/settings']);
+    assert.equal(account[0].label, 'Account settings');
     assert.equal(new Set(hrefs).size,hrefs.length);
-    assert.ok(hrefs.every(h=>!h.includes('#') && h!=='/account'),'Account settings must be real pages');
+    assert.ok(hrefs.every(h=>!h.includes('#') && h!=='/account'),'Account settings must be a real page');
   }
   assert.equal(morePageSections(null,false,{orders:false,applications:false}).account.length,0);
+  const morePage=read('src/app/more/page.tsx');
+  assert.match(morePage, /<MenuSection heading="Account & preferences" items=\{sections.account\} \/>/);
+  const hub=read('src/app/account/settings/page.tsx');
+  for(const link of ['/account/personal','/account/delivery','/notifications','/account/privacy']){
+    assert.ok(hub.includes(link),'The Account settings page should offer '+link);
+    assert.ok(!menuSource.includes("href: '"+link+"'"),'More should not duplicate '+link);
+  }
+
 });
 
 test('All account destinations exist and each page contains only its relevant settings',()=>{
