@@ -61,8 +61,17 @@ test('All account destinations exist and each page contains only its relevant se
   assert.doesNotMatch(privacy,/SavedAddressList|AccountEmailSettings/);
   const profile=read('src/app/account/page.tsx');
   for(const href of ['/account/settings','/account/personal','/account/delivery','/account/privacy'])assert.ok(profile.includes(href));
-  assert.doesNotMatch(profile,/#profile-details|#delivery-address|#delete-account/);
-  assert.doesNotMatch(profile,/<DefaultDeliveryAddress|<AccountEmailSettings|<DeleteAccountSection/);
+  assert.match(profile, /className="lg:hidden"/, 'Mobile gets the streamlined account overview');
+  assert.match(profile, /className="hidden lg:block"/, 'Desktop keeps the full original account dashboard');
+  assert.match(profile, /lg:grid-cols-\[280px_minmax\(0,1fr\)\]/, 'Original desktop sidebar is restored');
+  for(const section of ['#profile-details','#delivery-address','#delete-account']) {
+    assert.ok(profile.includes(section), 'Desktop sidebar preserves '+section);
+  }
+  assert.match(profile, /<DefaultDeliveryAddress/);
+  assert.match(profile, /<AccountEmailSettings/);
+  assert.match(profile, /<DeleteAccountSection/);
+  assert.match(profile, /Recent orders/);
+  assert.match(profile, /Completed · recent/);
 });
 
 test('Account setting pages require authentication and preserve More breadcrumbs and stepwise back',()=>{
