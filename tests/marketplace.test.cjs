@@ -599,6 +599,7 @@ test('sign-in validates fields before requesting authentication and preserves pa
     'next/navigation':{useRouter:()=>({replace(){}})},'next/link':'a',
     '@/firebase':{useAuth:()=>({}),useUser:()=>({user:null,isUserLoading:false})},
     'firebase/auth':{signInWithEmailAndPassword:async(...values)=>{attempts++;args=values;throw {code,message:'Firebase private diagnostic'};}},
+    '@/components/google-sign-in-button':{GoogleSignInButton:() => null},
     '@/components/ui/toast':{ToastAction:'button'},'@/components/ui/button':{Button:'button'},
     '@/components/ui/input':{Input:React.forwardRef((props,ref)=>React.createElement('input',{...props,ref}))},'@/components/ui/label':{Label:'label'},
     '@/hooks/use-toast':{useToast:()=>({toast:n=>notices.push(n)})},
