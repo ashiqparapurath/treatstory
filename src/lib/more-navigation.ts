@@ -1,6 +1,6 @@
 import {
-  Bell, BookOpen, ClipboardList, FileText, Heart, HelpCircle, Home,
-  MapPin, Package, Settings, ShieldCheck, ShoppingBag, Store, UserRound, Users,
+  BookOpen, ClipboardList, FileText, Heart, HelpCircle, Home,
+  Package, Settings, ShieldCheck, ShoppingBag, Store, Users,
   type LucideIcon,
 } from 'lucide-react';
 import type { MobileRole } from '@/lib/mobile-navigation';
@@ -20,11 +20,7 @@ export function morePageSections(
 ): { account: MenuLink[]; marketplace: MenuLink[]; information: MenuLink[] } {
   const account: MenuLink[] = authenticated
     ? [
-      { label: 'Account settings', description: 'Your settings and preferences', href: '/account/settings', icon: Settings },
-      { label: 'Personal information', description: 'Name, email and verification', href: '/account/personal', icon: UserRound },
-      { label: 'Delivery addresses', description: 'Saved locations and your default address', href: '/account/delivery', icon: MapPin },
-      { label: 'Notifications', description: 'Recent TreatStory updates', href: '/notifications', icon: Bell },
-      { label: 'Privacy & account deletion', description: 'Account security and deletion', href: '/account/privacy', icon: ShieldCheck },
+      { label: 'Account settings', description: 'Personal details, delivery, notifications and privacy', href: '/account/settings', icon: Settings },
     ]
     : [];
 
