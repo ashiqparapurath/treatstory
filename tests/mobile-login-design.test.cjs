@@ -4,19 +4,24 @@ const fs = require('node:fs');
 
 const page = () => fs.readFileSync('src/app/login/page.tsx', 'utf8');
 
-test('mobile login uses a borderless layout, safe tap targets and readable input sizes', () => {
-  const src=page();
-  assert.match(src, /min-h-\[100dvh\] min-w-0 flex-col bg-\[#fcfaf6\] px-5 pb-6 pt-6/);
-  assert.match(src, /justify-start pb-7 pt-11 sm:justify-center sm:py-14/);
-  assert.match(src, /max-w-\[420px\]/);
-  assert.match(src, /text-\[clamp\(2\.15rem,9vw,2\.65rem\)\]/);
-  assert.match(src, /h-\[54px\] rounded-\[14px\] border-\[#e2d9cd\] bg-white px-4 text-base/);
-  assert.match(src, /h-\[54px\] w-full rounded-full bg-\[#29251f\]/);
-  assert.match(src, /inline-flex min-h-11 shrink-0 items-center/);
-  assert.match(src, /sm:border sm:border-\[#e6ded2\] sm:bg-white/, 'Back link is unboxed on mobile');
-  assert.match(src, /min-h-9 items-center text-xs font-semibold/, 'Password recovery is touch-accessible');
-  assert.match(src, /focus-visible:outline/, 'Actions have keyboard focus states');
-  assert.doesNotMatch(src, /rounded-xl border border-\[#e6ded2\] bg-white px-3/, 'Old mobile header button is gone');
+test('iOS-inspired mobile login uses a native-feeling navigation bar and inset-grouped fields', () => {
+  const src = page();
+  assert.match(src, /bg-\[#f5f5f7\] px-5 pb-\[max\(1\.5rem,env\(safe-area-inset-bottom\)\)\] pt-3 sm:bg-\[#faf8f4\]/);
+  assert.match(src, /brand-wordmark absolute left-1\/2 max-w-\[55%\] -translate-x-1\/2/);
+  assert.match(src, /aria-label="Back to shop"/);
+  assert.match(src, /<span className="sm:hidden">Shop<\/span>/);
+  assert.match(src, /justify-start pb-7 pt-14 sm:justify-center sm:py-14/);
+  assert.match(src, /text-\[clamp\(2\.2rem,9vw,2\.75rem\)\] font-semibold/);
+  assert.match(src, /overflow-hidden rounded-\[17px\] border border-\[#e5e5ea\] bg-white/);
+  assert.match(src, /border-t border-\[#eeeef0\] px-4 py-3 sm:space-y-2 sm:border-0/);
+  assert.match(src, /h-9 rounded-none border-0 bg-transparent px-0 text-base/, 'Email text is at least 16px on mobile');
+  assert.match(src, /h-9 rounded-none border-0 bg-transparent px-0 pr-12 text-base/, 'Password text is at least 16px on mobile');
+  assert.match(src, /min-h-11 items-center text-\[13px\] font-medium/, 'Forgot-password action has a usable touch target');
+  assert.match(src, /h-\[54px\] w-full rounded-\[15px\] bg-\[#1c1c1e\]/);
+  assert.match(src, /sm:rounded-full sm:bg-\[#29251f\]/, 'Desktop button style is maintained');
+  assert.match(src, /sm:space-y-5 sm:overflow-visible sm:rounded-none sm:border-0/, 'Desktop fields remain independent');
+  assert.doesNotMatch(src, /<p className="mb-3 text-\[10px\] font-semibold uppercase/, 'Mobile title needs no decorative eyebrow');
+  assert.doesNotMatch(src, /rounded-\[14px\] border-\[#e2d9cd\]/, 'No separate mobile input cards');
 });
 
 test('redesign leaves desktop editorial image and secure auth flow unchanged', () => {
