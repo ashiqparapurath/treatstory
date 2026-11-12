@@ -15,7 +15,7 @@ export default function AboutPage() {
             <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-muted-foreground sm:text-lg">TreatStory is a place for thoughtful discoveries — a growing collection of pieces for everyday life, meaningful moments and everything in between.</p>
           </div>
           <div className="relative mt-12 aspect-[4/3] sm:aspect-[16/9] overflow-hidden rounded-[26px] bg-[#e8dfd2] sm:mt-16">
-            <Image src="/img/landing-hero.webp" alt="Homemade cakes, cookies and handmade gifts from independent makers" fill sizes="(max-width: 639px) calc(100vw - 32px), (max-width: 1023px) calc(100vw - 48px), (max-width: 1439px) calc(100vw - 80px), 1360px" className="object-cover object-[35%_center] sm:object-center" />
+            <Image src="/img/our-story-creators.svg" alt="An illustrated editorial still life of a handmade berry cake, embroidered flowers, pottery and wrapped gifts celebrating Kerala creators" fill unoptimized sizes="(max-width: 639px) calc(100vw - 32px), (max-width: 1023px) calc(100vw - 48px), (max-width: 1439px) calc(100vw - 80px), 1360px" className="object-cover object-center" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
             <p className="absolute bottom-5 left-5 text-sm font-medium text-white sm:bottom-8 sm:left-8 sm:text-lg">Made for the moments that make a day.</p>
           </div>
