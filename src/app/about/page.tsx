@@ -9,19 +9,19 @@ export default function AboutPage() {
       <main className="flex-1">
         <section className="section-shell py-8 sm:py-12 lg:py-16">
           <div
-            role="img"
-            aria-label="The Story Behind TreatStory — a Kerala-born marketplace bringing together home bakers, crafters and handmade creators. A warm still life of cake, handmade gifts, embroidery and crafts."
             className="relative isolate overflow-hidden rounded-[22px] bg-[#f3e7db] shadow-sm sm:rounded-[30px]"
           >
-            {/* The first layer is the supplied Our Story photograph; the existing
-                illustration remains as a safe fallback until the asset is published. */}
+            {/* Desktop keeps the original editorial banner; mobile crops out its embedded lettering
+                so that the accessible HTML heading and copy appear only once. */}
             <div
               className="hidden aspect-[3/2] w-full bg-cover bg-center sm:block"
               style={{ backgroundImage: "url('/img/our-story-banner.webp'), url('/img/our-story-creators.svg')" }}
             />
             <div className="sm:hidden">
               <div
-                className="aspect-[5/4] w-full bg-cover bg-[65%_center]"
+                role="img"
+                aria-label="Handmade cake, flowers, a wrapped gift and a crocheted bag by Kerala creators"
+                className="aspect-[5/4] w-full bg-no-repeat bg-right bg-[length:200%_auto]"
                 style={{ backgroundImage: "url('/img/our-story-banner.webp'), url('/img/our-story-creators.svg')" }}
               />
               <div className="space-y-4 bg-[#f7ede3] px-6 py-8 text-[#30261d]">
