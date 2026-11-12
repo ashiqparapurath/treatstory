@@ -11,7 +11,7 @@ test('mobile login uses a borderless layout, safe tap targets and readable input
   assert.match(src, /max-w-\[420px\]/);
   assert.match(src, /text-\[clamp\(2\.15rem,9vw,2\.65rem\)\]/);
   assert.match(src, /h-\[54px\] rounded-\[14px\] border-\[#e2d9cd\] bg-white px-4 text-base/);
-  assert.match(src, /h-\[54px\] rounded-full bg-\[#29251f\]/);
+  assert.match(src, /h-\[54px\] w-full rounded-full bg-\[#29251f\]/);
   assert.match(src, /inline-flex min-h-11 shrink-0 items-center/);
   assert.match(src, /sm:border sm:border-\[#e6ded2\] sm:bg-white/, 'Back link is unboxed on mobile');
   assert.match(src, /min-h-9 items-center text-xs font-semibold/, 'Password recovery is touch-accessible');
