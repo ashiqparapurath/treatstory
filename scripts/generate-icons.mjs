@@ -82,7 +82,7 @@ for (let i = 0; i < sizes.length; i++) {
 const ico = Buffer.concat([header, entries, ...pngs]),
   favicon = `favicon-${revision}.ico`;
 await writeFile(new URL(favicon, dir), ico);
-await writeFile(new URL("public/favicon.ico", root), ico);
+// The browser title-bar favicon is separately approved artwork; never overwrite it when generating installed-app typography icons.
 urls.favicon = "/icons/" + favicon;
 await writeFile(
   new URL("src/lib/pwa-icons.ts", root),

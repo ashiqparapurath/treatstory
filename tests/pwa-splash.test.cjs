@@ -176,5 +176,18 @@ test("the refreshed browser icon contains valid PNG entries and the legacy URL m
     assert.equal(metadata.width, size);
     assert.equal(metadata.height, size);
   }
-  assert.equal(Buffer.compare(bytes, fs.readFileSync("public/favicon.ico")), 0);
+  const browserFavicon = fs.readFileSync("public/favicon.ico");
+  const crypto = require("node:crypto");
+  assert.equal(
+    crypto.createHash("sha256").update(browserFavicon).digest("hex"),
+    "424c6d41fc34f99af3f0894ef2918d866e191abb978401392a56673a1d70aef0",
+    "desktop title bar must retain the supplied favicon",
+  );
+  assert.notEqual(Buffer.compare(bytes, browserFavicon), 0,
+    "installed app typography icon is independent of desktop browser favicon");
+  const layout = fs.readFileSync("src/app/layout.tsx", "utf8");
+  assert.ok(layout.includes("url: '/favicon.ico'"));
+  const manifest = JSON.parse(fs.readFileSync("public/manifest.json", "utf8"));
+  assert.ok(manifest.icons.every((icon) => icon.src.includes("/icons/app-")));
+
 });

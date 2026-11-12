@@ -28,7 +28,7 @@ export const emptyDraft: ProductDraft = {
   weightOptions: [], customizationOptions: '', careInstructions: '',
   ingredients: '', allergens: '', dietaryTags: '', shelfLifeDays: '', storageInstructions: '',
   advancePaymentRequired: false,
-  showPrice: true, status: 'draft'
+  showPrice: true, status: 'published'
 };
 const presets = ['Home bakery', 'Cakes', 'Cookies', 'Desserts', 'Art', 'Paintings', 'Handmade crafts', 'Gifts', 'Candles', 'Accessories'];
 const units: WeightUnit[] = ['g', 'kg', 'ml', 'l', 'pieces'];
@@ -64,6 +64,8 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
   uploadProgress: string;
 }) {
   const [suggestion, setSuggestion] = useState('');
+  const [newPhotoLink, setNewPhotoLink] = useState('');
+  const [photoLinkError, setPhotoLinkError] = useState('');
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [categoryActiveIndex, setCategoryActiveIndex] = useState(0);
   if (!open) return null;
@@ -74,6 +76,20 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
   const photos = parseProductImageUrls(draft.imageUrls);
   const photoCount = photos.length;
   const arrangePhotos = (next: string[]) => set('imageUrls', next.join('\n'));
+  const addPhotoLink = () => {
+    const link = newPhotoLink.trim();
+    let parsed: URL;
+    try { parsed = new URL(link); } catch { setPhotoLinkError('Enter a complete HTTPS image URL.'); return; }
+    if (parsed.protocol !== 'https:' || !parsed.hostname || parsed.username || parsed.password) {
+      setPhotoLinkError('Use a secure HTTPS image URL without credentials.');
+      return;
+    }
+    if (photos.length >= 10) { setPhotoLinkError('You can add a maximum of 10 product photos.'); return; }
+    if (photos.includes(link)) { setPhotoLinkError('This image is already added.'); return; }
+    arrangePhotos([...photos, link]);
+    setNewPhotoLink('');
+    setPhotoLinkError('');
+  };
   const shiftPhoto = (index: number, delta: number) => {
     const target = index + delta;
     if (target < 0 || target >= photos.length) return;
@@ -88,7 +104,8 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
         <button type="button" onClick={onClose} aria-label="Close product editor" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f5f1eb]"><X className="h-5 w-5" /></button>
       </div>
       <form id="sellerProductForm" onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4 sm:space-y-5 sm:px-7 sm:py-6">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4 sm:space-y-4 sm:px-7 sm:py-5">
+          <p className="text-xs leading-5 text-[#776a5d]">Start with the essentials. Add sizes, photos and advanced details only when needed.</p>
           {saveError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{saveError}</p>}
           <section className="space-y-3 rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6">
             <h3 className="text-sm font-semibold">Essential details</h3>
@@ -129,10 +146,27 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
               <Textarea id="creatorDescription" required maxLength={2000} rows={3} placeholder="Tell buyers about the product, materials, portions and special touches…" value={draft.description} onChange={e => set('description',e.target.value)} className="resize-y" />
               {suggestion && <div className="rounded-xl bg-[#f3eee6] p-3"><p className="text-xs leading-5 text-[#5e5040]">{suggestion}</p><div className="mt-2 flex gap-2"><Button type="button" size="sm" onClick={() => { set('description',suggestion); setSuggestion(''); }}>Use suggestion</Button><Button type="button" size="sm" variant="outline" onClick={() => setSuggestion('')}>Dismiss</Button></div><p className="mt-2 text-[10px] text-muted-foreground">Template suggestion based only on the details you've entered; review its accuracy before publishing.</p></div>}
             </div>
+            <div className="border-t border-[#eee8df] pt-4"><p className="mb-3 text-xs font-semibold text-[#786450]">Availability & publishing</p><div className="grid items-start gap-3 sm:grid-cols-2">
+              <div className="flex min-w-0 flex-col gap-1.5 text-xs font-medium"><Label htmlFor="seller-editor-availability" className="text-xs leading-5">Availability</Label>
+                  <Select value={draft.availability} onValueChange={value=>set('availability',value as ProductDraft['availability'])}>
+                    <SelectTrigger id="seller-editor-availability" className="min-h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent position="popper" sideOffset={6}><SelectItem value="available">Available</SelectItem><SelectItem value="made-to-order">Made to order</SelectItem><SelectItem value="unavailable">Unavailable</SelectItem></SelectContent>
+                  </Select>
+                </div>
+
+              <div className="flex min-w-0 flex-col gap-1.5"><Label htmlFor="seller-editor-preparation" className="text-xs leading-5">Preparation days</Label><Input id="seller-editor-preparation" className="min-h-11" type="number" min={0} max={365} value={draft.preparationDays} onChange={e=>set('preparationDays',e.target.value)} /></div>
+              <div className="flex min-w-0 flex-col gap-1.5"><Label htmlFor="seller-editor-stock" className="text-xs leading-5">Stock quantity</Label><Input id="seller-editor-stock" className="min-h-11" type="number" min={0} max={1000000} value={draft.stockQuantity} onChange={e=>set('stockQuantity',e.target.value)} /></div>
+              <div className="flex min-w-0 flex-col gap-1.5 text-xs font-medium"><Label htmlFor="seller-editor-status" className="text-xs leading-5">Listing status</Label>
+                  <Select value={draft.status} onValueChange={value=>set('status',value as ProductDraft['status'])}>
+                    <SelectTrigger id="seller-editor-status" className="min-h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent position="popper" sideOffset={6}><SelectItem value="draft">Draft</SelectItem><SelectItem value="published">Published</SelectItem></SelectContent>
+                  </Select>
+                </div>
+            </div></div>
           </section>
-          <section className="rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6"><h3 className="mb-3 text-sm font-semibold">Payment requirements</h3>
-              <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={draft.advancePaymentRequired} onChange={e => set('advancePaymentRequired', e.target.checked)} />Advance payment required before preparation</label><p className="text-xs text-muted-foreground sm:col-span-2">Arrange the advance directly with the buyer. TreatStory does not collect online payments.</p>
-          </section>
+          <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-5"><summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold [&::-webkit-details-marker]:hidden">Payment requirements <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180"/></summary><div className="mt-3">
+              <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={draft.advancePaymentRequired} onChange={e => set('advancePaymentRequired', e.target.checked)} />Advance payment required before preparation</label><p className="text-xs text-muted-foreground sm:col-span-2">Arrange the advance directly with the buyer. TreatStory does not collect online payments.</p></div>
+          </details>
           <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Photos & gallery <span className="flex items-center gap-2 text-xs font-normal text-[#8b795e]">{photoCount} photo(s)<ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></span></summary>
             <div className="mt-4 space-y-3">
@@ -143,11 +177,19 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
                 <span role="status" aria-live="polite" className="text-xs text-muted-foreground">{uploadProgress || `${photoCount} / 10 photos`}</span>
               </div>
               {photoCount > 0 && <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{photos.map((url, i) => <div key={url + i} className="space-y-1 overflow-hidden rounded-xl border border-[#e8e0d5] bg-[#f7f4ef] p-2"><div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-[#ebe3d8]"><img src={url} alt={`Product photo ${i + 1}`} className="h-full w-full object-cover" loading="lazy" /></div><div className="flex items-center justify-between gap-1"><span className="truncate text-[10px] text-muted-foreground">{i === 0 ? 'Cover' : `Photo ${i + 1}`}</span><div className="flex gap-1"><button type="button" onClick={() => shiftPhoto(i,-1)} disabled={i===0||uploading} aria-label={`Move photo ${i+1} left`} className="grid h-7 w-7 place-items-center rounded-md border bg-white disabled:opacity-30"><ArrowLeft className="h-3.5 w-3.5" /></button><button type="button" onClick={() => shiftPhoto(i,1)} disabled={i===photos.length-1||uploading} aria-label={`Move photo ${i+1} right`} className="grid h-7 w-7 place-items-center rounded-md border bg-white disabled:opacity-30"><ArrowRight className="h-3.5 w-3.5" /></button><button type="button" onClick={() => arrangePhotos(photos.filter((_, n) => n !== i))} disabled={uploading} aria-label={`Remove photo ${i+1}`} className="grid h-7 w-7 place-items-center rounded-md border bg-white text-red-600 disabled:opacity-30"><X className="h-3.5 w-3.5" /></button></div></div></div>)}</div>}
-              <details className="rounded-xl border border-dashed p-3"><summary className="cursor-pointer text-xs font-medium text-[#71604b]">Or paste image URLs manually</summary><div className="mt-2 space-y-2"><Label htmlFor="creatorImages">HTTPS image links (one per line)</Label><Textarea id="creatorImages" rows={3} maxLength={5000} placeholder={"https://example.com/cake-front.jpg\nhttps://example.com/cake-detail.jpg"} value={draft.imageUrls} onChange={e => set('imageUrls',e.target.value)} /><p className="text-xs text-muted-foreground">You can still use previously hosted photo links. Photos from direct uploads are added here automatically.</p></div></details>
+              <div className="rounded-xl border border-[#e8e0d5] bg-[#faf8f5] p-3 sm:p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-semibold text-[#352c23]">Add image by link</p><p className="mt-1 text-[11px] text-[#87786a]">Add one HTTPS image link at a time. Repeat for more photos.</p></div><span className="text-[11px] tabular-nums text-[#87786a]">{photoCount} / 10</span></div>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <Input id="creatorImageLink" type="url" inputMode="url" autoComplete="url" aria-label="Image URL" aria-invalid={!!photoLinkError} aria-describedby={photoLinkError ? 'creatorImageLinkError' : undefined} placeholder="https://example.com/my-product.jpg" value={newPhotoLink} disabled={uploading || busy || !enabled || photoCount >= 10} onChange={e => { setNewPhotoLink(e.target.value); if (photoLinkError) setPhotoLinkError(''); }} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addPhotoLink(); } }} className="h-11 min-w-0 flex-1 rounded-xl bg-white" />
+                  <Button type="button" variant="outline" className="h-11 shrink-0 rounded-xl border-[#cbb89e] bg-white" onClick={addPhotoLink} disabled={uploading || busy || !enabled || photoCount >= 10 || !newPhotoLink.trim()}><Plus className="mr-2 h-4 w-4" />Add link</Button>
+                </div>
+                {photoLinkError && <p id="creatorImageLinkError" role="alert" className="mt-2 text-xs text-red-700">{photoLinkError}</p>}
+                <p className="mt-2 text-[11px] leading-5 text-[#87786a]">New links appear in the gallery above. Reorder photos with the arrow controls; the first becomes the cover.</p>
+              </div>
             </div>
           </details>
-          <section className="space-y-4 rounded-2xl border-2 border-[#b99b72] bg-[#fffdf8] p-4 sm:p-6" aria-labelledby="variant-pricing-title">
-            <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#98764d]">One product · Multiple prices</p><h3 id="variant-pricing-title" className="mt-1 text-base font-semibold">Weight, size & variant pricing</h3></div><span className="rounded-full bg-[#f0e7da] px-3 py-1.5 text-xs font-semibold text-[#715637]">{draft.weightOptions.length} {draft.weightOptions.length === 1 ? 'size' : 'sizes'}</span></div>
+          <details className="group rounded-2xl border border-[#e4d6c5] bg-white p-4 sm:p-5" open={draft.weightOptions.length > 0 ? true : undefined} aria-labelledby="variant-pricing-title">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden"><span id="variant-pricing-title">Weight, size & variant pricing</span><span className="flex items-center gap-2 text-xs font-normal text-[#8b795e]">{draft.weightOptions.length} sizes <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180"/></span></summary><div className="mt-4 space-y-4">
             <p className="text-xs leading-5 text-[#6d6050]">Example: add <strong>500 g at ₹450</strong> and <strong>1 kg at ₹800</strong> under the same cake product. Enter a price for each size. Each size can also have its own stock; leaving stock blank uses the product's shared stock.</p>
             <div className="space-y-3">
               {draft.weightOptions.map((option,i) => <div key={i} className="grid grid-cols-2 items-end gap-3 rounded-xl border border-[#e3d1ba] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_100px_120px_120px_36px]">
@@ -167,25 +209,10 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
               {!!draft.weightOptions.length && <div role="status" className="rounded-xl bg-[#f5ede2] p-3 text-xs leading-6 text-[#5e503f]"><strong>Price preview:</strong> {draft.weightOptions.map((option,i) => `${option.value || 'Size '+(i+1)} ${option.unit}: ₹${option.price.trim() === '' ? 'set price' : option.price}`).join(' · ')}. Each size is saved under this single product.</div>}
               <label className="block max-w-xs space-y-1 text-xs font-medium">Minimum order quantity (units)<Input type="number" min={1} max={99} value={draft.minimumOrderQuantity} onChange={e=>set('minimumOrderQuantity',e.target.value)}/></label>
             </div>
-          </section>
-          <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Availability & personalization <ChevronDown className="h-4 w-4 transition group-open:rotate-180"/></summary>
+          </div></details>
+          <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-5">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Advanced listing details <ChevronDown className="h-4 w-4 transition group-open:rotate-180"/></summary>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1 text-xs font-medium"><Label htmlFor="seller-editor-availability" className="text-xs">Availability</Label>
-                  <Select value={draft.availability} onValueChange={value=>set('availability',value as ProductDraft['availability'])}>
-                    <SelectTrigger id="seller-editor-availability" className="min-h-11"><SelectValue /></SelectTrigger>
-                    <SelectContent position="popper" sideOffset={6}><SelectItem value="available">Available</SelectItem><SelectItem value="made-to-order">Made to order</SelectItem><SelectItem value="unavailable">Unavailable</SelectItem></SelectContent>
-                  </Select>
-                </div>
-
-              <label className="space-y-1 text-xs font-medium">Preparation days<Input type="number" min={0} max={365} value={draft.preparationDays} onChange={e=>set('preparationDays',e.target.value)} /></label>
-              <label className="space-y-1 text-xs font-medium">Stock quantity<Input type="number" min={0} max={1000000} value={draft.stockQuantity} onChange={e=>set('stockQuantity',e.target.value)} /></label>
-              <div className="space-y-1 text-xs font-medium"><Label htmlFor="seller-editor-status" className="text-xs">Listing status</Label>
-                  <Select value={draft.status} onValueChange={value=>set('status',value as ProductDraft['status'])}>
-                    <SelectTrigger id="seller-editor-status" className="min-h-11"><SelectValue /></SelectTrigger>
-                    <SelectContent position="popper" sideOffset={6}><SelectItem value="draft">Draft</SelectItem><SelectItem value="published">Published</SelectItem></SelectContent>
-                  </Select>
-                </div>
               <label className="space-y-1 text-xs font-medium sm:col-span-2">Customization prompts (one per line)<Textarea rows={3} maxLength={500} placeholder={"Cake message\nColour preference\nGift note"} value={draft.customizationOptions} onChange={e=>set('customizationOptions',e.target.value)} /><span className="block text-[11px] text-muted-foreground">Up to six prompts (80 characters each). Requests do not change pricing.</span></label>
               <label className="space-y-1 text-xs font-medium sm:col-span-2">Ingredients, care or handling notes<Textarea rows={2} maxLength={500} value={draft.careInstructions} onChange={e=>set('careInstructions',e.target.value)} /></label>
               <div className="space-y-3 rounded-xl border border-[#eee7dd] p-4 sm:col-span-2"><h4 className="text-sm font-semibold">Food safety & ingredient details (for bakers)</h4><p className="text-xs text-muted-foreground">Enter accurate information for customers with food sensitivities. These claims are supplied by the seller and aren't independently certified by TreatStory.</p><label className="block space-y-1 text-xs font-medium">Ingredients <Textarea rows={2} maxLength={1000} value={draft.ingredients} onChange={e=>set('ingredients',e.target.value)} placeholder="Flour, milk, eggs, cocoa…"/></label><div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-medium">Allergens (comma separated)<Input maxLength={300} value={draft.allergens} onChange={e=>set('allergens',e.target.value)} placeholder="Milk, eggs, wheat"/></label><label className="block space-y-1 text-xs font-medium">Dietary claims (comma separated)<Input maxLength={300} value={draft.dietaryTags} onChange={e=>set('dietaryTags',e.target.value)} placeholder="Vegetarian, eggless"/></label></div><div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-medium">Shelf life (days)<Input type="number" min={0} max={365} value={draft.shelfLifeDays} onChange={e=>set('shelfLifeDays',e.target.value)} placeholder="e.g. 2"/></label><label className="block space-y-1 text-xs font-medium">Storage instructions<Input maxLength={500} value={draft.storageInstructions} onChange={e=>set('storageInstructions',e.target.value)} placeholder="Refrigerate; consume within 2 days"/></label></div></div>
