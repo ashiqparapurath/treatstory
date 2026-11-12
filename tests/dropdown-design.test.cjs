@@ -91,3 +91,17 @@ test('opened dropdowns share the TreatStory palette and stay usable on narrow sc
     assert.match(source,/z-\[70\]/,name);
   }
 });
+
+test('all storefront and dashboard screens avoid unstyled native selection menus',()=>{
+  const visit=(dir)=>{
+    for(const entry of fs.readdirSync(dir,{withFileTypes:true})) {
+      const path=dir+'/'+entry.name;
+      if(entry.isDirectory()){visit(path);continue;}
+      if(!entry.name.endsWith('.tsx'))continue;
+      const contents=read(path);
+      assert.doesNotMatch(contents,/<select\b|<datalist\b|<option\b/,path+' should not use OS-level picker UI');
+    }
+  };
+  visit('src/app');
+  visit('src/components');
+});

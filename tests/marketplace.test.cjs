@@ -5,6 +5,14 @@ const vm = require('node:vm');
 const ts = require('typescript');
 const React = require('react');
 const { create, act } = require('react-test-renderer');
+const selectMock = {
+  Select: ({ children }) => React.createElement(React.Fragment, null, children),
+  SelectTrigger: ({ children }) => React.createElement('span', null, children),
+  SelectContent: ({ children }) => React.createElement('div', null, children),
+  SelectItem: ({ children }) => React.createElement('span', null, children),
+  SelectValue: () => null,
+};
+
 
 const sharedModules = new Map();
 const accountMailMock={requestAccountMail:async()=>({ok:true}),requestSellerMail:async()=>{}};
@@ -15,7 +23,7 @@ function sharedModule(id) {
 function load(file, mocks = {}, globals = {}) {
   const output = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   const module = { exports: {} };
-  vm.runInNewContext(output, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id==='@/lib/server/request-body'?load('src/lib/server/request-body.ts',mocks):id==='@/lib/account-mail'?accountMailMock : ['@/lib/addresses','@/lib/image-source','@/lib/document-id','@/lib/user-notices', '@/lib/order-feedback','@/lib/server/mail'].includes(id) ? sharedModule(id) : id === 'lucide-react' ? new Proxy({}, { get: () => () => null }) : require(id), console,
+  vm.runInNewContext(output, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id==='@/lib/server/request-body'?load('src/lib/server/request-body.ts',mocks):id==='@/lib/account-mail'?accountMailMock : ['@/lib/addresses','@/lib/image-source','@/lib/document-id','@/lib/user-notices', '@/lib/order-feedback','@/lib/server/mail'].includes(id) ? sharedModule(id) : id === 'lucide-react' ? new Proxy({}, { get: () => () => null }) : id === '@/components/ui/select' ? selectMock : require(id), console,
     setTimeout: (...args) => { const timer = setTimeout(...args); timer.unref(); return timer; }, clearTimeout, AbortSignal, TextDecoder, URL, URLSearchParams, ...globals }, { filename: file });
   return module.exports;
 }
