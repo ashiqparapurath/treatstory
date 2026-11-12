@@ -5,6 +5,14 @@ const vm = require('node:vm');
 const ts = require('typescript');
 const React = require('react');
 const { create, act } = require('react-test-renderer');
+const selectMock = {
+  Select: ({ children }) => React.createElement(React.Fragment, null, children),
+  SelectTrigger: ({ children }) => React.createElement('span', null, children),
+  SelectContent: ({ children }) => React.createElement('div', null, children),
+  SelectItem: ({ children }) => React.createElement('span', null, children),
+  SelectValue: () => null,
+};
+
 
 const sharedModules = new Map();
 const accountMailMock={requestAccountMail:async()=>({ok:true}),requestSellerMail:async()=>{}};
@@ -15,7 +23,7 @@ function sharedModule(id) {
 function load(file, mocks = {}, globals = {}) {
   const output = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   const module = { exports: {} };
-  vm.runInNewContext(output, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id==='@/lib/server/request-body'?load('src/lib/server/request-body.ts',mocks):id==='@/lib/account-mail'?accountMailMock : ['@/lib/addresses','@/lib/image-source','@/lib/document-id','@/lib/user-notices', '@/lib/order-feedback','@/lib/server/mail'].includes(id) ? sharedModule(id) : id === 'lucide-react' ? new Proxy({}, { get: () => () => null }) : require(id), console,
+  vm.runInNewContext(output, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id==='@/lib/server/request-body'?load('src/lib/server/request-body.ts',mocks):id==='@/lib/account-mail'?accountMailMock : ['@/lib/addresses','@/lib/image-source','@/lib/document-id','@/lib/user-notices', '@/lib/order-feedback','@/lib/server/mail'].includes(id) ? sharedModule(id) : id === 'lucide-react' ? new Proxy({}, { get: () => () => null }) : id === '@/components/ui/select' ? selectMock : require(id), console,
     setTimeout: (...args) => { const timer = setTimeout(...args); timer.unref(); return timer; }, clearTimeout, AbortSignal, TextDecoder, URL, URLSearchParams, ...globals }, { filename: file });
   return module.exports;
 }
@@ -599,6 +607,7 @@ test('sign-in validates fields before requesting authentication and preserves pa
     'next/navigation':{useRouter:()=>({replace(){}})},'next/link':'a',
     '@/firebase':{useAuth:()=>({}),useUser:()=>({user:null,isUserLoading:false})},
     'firebase/auth':{signInWithEmailAndPassword:async(...values)=>{attempts++;args=values;throw {code,message:'Firebase private diagnostic'};}},
+    '@/components/google-sign-in-button':{GoogleSignInButton:() => null},
     '@/components/ui/toast':{ToastAction:'button'},'@/components/ui/button':{Button:'button'},
     '@/components/ui/input':{Input:React.forwardRef((props,ref)=>React.createElement('input',{...props,ref}))},'@/components/ui/label':{Label:'label'},
     '@/hooks/use-toast':{useToast:()=>({toast:n=>notices.push(n)})},
@@ -826,4 +835,69 @@ test('seller save validates with the server schema and does not split Cloudinary
   assert.match(page,/parseProductImageUrls\(draft.imageUrls\)/);
   assert.match(editor,/parseProductImageUrls\(draft.imageUrls\)/);
   assert.match(server,/from "@\/lib\/seller-product-validation"/);
+});
+
+test('home creator cards use an in-place weight/price selection dialog and keep SKU on product details', () => {
+  const fs = require('node:fs');
+  const ts = require('typescript');
+  const vm = require('node:vm');
+  const file=fs.readFileSync('src/lib/seller-card-purchase.ts','utf8');
+  const js=ts.transpileModule(file,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+  const module={exports:{}};
+  vm.runInNewContext(js,{module,exports:module.exports});
+  const {sellerCardWeightChoices,canBuySellerSize,createSellerCardCartItem}=module.exports;
+  const cake={
+    id:'cake-1',sellerId:'baker-1',name:'Chocolate cake',description:'Handmade',category:'Bakery',
+    price:599,imageUrls:['/img/product-placeholder.svg'],showPrice:true,availability:'available',
+    stockQuantity:8,minimumOrderQuantity:2,
+    weightOptions:[
+      {value:500,unit:'g',price:599,stockQuantity:5},
+      {value:1,unit:'kg',price:1099,stockQuantity:1},
+      {value:1.5,unit:'kg',price:1599,stockQuantity:6}
+    ]
+  };
+  const options=sellerCardWeightChoices(cake);
+  assert.equal(options.length,3);
+  assert.equal(canBuySellerSize(cake,options[0]),true);
+  assert.equal(canBuySellerSize(cake,options[1]),false,'Stock below minimum blocks this size');
+  assert.equal(canBuySellerSize(cake,options[2]),true);
+  const item=createSellerCardCartItem(cake,options[2]);
+  assert.equal(item.id,'seller:cake-1');
+  assert.equal(item.price,1599);
+  assert.equal(item.selectedWeight.value,1.5);
+  assert.equal(item.selectedWeight.unit,'kg');
+  assert.match(item.customizationNote,/Selected weight \/ size: 1\.5 kg/);
+  const minSingle={...cake,weightOptions:[options[0]]};
+  assert.equal(sellerCardWeightChoices(minSingle).length,1);
+  const preorder={...cake,availability:'made-to-order'};
+  assert.equal(canBuySellerSize(preorder,options[1]),true,'Made-to-order listings may accept new orders');
+  assert.equal(canBuySellerSize({...cake,availability:'unavailable'},options[0]),false);
+
+  const section=fs.readFileSync('src/components/seller-storefront-products.tsx','utf8');
+  const card=fs.readFileSync('src/components/seller-product-card.tsx','utf8');
+  const detail=fs.readFileSync('src/app/product/[id]/page.tsx','utf8');
+  assert.match(section,/choices.length > 1/);
+  assert.match(section,/setPendingChoice\(\{ product: p, intent \}\)/);
+  assert.match(section,/<Dialog open=\{!!pendingChoice\}/);
+  assert.match(section,/role="group" aria-label="Available weights and sizes"/);
+  assert.match(section,/aria-pressed=\{selectedWeightIndex === index\}/);
+  assert.match(section,/disabled=\{!chosenAvailable \|\| !pendingChoice\}/);
+  assert.match(section,/selectedWeightIndex\]\;/);
+  assert.doesNotMatch(section,/router.push\(\x60\/product\/seller:/);
+  assert.doesNotMatch(card, /\{p\.sku && <span/);
+  assert.match(detail, /<ProductSkuCopy sku=\{creator\.sku\}/);
+});
+
+test('homepage banners are short on mobile and Our Story uses its own illustration',()=>{
+  const home=fs.readFileSync('src/app/page.tsx','utf8');
+  const about=fs.readFileSync('src/app/about/page.tsx','utf8');
+  const svg=fs.readFileSync('public/img/our-story-creators.svg','utf8');
+  assert.match(home,/h-\[clamp\(200px,54vw,236px\)\]/);
+  assert.doesNotMatch(home,/min-h-72 items-center justify-center/);
+  assert.match(home,/sm:h-64 md:h-72 lg:h-\[340px\]/);
+  assert.match(about,/src="\/img\/our-story-creators\.svg"/);
+  assert.doesNotMatch(about,/src="\/img\/landing-hero\.webp"/);
+  assert.match(svg,/The creations behind TreatStory/);
+  assert.match(svg,/<svg xmlns="http:\/\/www.w3.org\/2000\/svg"/);
+  assert.doesNotMatch(svg,/<script|onload=|https?:\/\/[^w]/i);
 });

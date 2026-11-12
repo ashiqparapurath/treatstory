@@ -44,7 +44,7 @@ function BannerCarousel() {
 
   useEffect(()=>{if(!firstLoaded||!banners?.length)return;setRequested(previous=>new Set([...previous,active,(active+1)%banners.length]));},[active,firstLoaded,banners?.length]);
 
-  if (isLoading) return <Skeleton className="h-56 w-full rounded-[24px] md:h-72" />;
+  if (isLoading) return <Skeleton className="h-[clamp(200px,54vw,236px)] w-full rounded-[24px] sm:h-64 md:h-72" />;
   if (!banners || banners.length === 0) return null;
 
   return (
@@ -53,14 +53,14 @@ function BannerCarousel() {
         {banners.map((banner,index) => (
           <CarouselItem key={banner.id}>
             <Card className="overflow-hidden rounded-[24px] border-0 shadow-none">
-              <CardContent className="relative flex min-h-72 items-center justify-center p-0 sm:min-h-0 sm:h-64 md:h-72 lg:h-[340px]">
+              <CardContent className="relative flex h-[clamp(200px,54vw,236px)] items-center justify-center p-0 sm:h-64 md:h-72 lg:h-[340px]">
                 <div className="absolute inset-0 bg-[#e8dfd2]"/>{(requested.has(index)||index===active)&&<OptimizedImage src={banner.imageUrl} alt={banner.title} fill sizes={BANNER_IMAGE_SIZES} quality={75} loading="lazy" fetchPriority={index===active?'auto':'low'} onLoad={()=>{if(index===active)setFirstLoaded(true);}} className="object-cover"/>}
                 <div className="absolute inset-0 bg-black/40" />
-                <div className="relative max-w-2xl px-5 py-6 text-center text-white sm:px-10">
-                  <p className="eyebrow text-white/80">The TreatStory edit</p>
-                  <h2 className="mt-3 text-2xl font-medium leading-tight tracking-tight sm:text-4xl md:text-5xl">{banner.title}</h2>
-                  <p className="mx-auto mt-3 max-w-xl line-clamp-3 text-xs leading-5 text-white/85 sm:text-base">{banner.subtitle}</p>
-                  <Button asChild className="mt-6 rounded-full bg-white px-6 text-xs font-semibold uppercase tracking-widest text-foreground hover:bg-white/90">
+                <div className="relative max-w-2xl px-5 py-3 text-center text-white sm:px-10 sm:py-6">
+                  <p className="eyebrow hidden text-white/80 sm:block">The TreatStory edit</p>
+                  <h2 className="line-clamp-2 text-xl font-medium leading-tight tracking-tight sm:mt-3 sm:text-4xl md:text-5xl">{banner.title}</h2>
+                  <p className="mx-auto mt-2 max-w-xl line-clamp-2 text-[11px] leading-4 text-white/85 sm:mt-3 sm:line-clamp-3 sm:text-base sm:leading-6">{banner.subtitle}</p>
+                  <Button asChild className="mt-3 h-9 rounded-full bg-white px-4 text-[10px] font-semibold uppercase tracking-widest text-foreground hover:bg-white/90 sm:mt-6 sm:h-10 sm:px-6 sm:text-xs">
                     <Link href={banner.buttonLink}>{banner.buttonText}<ArrowRight className="ml-2 h-4 w-4" /></Link>
                   </Button>
                 </div>

@@ -9,6 +9,7 @@ import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebas
 import type { Seller, SellerAccessType } from '@/lib/marketplace-types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { ConfirmActionDialog } from '@/components/confirm-action-dialog';
 import { errorToast } from '@/lib/user-notices';
@@ -104,7 +105,13 @@ export function SellerManagement() {
   if (error) return <LoadError retry={retry} error={error} />;
   return <section className="space-y-5">
     <div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a68a64]">Marketplace access</p><h2 className="mt-2 text-2xl font-medium">Manage sellers</h2><p className="mt-2 text-sm text-muted-foreground">Search sellers, review access, manually adjust trial expiry dates, and suspend or reactivate storefronts. Only administrators can manage seller access.</p></div>
-    <div className="flex flex-wrap gap-3"><Input className="min-w-[200px] max-w-sm flex-1 rounded-xl bg-white" aria-label="Search sellers" placeholder="Search name, email, UID…" value={search} onChange={e => setSearch(e.target.value)} /><select aria-label="Filter seller access" className="h-10 rounded-xl border bg-white px-3 text-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="suspended">Suspended</option><option value="expired">Expired</option><option value="pending">Pending</option></select></div>
+    <div className="flex flex-wrap gap-3"><Input className="min-w-[200px] max-w-sm flex-1 rounded-xl bg-white" aria-label="Search sellers" placeholder="Search name, email, UID…" value={search} onChange={e => setSearch(e.target.value)} /><Select value={statusFilter} onValueChange={setStatusFilter}>
+        <SelectTrigger aria-label="Filter seller access" className="min-h-11 w-full sm:w-[180px]"><SelectValue /></SelectTrigger>
+        <SelectContent position="popper" sideOffset={6}>
+          <SelectItem value="all">All statuses</SelectItem><SelectItem value="active">Active</SelectItem>
+          <SelectItem value="suspended">Suspended</SelectItem><SelectItem value="expired">Expired</SelectItem><SelectItem value="pending">Pending</SelectItem>
+        </SelectContent>
+      </Select></div>
     {isLoading ? <p className="text-sm text-muted-foreground">Loading seller accounts…</p> : !visible.length ? <p className="rounded-2xl border bg-white p-8 text-sm text-muted-foreground">No sellers match these filters.</p> : <div className="space-y-3">
       {visible.map(seller => {
         const end = dateFrom(seller.accessEndsAt)?.getTime() ?? 0;
@@ -114,7 +121,10 @@ export function SellerManagement() {
           <div className="mt-4 flex flex-wrap gap-2 border-t pt-4"><Button size="sm" variant="outline" disabled={working !== null} onClick={() => manage(seller)}><CalendarClock className="mr-2 h-4 w-4" />Manage access</Button>{seller.status === 'suspended' ? <Button size="sm" disabled={working !== null} onClick={() => void update(seller, { status: 'active' }, 'reactivate')}>Reactivate</Button> : <Button size="sm" variant="outline" disabled={working !== null} onClick={() => void update(seller, { status: 'suspended' }, 'suspend')} className="text-red-700">Suspend</Button>}</div>
           {selectedId === seller.id && <div className="mt-4 space-y-4 rounded-xl border border-[#e5d9c8] bg-[#faf8f3] p-4">
             <div className="flex items-center justify-between gap-2"><div><h4 className="font-semibold">Edit seller access</h4><p className="mt-1 text-xs text-muted-foreground">Existing expiry: {formatDate(seller.accessEndsAt)}. Changes are applied after confirmation.</p></div><button type="button" aria-label="Close access editor" onClick={() => setSelectedId(null)} className="rounded-full p-2 hover:bg-white"><X className="h-4 w-4" /></button></div>
-            <div className="grid gap-3 sm:grid-cols-2"><div><Label htmlFor="sellerAccessType">Access plan</Label><select id="sellerAccessType" value={accessType} onChange={e => setAccessType(e.target.value as SellerAccessType)} className="mt-1 h-10 w-full rounded-md border bg-white px-3 text-sm"><option value="trial">Trial</option><option value="full">Full access</option></select></div><div><Label htmlFor="sellerExtension">Extend from current expiry (days)</Label><div className="mt-1 flex gap-2"><Input id="sellerExtension" min={1} max={3650} type="number" value={extensionDays} onChange={e => setExtensionDays(e.target.value)} /><Button type="button" disabled={working !== null} onClick={() => extend(seller)}>Extend</Button></div></div></div>
+            <div className="grid gap-3 sm:grid-cols-2"><div><Label htmlFor="sellerAccessType">Access plan</Label><Select value={accessType} onValueChange={value => setAccessType(value as SellerAccessType)} disabled={working !== null}>
+                <SelectTrigger id="sellerAccessType" className="mt-1 min-h-11"><SelectValue /></SelectTrigger>
+                <SelectContent position="popper" sideOffset={6}><SelectItem value="trial">Trial</SelectItem><SelectItem value="full">Full access</SelectItem></SelectContent>
+              </Select></div><div><Label htmlFor="sellerExtension">Extend from current expiry (days)</Label><div className="mt-1 flex gap-2"><Input id="sellerExtension" min={1} max={3650} type="number" value={extensionDays} onChange={e => setExtensionDays(e.target.value)} /><Button type="button" disabled={working !== null} onClick={() => extend(seller)}>Extend</Button></div></div></div>
             <div><Label htmlFor="sellerExactExpiry">Or manually set expiry date</Label><div className="mt-1 flex flex-wrap gap-2"><Input id="sellerExactExpiry" type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)} className="max-w-xs bg-white"/><Button type="button" variant="outline" disabled={working !== null} onClick={() => saveExact(seller)}>Save expiry</Button></div></div>
             <p className="text-xs text-[#796d5c]">Admin-only access control. An expiry change does not charge the seller or modify order history.</p>
           </div>}

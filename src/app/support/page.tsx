@@ -9,6 +9,7 @@ import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { LifeBuoy } from 'lucide-react';
 
@@ -40,7 +41,22 @@ export default function SupportPage(){
     {!user&&!isUserLoading?<Link href="/login" className="editorial-button mt-7">Sign in to request support</Link>:<div className="mt-9 grid gap-8 lg:grid-cols-2">
       <form onSubmit={submit} className="space-y-4 rounded-3xl border bg-white p-5 sm:p-8">
         <h2 className="text-xl font-semibold">New support request</h2>
-        <label className="block space-y-2 text-xs font-semibold">What is this about?<select aria-label="Support topic" className="h-11 w-full rounded-md border bg-white px-3" value={category} onChange={e=>setCategory(e.target.value)}><option value="order">An order or cancellation</option><option value="delivery">Delivery or pickup</option><option value="payment">Payment</option><option value="seller">A seller or product</option><option value="account">My account</option><option value="other">Something else</option></select></label>
+        <div className="space-y-2">
+          <label htmlFor="support-topic" className="block text-xs font-semibold text-[#4b4034]">What is this about?</label>
+          <Select value={category} onValueChange={setCategory} disabled={busy}>
+            <SelectTrigger id="support-topic" aria-label="Support topic" className="h-12 bg-[#fffdfa] text-left text-sm">
+              <SelectValue placeholder="Choose a topic" />
+            </SelectTrigger>
+            <SelectContent position="popper" sideOffset={6} align="start" className="max-h-[min(22rem,65dvh)] w-[var(--radix-select-trigger-width)]">
+              <SelectItem value="order">An order or cancellation</SelectItem>
+              <SelectItem value="delivery">Delivery or pickup</SelectItem>
+              <SelectItem value="payment">Payment</SelectItem>
+              <SelectItem value="seller">A seller or product</SelectItem>
+              <SelectItem value="account">My account</SelectItem>
+              <SelectItem value="other">Something else</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <label className="block space-y-2 text-xs font-semibold">Subject<Input required minLength={5} maxLength={140} value={subject} onChange={e=>setSubject(e.target.value)} placeholder="A short description of your issue"/></label>
         <label className="block space-y-2 text-xs font-semibold">Order ID (optional)<Input maxLength={160} value={orderId} onChange={e=>setOrderId(e.target.value)} placeholder="Paste an order ID from your order details"/></label>
         <label className="block space-y-2 text-xs font-semibold">How can we help?<Textarea required minLength={15} maxLength={2000} rows={6} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Explain what happened and what outcome you would prefer."/></label>

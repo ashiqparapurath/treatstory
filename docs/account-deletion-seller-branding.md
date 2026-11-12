@@ -32,3 +32,40 @@ Chrome may log `Banner not shown: beforeinstallpromptevent.preventDefault() call
 - Seller and buyer email notifications for order status and refunds.
 - Buyer/seller dispute resolution and refund workflows before online payments.
 - Seller analytics for conversion, repeat orders and product performance.
+
+## Mobile Profile, More and role-aware attention indicators
+
+The mobile bottom navigation now has five equally sized destinations:
+**Home, Shop, Cart, Profile, More**. The former Sell shortcut is replaced by
+a More page. Desktop header navigation is unchanged.
+
+The Profile tab uses the existing `useAccountRole` Firebase role resolver:
+- Verified administrator → `/admin`.
+- Verified seller → `/seller/dashboard`.
+- Customer → `/account`.
+- Logged-out user → `/login`.
+- Role lookup still pending or failed → `/dashboard`, whose guarded role
+  router shows loading/error feedback and does not guess a customer role.
+
+More groups real existing destinations by Account, Marketplace, Information and
+Account Actions. Seller tools link to existing dashboard sections and admin
+tools to existing dashboard tabs. Unknown roles never gain admin/seller links.
+Language preferences are omitted until they are actually implemented.
+Sign-out uses Firebase Authentication and surfaces failure feedback.
+
+The tiny bronze/red **dot (no count)** is displayed only when there is verified
+actionable work:
+- Seller: at least one of their own `seller_orders` is `pending`.
+- Admin: any `pending` seller application or `pending` seller order.
+- Buyer: no dot until the app has persisted, meaningful unread-state metadata.
+
+Queries use real-time, `limit(1)`, role-scoped Firestore listeners on small
+viewports only; listeners clean up on unmount or role change. Firestore rules
+continue to enforce authorization. The More page can show the dot next to
+specific actionable destinations as well.
+
+To verify visually, test at 320px, 375px, 430px and 768px widths using a
+customer, seller, admin and signed-out session. Confirm both dashboard routing
+and visibility of role-specific More items. Test pending/non-pending
+applications and orders for appropriate dot display, and confirm no dots show
+when the query fails. Confirm desktop nav retains its prior behavior.

@@ -123,23 +123,34 @@ nav a[aria-current="page"] { color: hsl(var(--foreground)); text-decoration: und
   body { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
 }
 
-/* Shared dropdown treatment; native pickers retain platform keyboard and touch behaviour. */
+/* TreatStory select controls: the same understated appearance as account and
+   creator inputs. The opened native picker remains platform-controlled. */
 select:not([multiple]) {
   appearance: none;
-  min-height: 44px;
-  border: 1px solid #e1d7c8;
-  border-radius: 0.75rem;
-  background-color: #fffdf9;
-  color: #51463a;
-  padding: 0.625rem 2.5rem 0.625rem 0.875rem;
+  -webkit-appearance: none;
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #e4dbd0;
+  border-radius: 0.875rem;
+  background-color: #fffdfa;
+  color: #352c23;
+  padding: 0.75rem 2.75rem 0.75rem 1rem;
   font-size: 0.875rem;
   line-height: 1.25rem;
-  box-shadow: 0 2px 6px rgb(51 39 24 / 3%);
+  box-shadow: none;
+  transition: border-color 160ms ease, background-color 160ms ease;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23846b49' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 0.875rem center;
+  background-position: right 1rem center;
 }
-select:not([multiple]):focus-visible { outline: 2px solid #b99b72; outline-offset: 2px; }
+select:not([multiple]):hover:not(:disabled) { border-color: #c9b69e; }
+select:not([multiple]):focus-visible {
+  outline: 2px solid #a98d69;
+  outline-offset: 2px;
+  border-color: #a98d69;
+}
 select:not([multiple]):disabled { opacity: 0.55; cursor: not-allowed; }
-select option { background-color: #fffdf9; color: #51463a; }
-@media (max-width: 767px) { select:not([multiple]) { font-size: 1rem; } }
+select option { background-color: #fffdfa; color: #352c23; }
+@media (max-width: 767px) {
+  select:not([multiple]) { font-size: 1rem; min-height: 50px; }
+}

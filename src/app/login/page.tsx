@@ -8,6 +8,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { getErrorNotice, validateEmail, type UserNotice } from '@/lib/user-notices';
 import { requestAccountMail } from '@/lib/account-mail';
 import { ToastAction } from '@/components/ui/toast';
+import { GoogleSignInButton } from '@/components/google-sign-in-button';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,6 +30,12 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+  const [registerHref, setRegisterHref] = useState('/register');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const next = new URLSearchParams(window.location.search).get('next');
+    if (next && next.startsWith('/') && !next.startsWith('//') && !next.includes('\\') && !/^\/(login|register)([/?#]|$)/.test(next)) setRegisterHref('/register?next=' + encodeURIComponent(next));
+  }, []);
 
   // The dashboard router sends buyers to their profile and creators/admins
   // to the correct workspace. Never send a successful login to the homepage.
@@ -82,7 +89,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#faf8f4] text-[#2c2823] lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <main className="min-h-screen overflow-x-hidden bg-[#faf8f4] text-[#2c2823] lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <section className="relative hidden min-h-screen overflow-hidden bg-[#e9dfd0] lg:flex lg:flex-col lg:justify-between">
         <div className="absolute inset-0 bg-[url('/img/login-side.avif')] bg-cover bg-center" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#1d1916]/45 via-[#1d1916]/10 to-[#1d1916]/75" />
@@ -98,29 +105,56 @@ export default function LoginPage() {
         </div>
       </section>
 
-      <section className="flex min-h-[100dvh] flex-col bg-white px-5 pb-5 pt-5 sm:bg-[#faf8f4] sm:px-10 sm:py-9 lg:min-h-screen lg:px-12 xl:px-20">
-        <div className="flex items-center justify-between gap-3 border-b border-[#f0eae2] pb-5 sm:border-0 sm:pb-0 lg:justify-end">
-          <Link href="/" className="brand-wordmark text-[27px] leading-none lg:hidden">TreatStory</Link>
-          <Link href="/" className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[#e6ded2] bg-white px-3 py-2 text-[11px] font-medium transition hover:bg-[#f2ece4] sm:px-4 sm:text-xs"><ArrowLeft className="h-3.5 w-3.5" /> Back to shop</Link>
+      <section className="flex min-h-[100dvh] min-w-0 flex-col bg-[#f5f5f7] px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 sm:bg-[#faf8f4] sm:px-10 sm:py-9 lg:min-h-screen lg:px-12 xl:px-20">
+        <div className="relative flex min-h-12 min-w-0 items-center justify-between gap-3 lg:justify-end">
+          <Link href="/" aria-label="Back to shop" className="inline-flex min-h-11 items-center gap-1 rounded-lg bg-transparent pr-3 text-[15px] font-medium text-[#80684c] transition-colors hover:text-[#27272a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a88c6c] sm:rounded-full sm:border sm:border-[#e6ded2] sm:bg-white sm:px-4 sm:text-xs sm:hover:bg-[#f2ece4]">
+            <ArrowLeft className="h-[18px] w-[18px] shrink-0 sm:h-4 sm:w-4" aria-hidden="true" />
+            <span className="sm:hidden">Shop</span><span className="hidden sm:inline">Back to shop</span>
+          </Link>
+          <Link href="/" className="brand-wordmark absolute left-1/2 max-w-[55%] -translate-x-1/2 truncate text-[26px] leading-none text-[#27272a] sm:text-[30px] lg:hidden">TreatStory</Link>
+          <span aria-hidden="true" className="w-12 lg:hidden" />
         </div>
-        <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center py-8 sm:py-14">
-          <div className="mb-7 sm:mb-8">
-            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a68a64] lg:hidden">Little finds. Lovely stories.</p>
-            <h1 className="text-[34px] font-medium leading-tight tracking-tight sm:text-[44px]">{resetMode ? 'Reset your password.' : 'Welcome back.'}</h1>
-            <p className="mt-2 max-w-sm text-[13px] leading-6 text-[#7a7167] sm:mt-3 sm:text-sm">{resetMode ? 'Enter your account email and we’ll send you a secure password reset link.' : 'Sign in to keep your favourite finds, orders and delivery details together.'}</p>
+        <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-start pb-7 pt-14 sm:justify-center sm:py-14">
+          <div className="mb-9 sm:mb-8">
+            <h1 className="text-[clamp(2.2rem,9vw,2.75rem)] font-semibold leading-[1.1] tracking-[-0.045em] text-[#1c1c1e] sm:text-[44px] sm:font-medium sm:text-[#2c2823]">{resetMode ? 'Reset password' : 'Welcome back'}</h1>
+            <p className="mt-3 max-w-sm text-[15px] leading-6 text-[#767680] sm:text-sm sm:leading-6 sm:text-[#796e61]">{resetMode ? 'We’ll send a secure reset link to your email.' : 'Sign in to continue your TreatStory.'}</p>
           </div>
-          <form noValidate onSubmit={resetMode ? handlePasswordReset : handleSignIn} className="space-y-4 sm:space-y-5">
-            <div className="space-y-2"><Label htmlFor="email" className="text-xs font-semibold">Email address</Label><Input ref={emailInput} aria-invalid={formError?.field==='email'||formError?.field==='credentials'} aria-describedby={formError?'sign-in-error':undefined} id="email" type="email" autoComplete="email" inputMode="email" placeholder="you@example.com" value={email} onChange={e => {setEmail(e.target.value);setFormError(null);setResetSent(false);}} required disabled={isLoading} className="h-[52px] rounded-xl border-[#ddd4c8] bg-[#faf9f6] px-4 text-base sm:h-12 sm:bg-white sm:text-sm focus-visible:ring-[#a78c6a]" /></div>
-            {!resetMode && <div className="space-y-2"><Label htmlFor="password" className="text-xs font-semibold">Password</Label><div className="relative"><Input ref={passwordInput} aria-invalid={formError?.field==='password'||formError?.field==='credentials'} aria-describedby={formError?'sign-in-error':undefined} id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={e => {setPassword(e.target.value);setFormError(null);}} required disabled={isLoading} className="h-[52px] rounded-xl border-[#ddd4c8] bg-[#faf9f6] px-4 pr-12 text-base sm:h-12 sm:bg-white sm:text-sm focus-visible:ring-[#a78c6a]" /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(v=>!v)} className="absolute inset-y-0 right-1 flex w-11 items-center justify-center rounded-lg text-[#7a7167] hover:text-[#29251f]">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>}
-            {!resetMode && <div className="flex justify-end"><button type="button" onClick={() => { setResetMode(true); setResetSent(false); setFormError(null); }} className="text-xs font-semibold text-[#6f583d] underline decoration-[#c4aa89] underline-offset-4 hover:text-[#29251f]">Forgot password?</button></div>}
-            {formError&&<div id="sign-in-error" role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"><p className="font-semibold">{formError.title}</p><p className="mt-1 text-xs leading-5">{formError.description}</p></div>}
+          <form noValidate onSubmit={resetMode ? handlePasswordReset : handleSignIn} className="space-y-5 sm:space-y-5">
+            <div className="overflow-hidden rounded-[17px] border border-[#e5e5ea] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.025)] sm:space-y-5 sm:overflow-visible sm:rounded-none sm:border-0 sm:bg-transparent sm:shadow-none">
+              <div className="space-y-1 px-4 py-3 sm:space-y-2 sm:px-0 sm:py-0">
+                <Label htmlFor="email" className="text-[12px] font-medium text-[#8e8e93] sm:text-xs sm:font-semibold sm:text-[#443b31]">Email address</Label>
+                <Input ref={emailInput} aria-invalid={formError?.field==='email'||formError?.field==='credentials'} aria-describedby={formError?'sign-in-error':undefined} id="email" type="email" autoComplete="email" inputMode="email" autoCapitalize="none" spellCheck={false} placeholder="you@example.com" value={email} onChange={e => {setEmail(e.target.value);setFormError(null);setResetSent(false);}} required disabled={isLoading} className="h-9 rounded-none border-0 bg-transparent px-0 text-base text-[#1c1c1e] shadow-none placeholder:text-[#aeaeb2] focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-12 sm:rounded-xl sm:border sm:border-[#ddd4c8] sm:bg-white sm:px-4 sm:text-sm sm:focus-visible:ring-[#a78c6a]" />
+              </div>
+              {!resetMode && <div className="space-y-1 border-t border-[#eeeef0] px-4 py-3 sm:space-y-2 sm:border-0 sm:px-0 sm:py-0">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="password" className="text-[12px] font-medium text-[#8e8e93] sm:text-xs sm:font-semibold sm:text-[#443b31]">Password</Label>
+                  <button type="button" onClick={() => { setResetMode(true); setResetSent(false); setFormError(null); }} className="hidden min-h-9 items-center text-xs font-semibold text-[#786044] underline decoration-[#c4aa89] underline-offset-4 hover:text-[#29251f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9f805a] sm:inline-flex">Forgot password?</button>
+                </div>
+                <div className="relative">
+                  <Input ref={passwordInput} aria-invalid={formError?.field==='password'||formError?.field==='credentials'} aria-describedby={formError?'sign-in-error':undefined} id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={e => {setPassword(e.target.value);setFormError(null);}} required disabled={isLoading} className="h-9 rounded-none border-0 bg-transparent px-0 pr-12 text-base text-[#1c1c1e] shadow-none placeholder:text-[#aeaeb2] focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-12 sm:rounded-xl sm:border sm:border-[#ddd4c8] sm:bg-white sm:px-4 sm:pr-12 sm:text-sm sm:focus-visible:ring-[#a78c6a]" />
+                  <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(v=>!v)} className="absolute -inset-y-1 right-0 flex w-11 items-center justify-center rounded-xl text-[#8e8e93] transition-colors hover:text-[#27272a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a88c6c] sm:inset-y-0 sm:right-1">{showPassword ? <EyeOff className="h-[19px] w-[19px]" /> : <Eye className="h-[19px] w-[19px]" />}</button>
+                </div>
+              </div>}
+            </div>
+            {!resetMode && <div className="flex justify-end">
+              <button type="button" onClick={() => { setResetMode(true); setResetSent(false); setFormError(null); }} className="inline-flex min-h-11 items-center text-[13px] font-medium text-[#80684c] transition-colors hover:text-[#27272a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a88c6c] sm:hidden">Forgot password?</button>
+            </div>}
+            {formError&&<div id="sign-in-error" role="alert" className="border-l-[3px] border-red-400 bg-red-50/80 px-3 py-3 text-sm text-red-800 sm:rounded-xl sm:border sm:border-red-200"><p className="font-semibold">{formError.title}</p><p className="mt-1 text-xs leading-5">{formError.description}</p></div>}
             {!auth&&<p role="status" className="text-xs text-amber-800">Sign-in is temporarily unavailable. Please try again later or contact support.</p>}
-            {resetMode && resetSent && <p role="status" className="rounded-xl border border-[#e1d8ca] bg-[#f5f0e8] p-3 text-sm leading-6 text-[#5c4b37]">If an account exists for this email, you’ll receive a reset link. Check your inbox and spam folder.</p>}
-            <Button type="submit" disabled={isLoading || !auth} className="mt-2 h-[52px] w-full rounded-xl bg-[#29251f] sm:h-12 sm:rounded-full text-sm font-semibold text-white transition hover:bg-[#51463a]">{isLoading ? (resetMode ? 'Sending…' : 'Signing in…') : <>{resetMode ? 'Send reset link' : 'Sign in'} <ArrowRight className="ml-2 h-4 w-4" /></>}</Button>
+            {resetMode && resetSent && <p role="status" className="border-l-[3px] border-[#b19b79] bg-[#f5f0e8] px-3 py-3 text-sm leading-6 text-[#5c4b37] sm:rounded-xl sm:border sm:border-[#e1d8ca]">If an account exists for this email, you’ll receive a reset link. Check your inbox and spam folder.</p>}
+            <Button type="submit" disabled={isLoading || !auth} className="mt-1 h-[54px] w-full rounded-[15px] bg-[#1c1c1e] text-[15px] font-semibold text-white transition-colors hover:bg-[#35353a] focus-visible:ring-2 focus-visible:ring-[#9a846d] sm:mt-2 sm:h-12 sm:rounded-full sm:bg-[#29251f] sm:text-sm sm:hover:bg-[#51463a]">{isLoading ? (resetMode ? 'Sending…' : 'Signing in…') : <>{resetMode ? 'Send reset link' : 'Sign in'} <ArrowRight className="ml-2 h-4 w-4" /></>}</Button>
           </form>
-          {resetMode && <button type="button" onClick={() => { setResetMode(false); setResetSent(false); setFormError(null); }} className="mt-5 inline-flex items-center justify-center gap-2 text-sm font-medium text-[#6f583d] hover:text-[#29251f]"><ArrowLeft className="h-4 w-4" /> Back to sign in</button>}
-          <div className="mt-7 border-t border-[#e8e0d5] pt-5"><p className="text-center text-sm text-[#7a7167]">New to TreatStory? <Link href="/register" className="font-semibold text-[#29251f] underline decoration-[#bca07b] underline-offset-4 hover:text-[#8c6c43]">Create an account</Link></p></div>
-          <p className="mt-5 flex items-center justify-center gap-2 text-center text-[11px] text-[#958a7c]"><ShieldCheck className="h-4 w-4" /> Secure sign-in for customers and creators</p>
+          {!resetMode && <div className="mt-6 space-y-5">
+            <div className="flex items-center gap-3" aria-hidden="true">
+              <span className="h-px flex-1 bg-[#dedee3] sm:bg-[#e7ded2]" />
+              <span className="text-xs font-medium text-[#8e8e93]">or</span>
+              <span className="h-px flex-1 bg-[#dedee3] sm:bg-[#e7ded2]" />
+            </div>
+            <GoogleSignInButton auth={auth} disabled={isLoading} onSuccess={() => toast({ title: 'Signed in with Google' })} />
+          </div>}
+          {resetMode && <button type="button" onClick={() => { setResetMode(false); setResetSent(false); setFormError(null); }} className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 text-sm font-medium text-[#6f583d] hover:text-[#29251f]"><ArrowLeft className="h-4 w-4" /> Back to sign in</button>}
+          <div className="mt-10 pt-2 sm:mt-7 sm:border-t sm:border-[#e7ded2] sm:pt-5"><p className="text-center text-[14px] leading-6 text-[#8e8e93] sm:text-sm sm:text-[#7a7167]">New to TreatStory? <Link href={registerHref} className="inline-flex min-h-10 items-center font-semibold text-[#80684c] transition-colors hover:text-[#27272a] sm:min-h-8 sm:text-[#29251f] sm:underline sm:decoration-[#bca07b] sm:underline-offset-4">Create an account</Link></p></div>
+          <p className="mt-5 hidden items-center justify-center gap-2 text-center text-[11px] leading-5 text-[#958a7c] sm:flex"><ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" /> Secure sign-in for customers and creators</p>
         </div>
         <p className="hidden text-center text-[11px] text-[#a3998e] sm:block">© {new Date().getFullYear()} TreatStory · Little finds. Lovely stories.</p>
       </section>

@@ -12,6 +12,7 @@ import { useCart } from '@/context/cart-context';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import { Banknote, CreditCard, MapPin, ShieldCheck, Truck, CheckCircle2, ClipboardCopy } from 'lucide-react';
@@ -144,9 +145,16 @@ export function CreatorCheckout({ variant = 'card', onlyProductId, onlyLineId, i
       <div className="space-y-4"><p className="flex items-center gap-2 text-sm font-semibold"><MapPin className="h-4 w-4 text-[#a68a64]" />Contact & delivery details</p>
       <div className="flex items-start justify-between gap-3 rounded-xl border bg-[#faf8f4] p-3 text-xs"><div className="min-w-0"><p className="font-semibold">{name ? `${name} · ${phone}` : 'Add your delivery details'}</p><p className="mt-1 line-clamp-2 text-muted-foreground">{address || 'Choose an address for this order.'}</p>{pincode && <p className="mt-1 text-muted-foreground">PIN {pincode}</p>}</div><Button type="button" variant="outline" size="sm" onClick={() => setEditingAddress(true)}>{address ? 'Change address' : 'Add address'}</Button></div>
       <div className="grid gap-4 rounded-2xl border bg-white p-4 sm:grid-cols-2">
-        <label className="space-y-2 text-xs font-medium">Fulfillment method
-          <select className="h-11 w-full rounded-lg border bg-white px-3 text-sm" value={fulfillment} onChange={e => setFulfillment(e.target.value as typeof fulfillment)}><option value="delivery">Seller delivery</option><option value="pickup">Pickup from creator</option></select>
-        </label>
+        <div className="space-y-2 text-xs font-medium">
+          <label htmlFor="creator-fulfillment">Fulfillment method</label>
+          <Select value={fulfillment} onValueChange={value => setFulfillment(value as typeof fulfillment)}>
+            <SelectTrigger id="creator-fulfillment" className="min-h-12"><SelectValue placeholder="Choose fulfillment" /></SelectTrigger>
+            <SelectContent position="popper" sideOffset={6}>
+              <SelectItem value="delivery">Seller delivery</SelectItem>
+              <SelectItem value="pickup">Pickup from creator</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <label className="space-y-2 text-xs font-medium">Requested date
           <Input required type="date" min={new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10)} max={new Date(Date.now() + 330 * 60000 + 90 * 86400000).toISOString().slice(0, 10)} value={requestedDate} onChange={e => setRequestedDate(e.target.value)} />
         </label>

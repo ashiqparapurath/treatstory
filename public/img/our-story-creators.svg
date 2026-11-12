@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 790" role="img" aria-labelledby="title desc">
+<title id="title">The creations behind TreatStory</title>
+<desc id="desc">Artisanal cake, fresh berries, embroidery, gifts and handmade ceramics on a sunlit work table.</desc>
+<defs>
+<linearGradient id="room" x1=".02" y1="0" x2=".95" y2=".85"><stop stop-color="#eee2d4"/><stop offset=".48" stop-color="#fcf4e7"/><stop offset="1" stop-color="#d3b898"/></linearGradient>
+<linearGradient id="linen" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#f9ebd7"/><stop offset="1" stop-color="#e0c7ad"/></linearGradient>
+<linearGradient id="cake" x1=".2" y1="0" x2=".8" y2="1"><stop stop-color="#fffaf0"/><stop offset=".6" stop-color="#f5e7d0"/><stop offset="1" stop-color="#d5a982"/></linearGradient>
+<linearGradient id="stand" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b78054"/><stop offset="1" stop-color="#70462f"/></linearGradient>
+<radialGradient id="light"><stop stop-color="#fffce9" stop-opacity=".8"/><stop offset="1" stop-color="#fff8e6" stop-opacity="0"/></radialGradient>
+<filter id="shadow"><feGaussianBlur stdDeviation="23"/></filter>
+<pattern id="cloth" width="25" height="25" patternUnits="userSpaceOnUse"><path d="M0 0H25M0 0V25" fill="none" stroke="#bd9674" stroke-opacity=".10" stroke-width="1"/></pattern>
+<pattern id="knit" width="26" height="30" patternUnits="userSpaceOnUse"><path d="M6 3q-7 9 3 16q10 8 1 13M21 1q7 9-3 16q-9 8 0 12" fill="none" stroke="#94704d" stroke-opacity=".39" stroke-width="3"/></pattern>
+</defs>
+<rect width="1400" height="790" fill="url(#room)"/>
+<ellipse cx="940" cy="240" rx="690" ry="370" fill="url(#light)"/>
+<g opacity=".3" stroke="#f7e7d5" stroke-width="26"><path d="M-20 0L550 600M120 0L670 600M280 0L830 600"/></g>
+<path d="M0 558Q250 524 430 570T960 550T1400 538V790H0Z" fill="url(#linen)"/>
+<path d="M0 558Q260 545 650 579T1400 541" fill="none" stroke="#fff6e9" stroke-width="6"/>
+<path d="M0 580H1400V790H0Z" fill="url(#cloth)" opacity=".65"/>
+<ellipse cx="740" cy="685" rx="495" ry="62" fill="#67452e" opacity=".18" filter="url(#shadow)"/>
+<!-- gifts -->
+<g transform="translate(92 364)">
+<rect x="0" y="62" width="286" height="204" rx="12" fill="#b78a5c"/>
+<path d="M0 64l120-54 166 54-119 54Z" fill="#d8b98e"/>
+<path d="M167 118V266" stroke="#e9d8ba" stroke-width="27"/>
+<path d="M105 12l81 198" stroke="#e9d8ba" stroke-width="23"/>
+<path d="M120 31q-64-45-68 0q8 37 84 18m0 0q58-65 90-23q20 40-90 23" fill="none" stroke="#e9d8ba" stroke-width="11" stroke-linecap="round"/>
+<rect x="34" y="125" width="65" height="85" rx="6" fill="#f8edda" transform="rotate(-10 66 160)"/>
+<path d="M66 149q-31 16-12 32m13-32q30 17 12 32" stroke="#73926b" stroke-width="4" fill="none"/>
+</g>
+<!-- embroidery hoop -->
+<g transform="translate(970 83)">
+<rect x="116" y="3" width="77" height="51" rx="8" fill="#b78a61"/>
+<ellipse cx="160" cy="205" rx="176" ry="190" fill="#d0a36b"/>
+<ellipse cx="160" cy="205" rx="157" ry="169" fill="#f8e6c8" stroke="#a37449" stroke-width="18"/>
+<g stroke="#5e855e" fill="none" stroke-width="7" stroke-linecap="round">
+<path d="M161 287q-10-74-67-136M161 285q5-107 66-160M159 287q54-69 101-76"/>
+</g>
+<g fill="#78916d"><ellipse cx="103" cy="200" rx="16" ry="9" transform="rotate(-30 103 200)"/><ellipse cx="203" cy="192" rx="18" ry="10" transform="rotate(30 203 192)"/><ellipse cx="144" cy="249" rx="17" ry="9" transform="rotate(-50 144 249)"/></g>
+<g fill="#e5a691" stroke="#f2c9a7" stroke-width="3">
+<circle cx="93" cy="148" r="26"/><circle cx="228" cy="127" r="26"/><circle cx="262" cy="213" r="22"/>
+</g>
+<g fill="#9c6743"><circle cx="93" cy="148" r="8"/><circle cx="228" cy="127" r="8"/><circle cx="262" cy="213" r="7"/></g>
+</g>
+<!-- crochet basket -->
+<g transform="translate(1122 346)">
+<path d="M75 48q-7-100 64-101q77-2 66 102" fill="none" stroke="#c9a57a" stroke-width="32" stroke-linecap="round"/>
+<path d="M0 47q16-20 38-20h235q20 0 28 20l-18 250q-144 61-268 0Z" fill="#e6ccaa" stroke="#b99975" stroke-width="5"/>
+<path d="M0 47q16-20 38-20h235q20 0 28 20l-18 250q-144 61-268 0Z" fill="url(#knit)" opacity=".75"/>
+<g transform="translate(150 135)">
+<circle r="36" fill="#966335"/><g fill="#e1b853"><ellipse cy="-56" rx="16" ry="33"/><ellipse cy="56" rx="16" ry="33"/><ellipse cx="-56" rx="33" ry="16"/><ellipse cx="56" rx="33" ry="16"/><ellipse cx="39" cy="39" rx="16" ry="33" transform="rotate(-45 39 39)"/><ellipse cx="-39" cy="39" rx="16" ry="33" transform="rotate(45 -39 39)"/><ellipse cx="39" cy="-39" rx="16" ry="33" transform="rotate(45 39 -39)"/><ellipse cx="-39" cy="-39" rx="16" ry="33" transform="rotate(-45 -39 -39)"/></g><circle r="31" fill="#8c603f"/><g fill="#c89d52"><circle cx="-7" cy="-9" r="3"/><circle cx="8" cy="-7" r="3"/><circle cy="8" r="3"/></g>
+</g></g>
+<!-- stand -->
+<g transform="translate(474 450)">
+<ellipse cx="273" cy="282" rx="315" ry="39" fill="#63462f" opacity=".25"/>
+<rect x="237" y="114" width="73" height="156" rx="18" fill="url(#stand)"/>
+<path d="M236 248h74l64 36H171Z" fill="#825035"/>
+<ellipse cx="273" cy="134" rx="307" ry="46" fill="#98613c"/>
+<ellipse cx="273" cy="123" rx="304" ry="40" fill="#b98756" stroke="#875639" stroke-width="6"/>
+<!-- cake -->
+<path d="M65-133q208-33 419 0l3 229q-211 51-420 0Z" fill="url(#cake)"/>
+<ellipse cx="275" cy="-131" rx="210" ry="57" fill="#fef7ea" stroke="#e4caa6" stroke-width="7"/>
+<path d="M66 41q205 52 419 0M67 80q214 51 419 0" fill="none" stroke="#ead4b9" stroke-width="4" opacity=".55"/>
+<path d="M70-128q-13 42 5 54q14 5 11-40M117-159q-6 57 8 67q16 1 14-61M291-183q-13 52 3 64q20 2 15-57M433-161q-8 51 8 62q13 4 15-52" fill="#fff9eb"/>
+<!-- berries -->
+<g fill="#b63d39" stroke="#912f29" stroke-width="4">
+<ellipse cx="146" cy="-180" rx="27" ry="22"/><ellipse cx="206" cy="-199" rx="29" ry="25"/><ellipse cx="286" cy="-208" rx="30" ry="26"/><ellipse cx="348" cy="-195" rx="27" ry="24"/><ellipse cx="414" cy="-178" rx="29" ry="25"/>
+</g>
+<g fill="#333b51"><circle cx="172" cy="-203" r="13"/><circle cx="258" cy="-225" r="14"/><circle cx="376" cy="-213" r="12"/><circle cx="302" cy="-184" r="11"/></g>
+<g fill="#567e50"><path d="M146-213l-17-17 23 8 18-13-6 20Z"/><path d="M286-241l-12-15 18 6 20-13-9 25Z"/><path d="M416-207l-12-15 17 8 19-14-7 25Z"/></g>
+</g>
+<!-- cookies in ceramic plate -->
+<g transform="translate(188 631)">
+<ellipse cx="150" cy="73" rx="171" ry="33" fill="#98795f" opacity=".17"/>
+<ellipse cx="150" cy="48" rx="178" ry="45" fill="#fbf0de" stroke="#d0b69b" stroke-width="8"/>
+<g fill="#ca9150" stroke="#a5753b" stroke-width="4">
+<ellipse cx="86" cy="10" rx="61" ry="32" transform="rotate(-14 86 10)"/>
+<ellipse cx="172" cy="0" rx="66" ry="35" transform="rotate(10 172 0)"/>
+<ellipse cx="240" cy="20" rx="58" ry="29" transform="rotate(20 240 20)"/>
+</g><g fill="#805435"><circle cx="74" cy="12" r="8"/><circle cx="97" cy="1" r="7"/><circle cx="159" cy="0" r="8"/><circle cx="186" cy="12" r="6"/><circle cx="231" cy="8" r="7"/><circle cx="251" cy="27" r="6"/></g>
+</g>
+<!-- little candle -->
+<g transform="translate(960 624)">
+<ellipse cx="82" cy="116" rx="99" ry="26" fill="#62442f" opacity=".2"/>
+<rect x="0" y="0" width="165" height="105" rx="21" fill="#f5e1c3" stroke="#cbaa83" stroke-width="5"/>
+<rect x="0" y="38" width="165" height="40" fill="#e7bc8d" opacity=".5"/>
+<path d="M81 8v-18" stroke="#7a6450" stroke-width="3"/>
+<path d="M81-11q-23-21 1-43q25 24-1 43Z" fill="#e7aa53"/>
+<path d="M81-10q-7-8 1-21q10 11-1 21Z" fill="#fdf1af"/>
+<g fill="#aa8b60"><circle cx="38" cy="58" r="4"/><circle cx="58" cy="62" r="5"/><circle cx="82" cy="54" r="4"/><circle cx="106" cy="63" r="5"/><circle cx="128" cy="56" r="4"/></g>
+</g>
+</svg>
