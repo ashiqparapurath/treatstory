@@ -140,9 +140,9 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
     }
   }
 
-  const panel = 'rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:rounded-3xl sm:p-6 lg:p-8';
-  return <form onSubmit={save} className="min-w-0 space-y-4 pb-8 sm:space-y-6">
-    <div className="overflow-hidden rounded-2xl bg-[#29251f] px-5 py-6 text-white sm:rounded-3xl sm:p-8">
+  const panel = 'rounded-2xl border border-[#e6dfd5] bg-white p-5 sm:p-6';
+  return <form onSubmit={save} className="min-w-0 space-y-5 pb-8 sm:space-y-6">
+    <div className="overflow-hidden rounded-2xl bg-[#29251f] px-5 py-6 text-white sm:p-7">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
         <div className="relative h-20 w-20 shrink-0 sm:h-24 sm:w-24">
           <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-2xl bg-white text-3xl font-semibold text-[#78664f] shadow-inner">
@@ -159,7 +159,8 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
       </div>
     </div>
 
-    <div className={'grid min-w-0 gap-4 lg:grid-cols-2 lg:gap-6'}>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a68a64]">Store details</p><h2 className="mt-1 text-lg font-semibold text-[#29251f]">How buyers see your business</h2></div><span className="inline-flex items-center gap-2 rounded-full border border-[#e4dbd0] bg-white px-3 py-1.5 text-xs text-[#776858]"><span className={draft.isOpen ? 'h-2 w-2 rounded-full bg-emerald-500' : 'h-2 w-2 rounded-full bg-amber-500'} />{draft.isOpen ? 'Accepting orders' : 'Store paused'}</span></div>
+    <div className="grid min-w-0 gap-4 lg:grid-cols-2 lg:gap-5">
       <section className={panel}>
         <div className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-[#9c7c52]" /><h3 className="text-lg font-semibold">Your store story</h3></div>
         <p className="mt-2 text-xs leading-5 text-muted-foreground">Share what makes your creations special.</p>
@@ -179,6 +180,7 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
       </section>
     </div>
 
+    <div className="pt-1"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a68a64]">Fulfillment preferences</p><h2 className="mt-1 text-lg font-semibold text-[#29251f]">Delivery and order handling</h2><p className="mt-1 text-xs text-[#817568]">Make sure customers know where and when you can fulfill their requests.</p></div>
     <section className={panel}>
       <div className="flex items-center gap-2"><Truck className="h-5 w-5 text-[#9c7c52]" /><h3 className="text-lg font-semibold">Delivery & pickup</h3></div>
       <p className="mt-2 text-xs leading-5 text-muted-foreground">Select supported fulfillment methods and define the areas you serve.</p>
@@ -206,7 +208,7 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
     {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
     <div className={(dirty || busy || uploading ? 'sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 shadow-lg md:bottom-4 ' : '') + 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-[#e8e0d5] bg-white/95 p-3 backdrop-blur-md sm:p-4'}>
       <div className="min-w-0 text-xs text-muted-foreground"><Check className="mr-1 inline h-4 w-4" />{uploading ? 'Uploading logo…' : dirty ? 'Unsaved changes' : 'All changes saved'}</div>
-      <Button type="submit" disabled={!active || busy || uploading || !dirty} className="min-h-11 rounded-full px-4 text-xs sm:px-6 sm:text-sm">{busy ? 'Saving…' : 'Save changes'}</Button>
+      <Button type="submit" disabled={!active || busy || uploading || !dirty} className="min-h-11 rounded-xl bg-[#29251f] px-4 text-xs text-white hover:bg-[#443b31] sm:px-6 sm:text-sm">{busy ? 'Saving…' : 'Save changes'}</Button>
     </div>
     <div className="flex flex-col gap-2 rounded-2xl border border-[#edd7d1] bg-[#fffafa] p-4 text-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
       <div><p className="flex items-center gap-2 font-semibold text-[#8b3b31]"><ShieldCheck className="h-4 w-4" />Account & privacy</p><p className="mt-1 text-xs text-muted-foreground">You can request permanent account deletion from your profile. Open orders must be completed first.</p></div>
