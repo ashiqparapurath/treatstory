@@ -151,11 +151,11 @@ export default function BecomeSellerPage() {
                 </p>
                 <p className="mt-2 text-xs leading-6 text-[#897e70]">Applying is a request for review—not an automatic seller approval.</p>
               </div>
-              <div className="flex w-full flex-col gap-3 sm:flex-row md:w-48 md:flex-col">
+              <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row md:w-64 md:shrink-0 md:flex-col">
                 <Link href="/register?next=%2Fbecome-a-seller" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#30291f] px-5 text-sm font-semibold text-white transition hover:bg-[#554737]">
-                  Create account <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  Create account <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
                 </Link>
-                <Link href="/login?next=%2Fbecome-a-seller" className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-white/75 px-5 text-sm font-semibold text-[#433629] transition hover:bg-white">
+                <Link href="/login?next=%2Fbecome-a-seller" className="inline-flex min-h-12 w-full items-center justify-center whitespace-nowrap rounded-full bg-white/75 px-4 text-sm font-semibold text-[#433629] transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9f805a]">
                   I already have an account
                 </Link>
               </div>

@@ -38,3 +38,17 @@ test('Become a Seller has responsive editorial copy and retains existing safe ap
   const rules = fs.readFileSync('firestore.rules','utf8');
   assert.match(rules, /Only an authenticated profile can request seller access/);
 });
+
+test('seller signup and sign-in calls to action stay horizontally aligned without wrapping', () => {
+  const page = fs.readFileSync('src/app/become-a-seller/page.tsx', 'utf8');
+  assert.match(page, /flex w-full min-w-0 flex-col gap-3 sm:flex-row md:w-64 md:shrink-0 md:flex-col/);
+  const start = page.indexOf('href="/register?next=%2Fbecome-a-seller"');
+  const end = page.indexOf('</div>', start);
+  assert.ok(start > 0 && end > start, 'Both account calls to action share one container');
+  const actions = page.slice(start, end);
+  assert.match(actions, /Create account/);
+  assert.match(actions, /I already have an account/);
+  assert.match(actions, /whitespace-nowrap/);
+  assert.match(actions, /min-h-12 w-full items-center justify-center/g);
+  assert.doesNotMatch(actions, /md:w-48/);
+});
