@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -24,6 +24,11 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [signInHref, setSignInHref] = useState('/login');
+  useEffect(() => {
+    const next = new URLSearchParams(window.location.search).get('next');
+    if (next && next.startsWith('/') && !next.startsWith('//') && !next.includes('\\') && !/^\/(login|register)([/?#]|$)/.test(next)) setSignInHref('/login?next=' + encodeURIComponent(next));
+  }, []);
 
   function nextDestination() {
     const next = new URLSearchParams(window.location.search).get('next');
@@ -121,7 +126,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="mt-8 border-t border-[#e7e7ea] pt-5 sm:mt-7 sm:border-[#e7ded2]">
-            <p className="text-center text-sm text-[#8e8e93] sm:text-[#7a7167]">Already have an account? <Link href="/login" className="inline-flex min-h-10 items-center font-semibold text-[#80684c] hover:text-[#29251f] sm:underline sm:underline-offset-4">Sign in</Link></p>
+            <p className="text-center text-sm text-[#8e8e93] sm:text-[#7a7167]">Already have an account? <Link href={signInHref} className="inline-flex min-h-10 items-center font-semibold text-[#80684c] hover:text-[#29251f] sm:underline sm:underline-offset-4">Sign in</Link></p>
           </div>
           <p className="mt-5 hidden items-center justify-center gap-2 text-center text-[11px] text-[#958a7c] sm:flex"><ShieldCheck className="h-4 w-4"/> Secure account for customers and creators</p>
         </div>

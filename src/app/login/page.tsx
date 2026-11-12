@@ -30,6 +30,11 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+  const [registerHref, setRegisterHref] = useState('/register');
+  useEffect(() => {
+    const next = new URLSearchParams(window.location.search).get('next');
+    if (next && next.startsWith('/') && !next.startsWith('//') && !next.includes('\\') && !/^\/(login|register)([/?#]|$)/.test(next)) setRegisterHref('/register?next=' + encodeURIComponent(next));
+  }, []);
 
   // The dashboard router sends buyers to their profile and creators/admins
   // to the correct workspace. Never send a successful login to the homepage.
@@ -147,7 +152,7 @@ export default function LoginPage() {
             <GoogleSignInButton auth={auth} disabled={isLoading} onSuccess={() => toast({ title: 'Signed in with Google' })} />
           </div>}
           {resetMode && <button type="button" onClick={() => { setResetMode(false); setResetSent(false); setFormError(null); }} className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 text-sm font-medium text-[#6f583d] hover:text-[#29251f]"><ArrowLeft className="h-4 w-4" /> Back to sign in</button>}
-          <div className="mt-10 pt-2 sm:mt-7 sm:border-t sm:border-[#e7ded2] sm:pt-5"><p className="text-center text-[14px] leading-6 text-[#8e8e93] sm:text-sm sm:text-[#7a7167]">New to TreatStory? <Link href="/register" className="inline-flex min-h-10 items-center font-semibold text-[#80684c] transition-colors hover:text-[#27272a] sm:min-h-8 sm:text-[#29251f] sm:underline sm:decoration-[#bca07b] sm:underline-offset-4">Create an account</Link></p></div>
+          <div className="mt-10 pt-2 sm:mt-7 sm:border-t sm:border-[#e7ded2] sm:pt-5"><p className="text-center text-[14px] leading-6 text-[#8e8e93] sm:text-sm sm:text-[#7a7167]">New to TreatStory? <Link href={registerHref} className="inline-flex min-h-10 items-center font-semibold text-[#80684c] transition-colors hover:text-[#27272a] sm:min-h-8 sm:text-[#29251f] sm:underline sm:decoration-[#bca07b] sm:underline-offset-4">Create an account</Link></p></div>
           <p className="mt-5 hidden items-center justify-center gap-2 text-center text-[11px] leading-5 text-[#958a7c] sm:flex"><ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" /> Secure sign-in for customers and creators</p>
         </div>
         <p className="hidden text-center text-[11px] text-[#a3998e] sm:block">© {new Date().getFullYear()} TreatStory · Little finds. Lovely stories.</p>

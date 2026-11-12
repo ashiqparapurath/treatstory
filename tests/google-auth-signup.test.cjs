@@ -71,4 +71,8 @@ test('signup matches mobile iOS-style login, has Google and preserves account se
   assert.match(signup,/GoogleSignInButton auth=\{auth\} disabled=\{submitting\}/);
   assert.match(login,/GoogleSignInButton auth=\{auth\} disabled=\{isLoading\}/);
   assert.match(login,/!resetMode && <div/);
+  assert.match(login,/setRegisterHref\('\/register\?next=' \+ encodeURIComponent\(next\)\)/);
+  assert.match(signup,/setSignInHref\('\/login\?next=' \+ encodeURIComponent\(next\)\)/);
+  assert.match(signup,/href=\{signInHref\}/);
+  assert.match(login,/href=\{registerHref\}/);
 });
