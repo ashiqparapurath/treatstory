@@ -82,7 +82,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#faf8f4] text-[#2c2823] lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <main className="min-h-screen overflow-x-hidden bg-[#faf8f4] text-[#2c2823] lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <section className="relative hidden min-h-screen overflow-hidden bg-[#e9dfd0] lg:flex lg:flex-col lg:justify-between">
         <div className="absolute inset-0 bg-[url('/img/login-side.avif')] bg-cover bg-center" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#1d1916]/45 via-[#1d1916]/10 to-[#1d1916]/75" />
@@ -98,29 +98,34 @@ export default function LoginPage() {
         </div>
       </section>
 
-      <section className="flex min-h-[100dvh] flex-col bg-white px-5 pb-5 pt-5 sm:bg-[#faf8f4] sm:px-10 sm:py-9 lg:min-h-screen lg:px-12 xl:px-20">
-        <div className="flex items-center justify-between gap-3 border-b border-[#f0eae2] pb-5 sm:border-0 sm:pb-0 lg:justify-end">
-          <Link href="/" className="brand-wordmark text-[27px] leading-none lg:hidden">TreatStory</Link>
-          <Link href="/" className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[#e6ded2] bg-white px-3 py-2 text-[11px] font-medium transition hover:bg-[#f2ece4] sm:px-4 sm:text-xs"><ArrowLeft className="h-3.5 w-3.5" /> Back to shop</Link>
+      <section className="flex min-h-[100dvh] min-w-0 flex-col bg-[#fcfaf6] px-5 pb-6 pt-6 sm:bg-[#faf8f4] sm:px-10 sm:py-9 lg:min-h-screen lg:px-12 xl:px-20">
+        <div className="flex min-w-0 items-center justify-between gap-4 lg:justify-end">
+          <Link href="/" className="brand-wordmark min-w-0 text-[30px] leading-none text-[#302920] lg:hidden">TreatStory</Link>
+          <Link href="/" className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-transparent px-0 text-xs font-medium text-[#72604d] transition-colors hover:text-[#2c2823] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9f805a] sm:border sm:border-[#e6ded2] sm:bg-white sm:px-4 sm:hover:bg-[#f2ece4]"><ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back to shop</Link>
         </div>
-        <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center py-8 sm:py-14">
-          <div className="mb-7 sm:mb-8">
-            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a68a64] lg:hidden">Little finds. Lovely stories.</p>
-            <h1 className="text-[34px] font-medium leading-tight tracking-tight sm:text-[44px]">{resetMode ? 'Reset your password.' : 'Welcome back.'}</h1>
-            <p className="mt-2 max-w-sm text-[13px] leading-6 text-[#7a7167] sm:mt-3 sm:text-sm">{resetMode ? 'Enter your account email and we’ll send you a secure password reset link.' : 'Sign in to keep your favourite finds, orders and delivery details together.'}</p>
+        <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-start pb-7 pt-11 sm:justify-center sm:py-14">
+          <div className="mb-8 sm:mb-8">
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#9b7d56] lg:hidden">Your space on TreatStory</p>
+            <h1 className="text-[clamp(2.15rem,9vw,2.65rem)] font-medium leading-[1.12] tracking-[-0.045em] sm:text-[44px]">{resetMode ? 'Reset your password.' : 'Welcome back.'}</h1>
+            <p className="mt-3 max-w-sm text-sm leading-7 text-[#796e61] sm:mt-3 sm:text-sm sm:leading-6">{resetMode ? 'Enter your email and we’ll send you a secure link to reset your password.' : 'Sign in to find your saved creations, orders and favourite makers.'}</p>
           </div>
-          <form noValidate onSubmit={resetMode ? handlePasswordReset : handleSignIn} className="space-y-4 sm:space-y-5">
-            <div className="space-y-2"><Label htmlFor="email" className="text-xs font-semibold">Email address</Label><Input ref={emailInput} aria-invalid={formError?.field==='email'||formError?.field==='credentials'} aria-describedby={formError?'sign-in-error':undefined} id="email" type="email" autoComplete="email" inputMode="email" placeholder="you@example.com" value={email} onChange={e => {setEmail(e.target.value);setFormError(null);setResetSent(false);}} required disabled={isLoading} className="h-[52px] rounded-xl border-[#ddd4c8] bg-[#faf9f6] px-4 text-base sm:h-12 sm:bg-white sm:text-sm focus-visible:ring-[#a78c6a]" /></div>
-            {!resetMode && <div className="space-y-2"><Label htmlFor="password" className="text-xs font-semibold">Password</Label><div className="relative"><Input ref={passwordInput} aria-invalid={formError?.field==='password'||formError?.field==='credentials'} aria-describedby={formError?'sign-in-error':undefined} id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={e => {setPassword(e.target.value);setFormError(null);}} required disabled={isLoading} className="h-[52px] rounded-xl border-[#ddd4c8] bg-[#faf9f6] px-4 pr-12 text-base sm:h-12 sm:bg-white sm:text-sm focus-visible:ring-[#a78c6a]" /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(v=>!v)} className="absolute inset-y-0 right-1 flex w-11 items-center justify-center rounded-lg text-[#7a7167] hover:text-[#29251f]">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>}
-            {!resetMode && <div className="flex justify-end"><button type="button" onClick={() => { setResetMode(true); setResetSent(false); setFormError(null); }} className="text-xs font-semibold text-[#6f583d] underline decoration-[#c4aa89] underline-offset-4 hover:text-[#29251f]">Forgot password?</button></div>}
-            {formError&&<div id="sign-in-error" role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"><p className="font-semibold">{formError.title}</p><p className="mt-1 text-xs leading-5">{formError.description}</p></div>}
+          <form noValidate onSubmit={resetMode ? handlePasswordReset : handleSignIn} className="space-y-5 sm:space-y-5">
+            <div className="space-y-2"><Label htmlFor="email" className="text-xs font-semibold text-[#443b31]">Email address</Label><Input ref={emailInput} aria-invalid={formError?.field==='email'||formError?.field==='credentials'} aria-describedby={formError?'sign-in-error':undefined} id="email" type="email" autoComplete="email" inputMode="email" autoCapitalize="none" spellCheck={false} placeholder="you@example.com" value={email} onChange={e => {setEmail(e.target.value);setFormError(null);setResetSent(false);}} required disabled={isLoading} className="h-[54px] rounded-[14px] border-[#e2d9cd] bg-white px-4 text-base shadow-none sm:h-12 sm:rounded-xl sm:text-sm focus-visible:ring-[#a78c6a]" /></div>
+            {!resetMode && <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="password" className="text-xs font-semibold text-[#443b31]">Password</Label>
+                <button type="button" onClick={() => { setResetMode(true); setResetSent(false); setFormError(null); }} className="inline-flex min-h-9 items-center text-xs font-semibold text-[#786044] underline decoration-[#c4aa89] underline-offset-4 hover:text-[#29251f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9f805a]">Forgot password?</button>
+              </div>
+              <div className="relative"><Input ref={passwordInput} aria-invalid={formError?.field==='password'||formError?.field==='credentials'} aria-describedby={formError?'sign-in-error':undefined} id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={e => {setPassword(e.target.value);setFormError(null);}} required disabled={isLoading} className="h-[54px] rounded-[14px] border-[#e2d9cd] bg-white px-4 pr-12 text-base shadow-none sm:h-12 sm:rounded-xl sm:text-sm focus-visible:ring-[#a78c6a]" /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(v=>!v)} className="absolute inset-y-0 right-1 flex w-11 items-center justify-center rounded-lg text-[#7a7167] hover:text-[#29251f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9f805a]">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
+            </div>}
+            {formError&&<div id="sign-in-error" role="alert" className="border-l-[3px] border-red-400 bg-red-50/80 px-3 py-3 text-sm text-red-800 sm:rounded-xl sm:border sm:border-red-200"><p className="font-semibold">{formError.title}</p><p className="mt-1 text-xs leading-5">{formError.description}</p></div>}
             {!auth&&<p role="status" className="text-xs text-amber-800">Sign-in is temporarily unavailable. Please try again later or contact support.</p>}
-            {resetMode && resetSent && <p role="status" className="rounded-xl border border-[#e1d8ca] bg-[#f5f0e8] p-3 text-sm leading-6 text-[#5c4b37]">If an account exists for this email, you’ll receive a reset link. Check your inbox and spam folder.</p>}
-            <Button type="submit" disabled={isLoading || !auth} className="mt-2 h-[52px] w-full rounded-xl bg-[#29251f] sm:h-12 sm:rounded-full text-sm font-semibold text-white transition hover:bg-[#51463a]">{isLoading ? (resetMode ? 'Sending…' : 'Signing in…') : <>{resetMode ? 'Send reset link' : 'Sign in'} <ArrowRight className="ml-2 h-4 w-4" /></>}</Button>
+            {resetMode && resetSent && <p role="status" className="border-l-[3px] border-[#b19b79] bg-[#f5f0e8] px-3 py-3 text-sm leading-6 text-[#5c4b37] sm:rounded-xl sm:border sm:border-[#e1d8ca]">If an account exists for this email, you’ll receive a reset link. Check your inbox and spam folder.</p>}
+            <Button type="submit" disabled={isLoading || !auth} className="mt-2 h-[54px] w-full rounded-full bg-[#29251f] text-sm font-semibold text-white transition hover:bg-[#51463a] sm:h-12">{isLoading ? (resetMode ? 'Sending…' : 'Signing in…') : <>{resetMode ? 'Send reset link' : 'Sign in'} <ArrowRight className="ml-2 h-4 w-4" /></>}</Button>
           </form>
-          {resetMode && <button type="button" onClick={() => { setResetMode(false); setResetSent(false); setFormError(null); }} className="mt-5 inline-flex items-center justify-center gap-2 text-sm font-medium text-[#6f583d] hover:text-[#29251f]"><ArrowLeft className="h-4 w-4" /> Back to sign in</button>}
-          <div className="mt-7 border-t border-[#e8e0d5] pt-5"><p className="text-center text-sm text-[#7a7167]">New to TreatStory? <Link href="/register" className="font-semibold text-[#29251f] underline decoration-[#bca07b] underline-offset-4 hover:text-[#8c6c43]">Create an account</Link></p></div>
-          <p className="mt-5 flex items-center justify-center gap-2 text-center text-[11px] text-[#958a7c]"><ShieldCheck className="h-4 w-4" /> Secure sign-in for customers and creators</p>
+          {resetMode && <button type="button" onClick={() => { setResetMode(false); setResetSent(false); setFormError(null); }} className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 text-sm font-medium text-[#6f583d] hover:text-[#29251f]"><ArrowLeft className="h-4 w-4" /> Back to sign in</button>}
+          <div className="mt-8 border-t border-[#e7ded2] pt-6 sm:mt-7 sm:pt-5"><p className="text-center text-sm leading-6 text-[#7a7167]">New to TreatStory? <Link href="/register" className="inline-flex min-h-8 items-center font-semibold text-[#29251f] underline decoration-[#bca07b] underline-offset-4 hover:text-[#8c6c43]">Create an account</Link></p></div>
+          <p className="mt-6 flex items-center justify-center gap-2 text-center text-[11px] leading-5 text-[#958a7c]"><ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" /> Secure sign-in for customers and creators</p>
         </div>
         <p className="hidden text-center text-[11px] text-[#a3998e] sm:block">© {new Date().getFullYear()} TreatStory · Little finds. Lovely stories.</p>
       </section>
