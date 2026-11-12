@@ -12,6 +12,7 @@ import type { Seller, MarketplaceProduct } from '@/lib/marketplace-types';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 
@@ -90,8 +91,17 @@ function CustomOrderContent(){
     {!user&&!isUserLoading?<Link href="/login" className="editorial-button mt-7">Sign in to request a quote</Link>:<div className="mt-9 grid gap-8 lg:grid-cols-2">
       <section className="rounded-3xl border bg-white p-5 sm:p-8"><h2 className="text-xl font-semibold">Request a custom creation</h2><form onSubmit={submit} className="mt-5 space-y-4">
         {serviceError && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm">{serviceError} Your request details are kept here; you can retry after the service is restored.</p>}
-        <label className="block space-y-1 text-xs font-semibold">Creator<select required className="h-11 w-full rounded-md border bg-white px-3 text-sm" value={sellerId} onChange={e=>{setSellerId(e.target.value);setProductId('');}}><option value="">Choose a creator</option>{creatorOptions.map(c=><option key={c.id} value={c.id}>{c.businessName}</option>)}</select></label>
-        <label className="block space-y-1 text-xs font-semibold">Product (optional)<select className="h-11 w-full rounded-md border bg-white px-3 text-sm" value={productId} disabled={!sellerId} onChange={e=>setProductId(e.target.value)}><option value="">A new custom creation</option>{productOptions.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+        <div className="space-y-2"><label htmlFor="custom-quote-creator" className="block text-xs font-semibold">Creator</label><Select value={sellerId || undefined} onValueChange={value=>{setSellerId(value);setProductId('');}}>
+            <SelectTrigger id="custom-quote-creator" aria-label="Creator" className="min-h-12"><SelectValue placeholder="Choose a creator" /></SelectTrigger>
+            <SelectContent position="popper" sideOffset={6} className="max-h-[min(22rem,65dvh)]">{creatorOptions.map(c=><SelectItem key={c.id} value={c.id}>{c.businessName}</SelectItem>)}</SelectContent>
+          </Select></div>
+        <div className="space-y-2"><label htmlFor="custom-quote-product" className="block text-xs font-semibold">Product (optional)</label><Select value={productId || '__custom__'} disabled={!sellerId} onValueChange={value=>setProductId(value === '__custom__' ? '' : value)}>
+            <SelectTrigger id="custom-quote-product" aria-label="Product" className="min-h-12"><SelectValue placeholder="A new custom creation" /></SelectTrigger>
+            <SelectContent position="popper" sideOffset={6} className="max-h-[min(22rem,65dvh)]">
+              <SelectItem value="__custom__">A new custom creation</SelectItem>
+              {productOptions.map(p=><SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            </SelectContent>
+          </Select></div>
         {(creatorsError||productsError) && <p role="alert" className="text-xs text-red-700">Could not load creators or products. Please refresh and try again.</p>}
         <label className="block space-y-1 text-xs font-semibold">Occasion<Input required minLength={2} maxLength={120} value={occasion} onChange={e=>setOccasion(e.target.value)} placeholder="Birthday, anniversary, wedding..."/></label>
         <label className="block space-y-1 text-xs font-semibold">Describe what you need<Textarea required minLength={15} maxLength={2000} rows={5} value={description} onChange={e=>setDescription(e.target.value)} placeholder="Size, ingredients, colours, materials, personalization..."/></label>

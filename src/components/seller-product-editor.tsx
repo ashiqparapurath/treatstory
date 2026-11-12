@@ -7,6 +7,7 @@ import { ProductSkuCopy } from '@/components/product-sku-copy';
 import { parseProductImageUrls } from '@/lib/product-image-urls';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -63,9 +64,13 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
   uploadProgress: string;
 }) {
   const [suggestion, setSuggestion] = useState('');
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [categoryActiveIndex, setCategoryActiveIndex] = useState(0);
   if (!open) return null;
   const set = <K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) => setDraft(d => ({ ...d, [key]: value }));
   const allCategories = [...new Set([...presets, ...categories])].filter(Boolean).sort((a,b) => a.localeCompare(b));
+  const categorySuggestions = allCategories.filter(category => category.toLowerCase().includes(draft.category.trim().toLowerCase())).slice(0,8);
+  const chooseCategory = (value: string) => { set('category',value);setCategoryOpen(false);setCategoryActiveIndex(0); };
   const photos = parseProductImageUrls(draft.imageUrls);
   const photoCount = photos.length;
   const arrangePhotos = (next: string[]) => set('imageUrls', next.join('\n'));
@@ -89,11 +94,34 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
             <h3 className="text-sm font-semibold">Essential details</h3>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block space-y-1.5 text-xs font-semibold sm:col-span-2">Product name<Input required minLength={2} maxLength={120} placeholder="e.g. Red velvet birthday cake" value={draft.name} onChange={e => set('name',e.target.value)} /></label>
-              <label className="block space-y-1.5 text-xs font-semibold">Category
-                <Input list="sellerProductCategories" required maxLength={80} value={draft.category} onChange={e => set('category',e.target.value)} placeholder="Choose or type a new category" />
-                <datalist id="sellerProductCategories">{allCategories.map(c => <option key={c} value={c} />)}</datalist>
+              <div className="block space-y-1.5 text-xs font-semibold">
+                <Label htmlFor="seller-category-name" className="text-xs font-semibold">Category</Label>
+                <div className="relative" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setCategoryOpen(false); }}>
+                  <Input id="seller-category-name" required maxLength={80} value={draft.category}
+                    role="combobox" aria-autocomplete="list" aria-expanded={categoryOpen && categorySuggestions.length>0}
+                    aria-controls="seller-category-suggestions"
+                    onFocus={() => { setCategoryOpen(true); setCategoryActiveIndex(0); }}
+                    onChange={event => { set('category',event.target.value);setCategoryOpen(true);setCategoryActiveIndex(0); }}
+                    onKeyDown={event => {
+                      if (event.key === 'Escape') setCategoryOpen(false);
+                      if (!categoryOpen || !categorySuggestions.length) return;
+                      if (event.key === 'ArrowDown') { event.preventDefault();setCategoryActiveIndex(index=>Math.min(index+1,categorySuggestions.length-1)); }
+                      if (event.key === 'ArrowUp') { event.preventDefault();setCategoryActiveIndex(index=>Math.max(index-1,0)); }
+                      if (event.key === 'Enter') { event.preventDefault();chooseCategory(categorySuggestions[categoryActiveIndex] ?? categorySuggestions[0]); }
+                    }}
+                    placeholder="Choose or type a new category" />
+                  {categoryOpen && categorySuggestions.length > 0 && <div id="seller-category-suggestions" role="listbox" aria-label="Suggested categories"
+                    className="absolute inset-x-0 top-full z-[60] mt-1 max-h-56 overflow-y-auto rounded-[14px] border border-[#e4dbd0] bg-[#fffdfa] p-1 shadow-[0_10px_28px_rgba(51,39,24,0.10)]">
+                    {categorySuggestions.map((category,index) => <button key={category} type="button" role="option"
+                      aria-selected={category === draft.category || index === categoryActiveIndex}
+                      onClick={() => chooseCategory(category)}
+                      className={`block min-h-10 w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${index===categoryActiveIndex ? 'bg-[#f2ebe2] text-[#352c23]' : 'text-[#594c3f] hover:bg-[#f2ebe2]'}`}>
+                      {category}
+                    </button>)}
+                  </div>}
+                </div>
                 <span className="block text-[11px] font-normal text-muted-foreground">New categories are saved with this listing and appear next time.</span>
-              </label>
+              </div>
               <label className="block space-y-1.5 text-xs font-semibold">{draft.weightOptions.length ? 'Single-product fallback price (₹) · not used for sized variants' : 'Price (₹)'}<Input disabled={draft.weightOptions.length > 0} required={!draft.weightOptions.length} min={0} max={10000000} step="0.01" type="number" inputMode="decimal" value={draft.price} onChange={e => set('price',e.target.value)} /><span className="block text-[11px] font-normal text-muted-foreground">{draft.weightOptions.length ? 'Enter the selling price beside EACH size below. The starting price is calculated automatically from the smallest variant price.' : 'For a single-price product, enter the selling price here. To set prices for 500 g, 1 kg, etc., use the pricing section below.'}</span></label>
             </div>
             <div className="space-y-2">
@@ -125,7 +153,12 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
               {draft.weightOptions.map((option,i) => <div key={i} className="grid grid-cols-2 items-end gap-3 rounded-xl border border-[#e3d1ba] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_100px_120px_120px_36px]">
                 <p className="col-span-2 text-[11px] font-semibold text-[#82623e] sm:hidden">Size {i+1} · set its selling price</p>
                 <label className="space-y-1 text-xs font-medium">Weight / count<Input type="number" inputMode="decimal" min="0.01" max="100000" step="any" value={option.value} placeholder="500" onChange={e => set('weightOptions', draft.weightOptions.map((v,n)=>n===i?{...v,value:e.target.value}:v))}/></label>
-                <label className="space-y-1 text-xs font-medium">Unit<select className="h-10 w-full rounded-md border bg-white px-2" value={option.unit} onChange={e=>set('weightOptions',draft.weightOptions.map((v,n)=>n===i?{...v,unit:e.target.value as WeightUnit}:v))}>{units.map(u=><option key={u} value={u}>{u}</option>)}</select></label>
+                <div className="space-y-1 text-xs font-medium"><Label htmlFor={`seller-unit-${i}`} className="text-xs">Unit</Label>
+                  <Select value={option.unit} onValueChange={value=>set('weightOptions',draft.weightOptions.map((v,n)=>n===i?{...v,unit:value as WeightUnit}:v))}>
+                    <SelectTrigger id={`seller-unit-${i}`} className="min-h-10 px-3"><SelectValue /></SelectTrigger>
+                    <SelectContent position="popper" sideOffset={6}>{units.map(unit=><SelectItem key={unit} value={unit}>{unit}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
                 <label className="space-y-1 text-xs font-semibold text-[#685139]">Price for this size (₹) *<Input required type="number" inputMode="decimal" min={0} max={10000000} step="0.01" value={option.price} placeholder="e.g. 450" onChange={e => set('weightOptions', draft.weightOptions.map((v,n)=>n===i?{...v,price:e.target.value}:v))}/></label>
                 <label className="space-y-1 text-xs font-medium">Size stock<Input type="number" inputMode="numeric" min={0} max={1000000} step={1} value={option.stockQuantity} placeholder="Total stock" onChange={e => set('weightOptions', draft.weightOptions.map((v,n)=>n===i?{...v,stockQuantity:e.target.value}:v))}/></label>
                 <button type="button" aria-label={`Remove weight option ${i+1}`} className="flex h-10 w-9 items-center justify-center rounded-md border text-red-700" onClick={()=>set('weightOptions',draft.weightOptions.filter((_,n)=>n!==i))}><Trash2 className="h-4 w-4"/></button>
@@ -138,11 +171,21 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
           <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Availability & personalization <ChevronDown className="h-4 w-4 transition group-open:rotate-180"/></summary>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <label className="space-y-1 text-xs font-medium">Availability<select className="h-10 w-full rounded-md border bg-white px-3" value={draft.availability} onChange={e=>set('availability',e.target.value as ProductDraft['availability'])}><option value="available">Available</option><option value="made-to-order">Made to order</option><option value="unavailable">Unavailable</option></select></label>
+              <div className="space-y-1 text-xs font-medium"><Label htmlFor="seller-editor-availability" className="text-xs">Availability</Label>
+                  <Select value={draft.availability} onValueChange={value=>set('availability',value as ProductDraft['availability'])}>
+                    <SelectTrigger id="seller-editor-availability" className="min-h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent position="popper" sideOffset={6}><SelectItem value="available">Available</SelectItem><SelectItem value="made-to-order">Made to order</SelectItem><SelectItem value="unavailable">Unavailable</SelectItem></SelectContent>
+                  </Select>
+                </div>
 
               <label className="space-y-1 text-xs font-medium">Preparation days<Input type="number" min={0} max={365} value={draft.preparationDays} onChange={e=>set('preparationDays',e.target.value)} /></label>
               <label className="space-y-1 text-xs font-medium">Stock quantity<Input type="number" min={0} max={1000000} value={draft.stockQuantity} onChange={e=>set('stockQuantity',e.target.value)} /></label>
-              <label className="space-y-1 text-xs font-medium">Listing status<select className="h-10 w-full rounded-md border bg-white px-3" value={draft.status} onChange={e=>set('status',e.target.value as ProductDraft['status'])}><option value="draft">Draft</option><option value="published">Published</option></select></label>
+              <div className="space-y-1 text-xs font-medium"><Label htmlFor="seller-editor-status" className="text-xs">Listing status</Label>
+                  <Select value={draft.status} onValueChange={value=>set('status',value as ProductDraft['status'])}>
+                    <SelectTrigger id="seller-editor-status" className="min-h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent position="popper" sideOffset={6}><SelectItem value="draft">Draft</SelectItem><SelectItem value="published">Published</SelectItem></SelectContent>
+                  </Select>
+                </div>
               <label className="space-y-1 text-xs font-medium sm:col-span-2">Customization prompts (one per line)<Textarea rows={3} maxLength={500} placeholder={"Cake message\nColour preference\nGift note"} value={draft.customizationOptions} onChange={e=>set('customizationOptions',e.target.value)} /><span className="block text-[11px] text-muted-foreground">Up to six prompts (80 characters each). Requests do not change pricing.</span></label>
               <label className="space-y-1 text-xs font-medium sm:col-span-2">Ingredients, care or handling notes<Textarea rows={2} maxLength={500} value={draft.careInstructions} onChange={e=>set('careInstructions',e.target.value)} /></label>
               <div className="space-y-3 rounded-xl border border-[#eee7dd] p-4 sm:col-span-2"><h4 className="text-sm font-semibold">Food safety & ingredient details (for bakers)</h4><p className="text-xs text-muted-foreground">Enter accurate information for customers with food sensitivities. These claims are supplied by the seller and aren't independently certified by TreatStory.</p><label className="block space-y-1 text-xs font-medium">Ingredients <Textarea rows={2} maxLength={1000} value={draft.ingredients} onChange={e=>set('ingredients',e.target.value)} placeholder="Flour, milk, eggs, cocoa…"/></label><div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-medium">Allergens (comma separated)<Input maxLength={300} value={draft.allergens} onChange={e=>set('allergens',e.target.value)} placeholder="Milk, eggs, wheat"/></label><label className="block space-y-1 text-xs font-medium">Dietary claims (comma separated)<Input maxLength={300} value={draft.dietaryTags} onChange={e=>set('dietaryTags',e.target.value)} placeholder="Vegetarian, eggless"/></label></div><div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-medium">Shelf life (days)<Input type="number" min={0} max={365} value={draft.shelfLifeDays} onChange={e=>set('shelfLifeDays',e.target.value)} placeholder="e.g. 2"/></label><label className="block space-y-1 text-xs font-medium">Storage instructions<Input maxLength={500} value={draft.storageInstructions} onChange={e=>set('storageInstructions',e.target.value)} placeholder="Refrigerate; consume within 2 days"/></label></div></div>
