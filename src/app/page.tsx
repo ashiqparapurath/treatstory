@@ -80,22 +80,22 @@ export default function Home() {
     <div className="flex min-h-screen flex-col overflow-hidden bg-background">
       <Header />
       <main className="flex-1">
-        <section className="section-shell pb-7 pt-5 sm:pb-10 sm:pt-8 lg:pb-12 lg:pt-10">
-          <div className="grid items-center gap-5 md:grid-cols-[0.95fr_1.05fr] md:gap-8 lg:gap-10">
-            <div className="relative z-10 order-1 max-w-xl pb-1 md:pb-0">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#e6ded2] bg-white/70 px-3 py-2">
+        <section className="section-shell pb-10 pt-9 sm:pb-10 sm:pt-8 lg:pb-12 lg:pt-10">
+          <div className="grid items-center gap-7 md:grid-cols-[0.95fr_1.05fr] md:gap-8 lg:gap-10">
+            <div className="relative z-10 order-1 min-w-0 max-w-xl pb-0 md:pb-0">
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#e6ded2] bg-white/70 px-3 py-2 sm:mb-3">
                 <Sparkles className="h-3.5 w-3.5 text-[#b28f62]" />
                 <span className="eyebrow text-[#8c7658]">Good things live here</span>
               </div>
-              <h1 className="text-[clamp(2.5rem,5vw,5.2rem)] font-medium leading-[0.98] tracking-[-0.065em] text-foreground">
+              <h1 className="max-w-[18ch] text-[clamp(2.65rem,10.5vw,3.75rem)] font-medium leading-[1.08] tracking-[-0.055em] text-foreground sm:max-w-none sm:text-[clamp(2.5rem,5vw,5.2rem)] sm:leading-[0.98] sm:tracking-[-0.065em]">
                 Little finds.<br /><span className="font-serif italic font-normal text-[#a68a64]">Lovely stories.</span>
               </h1>
-              <p className="mt-4 max-w-md text-sm leading-7 text-muted-foreground sm:text-base">
+              <p className="mt-5 max-w-[34ch] text-[15px] leading-7 text-muted-foreground sm:mt-4 sm:max-w-md sm:text-base">
                 Discover homemade bakes, handmade gifts and creative finds from independent makers across Kerala.
               </p>
-              <div className="mt-5 flex flex-wrap items-center gap-4">
-                <Link href="/products" className="editorial-button">Explore the collection <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                <Link href="/about" className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground underline decoration-[#c7b08e] underline-offset-4 transition-colors hover:text-[#9b7d55]">Our story</Link>
+              <div className="mt-7 flex flex-col items-stretch gap-4 min-[400px]:flex-row min-[400px]:items-center sm:mt-5 sm:flex-wrap">
+                <Link href="/products" className="editorial-button min-h-12 w-full px-4 text-center min-[400px]:w-auto sm:min-h-0 sm:px-6">Explore the collection <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link href="/about" className="inline-flex min-h-10 items-center justify-center text-xs font-semibold uppercase tracking-[0.14em] text-foreground underline min-[400px]:justify-start decoration-[#c7b08e] underline-offset-4 transition-colors hover:text-[#9b7d55]">Our story</Link>
               </div>
               <div className="mt-6 hidden items-center gap-4 border-t border-[#e8e0d5] pt-5 sm:flex">
                 <div className="flex -space-x-2">
@@ -122,9 +122,9 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="section-shell pb-8 sm:pb-11">
+        <section className="section-shell pb-9 sm:pb-11">
           <div className="mb-5 flex items-end justify-between gap-4">
-            <div><p className="eyebrow text-[#a68a64]">A little inspiration</p><h2 className="mt-2 text-2xl font-medium tracking-tight sm:text-3xl">The latest from TreatStory</h2></div>
+            <div><p className="eyebrow text-[#a68a64]">A little inspiration</p><h2 className="mt-2 text-[1.55rem] font-medium leading-tight tracking-tight sm:text-3xl">The latest from TreatStory</h2></div>
             <Link href="/products" className="hidden items-center gap-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.15em] sm:flex">Shop all <ArrowRight className="h-4 w-4" /></Link>
           </div>
           <BannerCarousel />
