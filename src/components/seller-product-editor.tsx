@@ -28,7 +28,7 @@ export const emptyDraft: ProductDraft = {
   weightOptions: [], customizationOptions: '', careInstructions: '',
   ingredients: '', allergens: '', dietaryTags: '', shelfLifeDays: '', storageInstructions: '',
   advancePaymentRequired: false,
-  showPrice: true, status: 'draft'
+  showPrice: true, status: 'published'
 };
 const presets = ['Home bakery', 'Cakes', 'Cookies', 'Desserts', 'Art', 'Paintings', 'Handmade crafts', 'Gifts', 'Candles', 'Accessories'];
 const units: WeightUnit[] = ['g', 'kg', 'ml', 'l', 'pieces'];
@@ -130,17 +130,17 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
               <Textarea id="creatorDescription" required maxLength={2000} rows={3} placeholder="Tell buyers about the product, materials, portions and special touches…" value={draft.description} onChange={e => set('description',e.target.value)} className="resize-y" />
               {suggestion && <div className="rounded-xl bg-[#f3eee6] p-3"><p className="text-xs leading-5 text-[#5e5040]">{suggestion}</p><div className="mt-2 flex gap-2"><Button type="button" size="sm" onClick={() => { set('description',suggestion); setSuggestion(''); }}>Use suggestion</Button><Button type="button" size="sm" variant="outline" onClick={() => setSuggestion('')}>Dismiss</Button></div><p className="mt-2 text-[10px] text-muted-foreground">Template suggestion based only on the details you've entered; review its accuracy before publishing.</p></div>}
             </div>
-            <div className="border-t border-[#eee8df] pt-4"><p className="mb-3 text-xs font-semibold text-[#786450]">Availability & publishing</p><div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1 text-xs font-medium"><Label htmlFor="seller-editor-availability" className="text-xs">Availability</Label>
+            <div className="border-t border-[#eee8df] pt-4"><p className="mb-3 text-xs font-semibold text-[#786450]">Availability & publishing</p><div className="grid items-start gap-3 sm:grid-cols-2">
+              <div className="flex min-w-0 flex-col gap-1.5 text-xs font-medium"><Label htmlFor="seller-editor-availability" className="text-xs leading-5">Availability</Label>
                   <Select value={draft.availability} onValueChange={value=>set('availability',value as ProductDraft['availability'])}>
                     <SelectTrigger id="seller-editor-availability" className="min-h-11"><SelectValue /></SelectTrigger>
                     <SelectContent position="popper" sideOffset={6}><SelectItem value="available">Available</SelectItem><SelectItem value="made-to-order">Made to order</SelectItem><SelectItem value="unavailable">Unavailable</SelectItem></SelectContent>
                   </Select>
                 </div>
 
-              <label className="space-y-1 text-xs font-medium">Preparation days<Input type="number" min={0} max={365} value={draft.preparationDays} onChange={e=>set('preparationDays',e.target.value)} /></label>
-              <label className="space-y-1 text-xs font-medium">Stock quantity<Input type="number" min={0} max={1000000} value={draft.stockQuantity} onChange={e=>set('stockQuantity',e.target.value)} /></label>
-              <div className="space-y-1 text-xs font-medium"><Label htmlFor="seller-editor-status" className="text-xs">Listing status</Label>
+              <div className="flex min-w-0 flex-col gap-1.5"><Label htmlFor="seller-editor-preparation" className="text-xs leading-5">Preparation days</Label><Input id="seller-editor-preparation" className="min-h-11" type="number" min={0} max={365} value={draft.preparationDays} onChange={e=>set('preparationDays',e.target.value)} /></div>
+              <div className="flex min-w-0 flex-col gap-1.5"><Label htmlFor="seller-editor-stock" className="text-xs leading-5">Stock quantity</Label><Input id="seller-editor-stock" className="min-h-11" type="number" min={0} max={1000000} value={draft.stockQuantity} onChange={e=>set('stockQuantity',e.target.value)} /></div>
+              <div className="flex min-w-0 flex-col gap-1.5 text-xs font-medium"><Label htmlFor="seller-editor-status" className="text-xs leading-5">Listing status</Label>
                   <Select value={draft.status} onValueChange={value=>set('status',value as ProductDraft['status'])}>
                     <SelectTrigger id="seller-editor-status" className="min-h-11"><SelectValue /></SelectTrigger>
                     <SelectContent position="popper" sideOffset={6}><SelectItem value="draft">Draft</SelectItem><SelectItem value="published">Published</SelectItem></SelectContent>
