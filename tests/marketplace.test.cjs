@@ -895,11 +895,11 @@ test('homepage banners are short on mobile and Our Story uses its editorial bann
   assert.match(home,/h-\[clamp\(200px,54vw,236px\)\]/);
   assert.doesNotMatch(home,/min-h-72 items-center justify-center/);
   assert.match(home,/sm:h-64 md:h-72 lg:h-\[340px\]/);
-  assert.match(about,/our-story-banner\\.webp/);
-  assert.match(about,/aspect-\\[3\\/2\\]/);
-  assert.match(about,/bg-\\[length:200%_auto\\]/);
+  assert.ok(about.includes('our-story-banner.webp'));
+  assert.ok(about.includes('aspect-[3/2]'));
+  assert.ok(about.includes('bg-[length:200%_auto]'));
   assert.ok(about.includes('The Story Behind <em>TreatStory</em>'));
-  assert.match(about,/our-story-creators\\.svg/);
+  assert.ok(about.includes('our-story-creators.svg'));
   assert.doesNotMatch(about,/src="\/img\/landing-hero\.webp"/);
   assert.match(svg,/The creations behind TreatStory/);
   assert.match(svg,/<svg xmlns="http:\/\/www.w3.org\/2000\/svg"/);
