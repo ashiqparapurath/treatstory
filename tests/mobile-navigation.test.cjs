@@ -44,6 +44,11 @@ test('mobile Profile sends admin seller and buyer to their existing dashboards',
   assert.equal(roleNav.mobileNavIsActive('/product/seller:abc', 'shop'), true);
   assert.equal(roleNav.mobileNavIsActive('/products', 'shop'), true);
   assert.equal(roleNav.mobileNavIsActive('/more', 'shop'), false);
+  for (const path of ['/more','/account/settings','/account/personal','/account/delivery','/account/privacy','/notifications']) {
+    assert.equal(roleNav.mobileNavIsActive(path, 'more'), true, 'More tab active for ' + path);
+  }
+  assert.equal(roleNav.mobileNavIsActive('/account', 'more'), false, 'Profile overview belongs to Profile tab');
+
 });
 
 test('More menu offers only role-relevant, existing routes and actionable dots', () => {
@@ -89,7 +94,7 @@ test('mobile bottom nav has five balanced destinations, role shortcut, More and 
   assert.match(header, /grid-cols-5/);
   assert.match(header, /item.label === 'Cart' && cartCount/);
   assert.doesNotMatch(header, /item.label === 'Cart' && cartCount > 0 && <span/);
-  assert.match(header, /label: 'More', icon: Menu, active: pathname === '\/more'/);
+  assert.match(header, /label: 'More', icon: Menu, active: mobileNavIsActive\(pathname, 'more'\)/);
   assert.match(header, /label: 'Profile', icon: UserRound, active: isMobileProfilePath/);
   assert.match(header, /href: profileHref/);
   assert.doesNotMatch(header, /label:'Sell'|label: 'Sell'/);
@@ -139,6 +144,15 @@ test('More menu links start a session-backed in-app navigation trail', () => {
   assert.deepEqual(Array.from(flow.nextMoreJourney(deeper,'/more')),['/more']);
   flow.storeMoreJourney(deeper);
   assert.equal(flow.readMoreJourney().length,3);
+  assert.equal(flow.moreJourneyBackLabel('/account/settings'),'Account settings');
+  assert.equal(flow.moreJourneyBackLabel('/account/personal'),'Personal information');
+  assert.equal(flow.moreJourneyBackLabel('/account/privacy'),'Privacy & security');
+  assert.equal(flow.moreJourneyBackLabel('/account/settings?foo=bar'),'Account settings');
+  const settingsHistory=Array.from(flow.nextMoreJourney(['/more'],'/account/settings'));
+  const detailsHistory=Array.from(flow.nextMoreJourney(settingsHistory,'/account/personal'));
+  assert.deepEqual(detailsHistory,['/more','/account/settings','/account/personal']);
+  assert.deepEqual(Array.from(flow.nextMoreJourney(detailsHistory,'/account/settings')),settingsHistory);
+
   flow.clearMoreJourney();
   assert.equal(flow.readMoreJourney().length,0);
   const page=fs.readFileSync('src/app/more/page.tsx','utf8');
