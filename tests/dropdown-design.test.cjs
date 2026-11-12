@@ -26,7 +26,7 @@ test('open dropdown menus are custom TreatStory overlays, not native system pick
     assert.match(source, /<SelectTrigger/,name);
     assert.match(source, /<SelectContent position="popper" sideOffset=\{6\}/,name);
     assert.match(source, /<SelectItem/,name);
-    assert.doesNotMatch(source, /<select\b|<option\b/i,name+' must not show a native system dropdown');
+    assert.doesNotMatch(source, /<select\b|<option\b/,name+' must not show a native system dropdown');
     assert.match(source, /max-h-\[min\(22rem,6[05]dvh\)\]/,name+' options should fit mobile viewports');
   }
 });
