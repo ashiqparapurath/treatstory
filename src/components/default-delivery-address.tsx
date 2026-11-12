@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +54,7 @@ export function SavedAddressList({
   currentPin.current = a.pincode;
   const pinId = useId();
   const streetId = useId();
+  const localityId = useId();
   const version = useRef(0);
   const [locating, setLocating] = useState(false);
   const [locationSuggested, setLocationSuggested] = useState(false);
@@ -492,29 +494,33 @@ export function SavedAddressList({
                 </Button>
               </div>
             </div>
-            <label className="text-xs font-medium">
-              Locality / post office
+            <div className="text-xs font-medium">
+              <label htmlFor={localityId}>Locality / post office</label>
               {areas.length > 0 ? (
-                <select
-                  className="mt-2 h-10 w-full rounded-md border bg-white px-3 text-sm"
-                  value={a.locality}
-                  onChange={(e) => change("locality", e.target.value)}
+                <Select
+                  value={areas.includes(a.locality) ? a.locality : undefined}
+                  onValueChange={(value) => change("locality", value)}
+                  disabled={busy || lookup || locating}
                 >
-                  {areas.map((v) => (
-                    <option key={v} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id={localityId} className="mt-2 min-h-12 bg-[#fffdfa] text-left">
+                    <SelectValue placeholder="Choose a locality" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" sideOffset={6} className="max-h-[min(22rem,60dvh)] w-[var(--radix-select-trigger-width)]">
+                    {areas.map((area) => (
+                      <SelectItem key={area} value={area}>{area}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ) : (
                 <Input
+                  id={localityId}
                   className="mt-2"
                   value={a.locality}
                   maxLength={120}
                   onChange={(e) => change("locality", e.target.value)}
                 />
               )}
-            </label>
+            </div>
             <label className="text-xs font-medium">
               District
               <Input

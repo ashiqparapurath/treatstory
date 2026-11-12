@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import type { SellerCategory } from '@/lib/marketplace-types';
 import { ArrowRight, CheckCircle2, Palette, Store, ShoppingBag, Sparkles } from 'lucide-react';
@@ -197,9 +198,14 @@ export default function BecomeSellerPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="businessCategory">What do you create?</Label>
-                  <select id="businessCategory" value={businessCategory} onChange={e => setBusinessCategory(e.target.value as SellerCategory)} className="min-h-12 w-full rounded-[14px] border-[#e4dbd0] bg-[#fffdfa] px-4 text-base text-[#352c23] sm:text-sm">
-                    {categories.map(category => <option key={category.value} value={category.value}>{category.label}</option>)}
-                  </select>
+                  <Select value={businessCategory} onValueChange={value => setBusinessCategory(value as SellerCategory)} disabled={submitting}>
+                    <SelectTrigger id="businessCategory" className="min-h-12 text-left text-base sm:text-sm">
+                      <SelectValue placeholder="Choose a creator category" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" sideOffset={6} align="start" className="max-h-[min(22rem,65dvh)] w-[var(--radix-select-trigger-width)]">
+                      {categories.map(category => <SelectItem key={category.value} value={category.value}>{category.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid gap-6 sm:grid-cols-2">
                   <div className="space-y-2"><Label htmlFor="contactEmail">Contact email</Label><Input id="contactEmail" type="email" required maxLength={254} value={contactEmail} onChange={e => setContactEmail(e.target.value)} className="min-h-12 bg-white"/></div>
