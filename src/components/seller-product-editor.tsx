@@ -130,6 +130,23 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
               <Textarea id="creatorDescription" required maxLength={2000} rows={3} placeholder="Tell buyers about the product, materials, portions and special touches…" value={draft.description} onChange={e => set('description',e.target.value)} className="resize-y" />
               {suggestion && <div className="rounded-xl bg-[#f3eee6] p-3"><p className="text-xs leading-5 text-[#5e5040]">{suggestion}</p><div className="mt-2 flex gap-2"><Button type="button" size="sm" onClick={() => { set('description',suggestion); setSuggestion(''); }}>Use suggestion</Button><Button type="button" size="sm" variant="outline" onClick={() => setSuggestion('')}>Dismiss</Button></div><p className="mt-2 text-[10px] text-muted-foreground">Template suggestion based only on the details you've entered; review its accuracy before publishing.</p></div>}
             </div>
+            <div className="border-t border-[#eee8df] pt-4"><p className="mb-3 text-xs font-semibold text-[#786450]">Availability & publishing</p><div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1 text-xs font-medium"><Label htmlFor="seller-editor-availability" className="text-xs">Availability</Label>
+                  <Select value={draft.availability} onValueChange={value=>set('availability',value as ProductDraft['availability'])}>
+                    <SelectTrigger id="seller-editor-availability" className="min-h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent position="popper" sideOffset={6}><SelectItem value="available">Available</SelectItem><SelectItem value="made-to-order">Made to order</SelectItem><SelectItem value="unavailable">Unavailable</SelectItem></SelectContent>
+                  </Select>
+                </div>
+
+              <label className="space-y-1 text-xs font-medium">Preparation days<Input type="number" min={0} max={365} value={draft.preparationDays} onChange={e=>set('preparationDays',e.target.value)} /></label>
+              <label className="space-y-1 text-xs font-medium">Stock quantity<Input type="number" min={0} max={1000000} value={draft.stockQuantity} onChange={e=>set('stockQuantity',e.target.value)} /></label>
+              <div className="space-y-1 text-xs font-medium"><Label htmlFor="seller-editor-status" className="text-xs">Listing status</Label>
+                  <Select value={draft.status} onValueChange={value=>set('status',value as ProductDraft['status'])}>
+                    <SelectTrigger id="seller-editor-status" className="min-h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent position="popper" sideOffset={6}><SelectItem value="draft">Draft</SelectItem><SelectItem value="published">Published</SelectItem></SelectContent>
+                  </Select>
+                </div>
+            </div></div>
           </section>
           <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-5"><summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold [&::-webkit-details-marker]:hidden">Payment requirements <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180"/></summary><div className="mt-3">
               <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={draft.advancePaymentRequired} onChange={e => set('advancePaymentRequired', e.target.checked)} />Advance payment required before preparation</label><p className="text-xs text-muted-foreground sm:col-span-2">Arrange the advance directly with the buyer. TreatStory does not collect online payments.</p></div>
@@ -172,21 +189,6 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
           <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-5">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Advanced listing details <ChevronDown className="h-4 w-4 transition group-open:rotate-180"/></summary>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1 text-xs font-medium"><Label htmlFor="seller-editor-availability" className="text-xs">Availability</Label>
-                  <Select value={draft.availability} onValueChange={value=>set('availability',value as ProductDraft['availability'])}>
-                    <SelectTrigger id="seller-editor-availability" className="min-h-11"><SelectValue /></SelectTrigger>
-                    <SelectContent position="popper" sideOffset={6}><SelectItem value="available">Available</SelectItem><SelectItem value="made-to-order">Made to order</SelectItem><SelectItem value="unavailable">Unavailable</SelectItem></SelectContent>
-                  </Select>
-                </div>
-
-              <label className="space-y-1 text-xs font-medium">Preparation days<Input type="number" min={0} max={365} value={draft.preparationDays} onChange={e=>set('preparationDays',e.target.value)} /></label>
-              <label className="space-y-1 text-xs font-medium">Stock quantity<Input type="number" min={0} max={1000000} value={draft.stockQuantity} onChange={e=>set('stockQuantity',e.target.value)} /></label>
-              <div className="space-y-1 text-xs font-medium"><Label htmlFor="seller-editor-status" className="text-xs">Listing status</Label>
-                  <Select value={draft.status} onValueChange={value=>set('status',value as ProductDraft['status'])}>
-                    <SelectTrigger id="seller-editor-status" className="min-h-11"><SelectValue /></SelectTrigger>
-                    <SelectContent position="popper" sideOffset={6}><SelectItem value="draft">Draft</SelectItem><SelectItem value="published">Published</SelectItem></SelectContent>
-                  </Select>
-                </div>
               <label className="space-y-1 text-xs font-medium sm:col-span-2">Customization prompts (one per line)<Textarea rows={3} maxLength={500} placeholder={"Cake message\nColour preference\nGift note"} value={draft.customizationOptions} onChange={e=>set('customizationOptions',e.target.value)} /><span className="block text-[11px] text-muted-foreground">Up to six prompts (80 characters each). Requests do not change pricing.</span></label>
               <label className="space-y-1 text-xs font-medium sm:col-span-2">Ingredients, care or handling notes<Textarea rows={2} maxLength={500} value={draft.careInstructions} onChange={e=>set('careInstructions',e.target.value)} /></label>
               <div className="space-y-3 rounded-xl border border-[#eee7dd] p-4 sm:col-span-2"><h4 className="text-sm font-semibold">Food safety & ingredient details (for bakers)</h4><p className="text-xs text-muted-foreground">Enter accurate information for customers with food sensitivities. These claims are supplied by the seller and aren't independently certified by TreatStory.</p><label className="block space-y-1 text-xs font-medium">Ingredients <Textarea rows={2} maxLength={1000} value={draft.ingredients} onChange={e=>set('ingredients',e.target.value)} placeholder="Flour, milk, eggs, cocoa…"/></label><div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-medium">Allergens (comma separated)<Input maxLength={300} value={draft.allergens} onChange={e=>set('allergens',e.target.value)} placeholder="Milk, eggs, wheat"/></label><label className="block space-y-1 text-xs font-medium">Dietary claims (comma separated)<Input maxLength={300} value={draft.dietaryTags} onChange={e=>set('dietaryTags',e.target.value)} placeholder="Vegetarian, eggless"/></label></div><div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-medium">Shelf life (days)<Input type="number" min={0} max={365} value={draft.shelfLifeDays} onChange={e=>set('shelfLifeDays',e.target.value)} placeholder="e.g. 2"/></label><label className="block space-y-1 text-xs font-medium">Storage instructions<Input maxLength={500} value={draft.storageInstructions} onChange={e=>set('storageInstructions',e.target.value)} placeholder="Refrigerate; consume within 2 days"/></label></div></div>
