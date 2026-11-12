@@ -21,3 +21,20 @@ test('product editor uses expandable optional sections and preserves core fields
  assert.match(source,/open=\{draft\.weightOptions\.length > 0 \? true : undefined\}/);
  assert.match(source,/type="submit" disabled=\{busy\|\|uploading\|\|!enabled\}/);
 });
+
+test('new listings default to published while edit mode keeps saved visibility', () => {
+ const editor=read('src/components/seller-product-editor.tsx');
+ const dashboard=read('src/app/seller/dashboard/page.tsx');
+ assert.match(editor,/showPrice: true, status: 'published'/);
+ assert.match(dashboard,/status: product\.status === 'published' \? 'published' : 'draft'/);
+ assert.match(dashboard,/\} : emptyDraft\)/);
+});
+test('stock quantity and listing status use matching labeled control geometry', () => {
+ const editor=read('src/components/seller-product-editor.tsx');
+ for(const id of ['seller-editor-stock','seller-editor-preparation','seller-editor-status','seller-editor-availability']) {
+   assert.ok(editor.includes('htmlFor="'+id+'"'), 'missing matching label for '+id);
+   assert.ok(editor.includes('id="'+id+'"'), 'missing input or trigger id for '+id);
+ }
+ assert.match(editor,/grid items-start gap-3 sm:grid-cols-2/);
+ assert.match(editor,/flex min-w-0 flex-col gap-1\.5/);
+});
