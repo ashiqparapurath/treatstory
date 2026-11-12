@@ -5,6 +5,7 @@ import { ShoppingBag, ArrowUpRight, UserRound, Bell, Home, Search, Menu, LoaderC
 import { mobileProfileHref, isMobileProfilePath, mobileNavIsActive } from '@/lib/mobile-navigation';
 import { useMobileAttention } from '@/hooks/use-mobile-attention';
 import { MoreNavigationTrail } from '@/components/more-navigation-trail';
+import { clearMoreJourney } from '@/lib/more-journey';
 import { useCart } from '@/context/cart-context';
 import { Badge } from '@/components/ui/badge';
 import { useAccountRole, useUser } from '@/firebase';
@@ -44,7 +45,7 @@ export function Header() {
               </Link>
             </div>
 
-            <Link href="/" aria-label="TreatStory home" className="brand-wordmark justify-self-center whitespace-nowrap text-[28px] leading-none text-foreground sm:text-[33px] md:text-[36px]">
+            <Link href="/" aria-label="TreatStory home" onClick={clearMoreJourney} className="brand-wordmark justify-self-center whitespace-nowrap text-[28px] leading-none text-foreground sm:text-[33px] md:text-[36px]">
               TreatStory
             </Link>
 
@@ -81,6 +82,7 @@ export function Header() {
           { href: '/more', label: 'More', icon: Menu, active: mobileNavIsActive(pathname, 'more') },
         ].map(item => (
           <Link key={item.label} href={item.href}
+            onClick={() => { if (item.label !== 'More') clearMoreJourney(); }}
             aria-label={item.label === 'Cart' && cartCount ? `Cart, ${cartCount} items` : item.label}
             aria-current={item.active ? 'page' : undefined}
             aria-busy={item.label === 'Profile' && pendingRole ? true : undefined}

@@ -96,6 +96,8 @@ test('mobile bottom nav has five balanced destinations, role shortcut, More and 
   const hook = fs.readFileSync('src/hooks/use-mobile-attention.ts', 'utf8');
   const firebase = fs.readFileSync('src/firebase/provider.tsx', 'utf8');
   assert.match(header, /grid-cols-5/);
+  assert.match(header, /onClick=\{\(\) => \{ if \(item.label !== 'More'\) clearMoreJourney\(\); \}\}/, 'Home Shop Cart and Profile should end More history');
+  assert.match(header, /aria-label="TreatStory home" onClick=\{clearMoreJourney\}/);
   assert.match(header, /item.label === 'Cart' && cartCount/);
   assert.doesNotMatch(header, /item.label === 'Cart' && cartCount > 0 && <span/);
   assert.match(header, /label: 'More', icon: Menu, active: mobileNavIsActive\(pathname, 'more'\)/);
@@ -159,6 +161,8 @@ test('More menu links start a session-backed in-app navigation trail', () => {
 
   flow.clearMoreJourney();
   assert.equal(flow.readMoreJourney().length,0);
+  assert.match(fs.readFileSync('src/components/more-navigation-trail.tsx','utf8'),
+    /addEventListener\('treatstory:more-journey-cleared', clear\)/);
   const page=fs.readFileSync('src/app/more/page.tsx','utf8');
   const history=fs.readFileSync('src/components/more-navigation-trail.tsx','utf8');
   const layout=fs.readFileSync('src/app/layout.tsx','utf8');

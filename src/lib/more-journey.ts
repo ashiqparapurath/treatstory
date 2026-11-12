@@ -3,8 +3,10 @@ export const MORE_JOURNEY_KEY = 'treatstory-more-journey-v1';
 export function startMoreJourney(): void {
   try { sessionStorage.setItem(MORE_JOURNEY_KEY, JSON.stringify(['/more'])); } catch { /* Storage may be unavailable. */ }
 }
+/** Close the More flow when the user selects a primary navigation destination. */
 export function clearMoreJourney(): void {
   try { sessionStorage.removeItem(MORE_JOURNEY_KEY); } catch { /* Storage may be unavailable. */ }
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('treatstory:more-journey-cleared'));
 }
 export function readMoreJourney(): string[] {
   try {

@@ -12,6 +12,13 @@ function JourneyContent() {
   const params = search.toString();
   const [previous, setPrevious] = useState<string | null>(null);
   useEffect(() => {
+    // Clearing the flow on a bottom-tab tap must hide the link immediately,
+    // even when the tab points to the currently mounted page.
+    const clear = () => setPrevious(null);
+    window.addEventListener('treatstory:more-journey-cleared', clear);
+    return () => window.removeEventListener('treatstory:more-journey-cleared', clear);
+  }, []);
+  useEffect(() => {
     const href = pathname + (params ? '?' + params : '');
     const journey = readMoreJourney();
     if (!journey.length || pathname === '/more') { setPrevious(null); return; }

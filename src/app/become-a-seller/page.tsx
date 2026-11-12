@@ -197,7 +197,7 @@ export default function BecomeSellerPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="businessCategory">What do you create?</Label>
-                  <select id="businessCategory" value={businessCategory} onChange={e => setBusinessCategory(e.target.value as SellerCategory)} className="flex min-h-12 w-full rounded-md border border-input bg-white px-3 text-sm">
+                  <select id="businessCategory" value={businessCategory} onChange={e => setBusinessCategory(e.target.value as SellerCategory)} className="min-h-12 w-full rounded-[14px] border-[#e4dbd0] bg-[#fffdfa] px-4 text-base text-[#352c23] sm:text-sm">
                     {categories.map(category => <option key={category.value} value={category.value}>{category.label}</option>)}
                   </select>
                 </div>
