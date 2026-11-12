@@ -299,26 +299,41 @@ function SellerContent() {
       <main className="min-w-0 space-y-5 sm:space-y-7">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e7ded2] pb-5 sm:pb-7"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a68a64]">Seller studio / {section}</p><h1 className="mt-2 text-[28px] font-semibold leading-tight tracking-tight text-[#29251f] sm:text-[36px]">{section === 'products' ? 'Your catalog' : menu.find(m => m.key === section)?.label}</h1><p className="mt-1 text-sm text-[#817568]">{section === 'products' ? 'Organize listings, update prices and manage what shoppers see.' : section === 'orders' ? 'Stay on top of every customer order.' : section === 'store' ? 'Keep your storefront ready for shoppers.' : 'Your business at a glance.'}</p></div>{section === 'products' && <Button onClick={() => openForm()} disabled={!active} className="h-11 rounded-xl bg-[#29251f] px-5 text-white hover:bg-[#443b31]"><Plus className="mr-2 h-4 w-4" />Add product</Button>}</div>
         {!active && <div role="alert" className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950"><AlertCircle className="h-5 w-5 shrink-0" /><span>Your seller access is suspended, expired or not yet active. Editing and publishing are disabled. Contact TreatStory administration to renew access.</span></div>}
-        {section === 'overview' && <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{[
-            { label: 'Total products', value: countError ? '—' : counts?.total ?? '…', icon: Package },
-            { label: 'Published products', value: countError ? '—' : counts?.published ?? '…', icon: CheckCircle2 },
-            { label: 'Draft products', value: countError ? '—' : counts ? counts.total - counts.published : '…', icon: Clock3 },
-          ].map(metric => <div key={metric.label} className="rounded-2xl border border-[#e9e3d9] bg-white p-4 shadow-sm shadow-[#29251f]/[0.03] sm:p-6"><metric.icon className="h-5 w-5 text-[#a68a64]" /><p className="mt-3 text-2xl font-semibold sm:mt-6 sm:text-3xl">{metric.value}</p><p className="mt-1 text-xs text-muted-foreground sm:text-sm">{metric.label}</p></div>)}</div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-            {[
-              { label: "Today's orders", count: fulfillment?.today },
-              { label: 'Needs acceptance', count: fulfillment?.pending },
-              { label: 'Preparing', count: fulfillment?.preparing },
-              { label: 'Ready to fulfill', count: fulfillment?.ready },
-              { label: 'Out for delivery', count: fulfillment?.outForDelivery },
-            ].map(item => <button key={item.label} type="button" onClick={() => setSection('orders')} className="rounded-2xl border border-[#e8e0d5] bg-white p-3 text-left transition hover:border-[#a68a64] sm:p-5"><p className="text-2xl font-semibold">{fulfillment ? item.count ?? '—' : '…'}</p><p className="mt-1 text-xs text-muted-foreground">{item.label}</p></button>)}
+        {section === 'overview' && <div className="space-y-5 sm:space-y-6">
+          <section className="relative overflow-hidden rounded-2xl bg-[#29251f] p-5 text-white sm:p-7">
+            <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10 sm:h-80 sm:w-80" />
+            <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="max-w-lg"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#cbb28c]">Your business today</p><h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Create. Sell. Grow.</h2><p className="mt-2 text-sm leading-6 text-white/70">Everything that needs your attention, in one place.</p><div className="mt-4 flex flex-wrap items-center gap-2"><span className="rounded-full border border-white/20 px-3 py-1.5 text-xs text-white/85">{seller.isOpen === false ? 'Store paused' : 'Store accepting orders'}</span><span className="rounded-full border border-white/20 px-3 py-1.5 text-xs text-white/85">{active ? 'Account active' : 'Access restricted'}</span></div></div>
+              <div className="flex flex-wrap gap-2 sm:flex-col sm:items-end"><Button type="button" disabled={!active} onClick={() => openForm()} className="h-11 rounded-xl bg-white px-4 text-[#29251f] hover:bg-[#f0e6d9]"><Plus className="mr-2 h-4 w-4" />Add product</Button><button type="button" onClick={() => setSection('orders')} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/25 px-4 text-sm font-medium text-white hover:bg-white/10">View orders <ArrowUpRight className="ml-2 h-4 w-4" /></button></div>
+            </div>
+          </section>
+          <section aria-labelledby="seller-performance-title" className="space-y-3">
+            <div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a68a64]">Store performance</p><h2 id="seller-performance-title" className="mt-1 text-lg font-semibold text-[#29251f]">Your catalog at a glance</h2></div><button type="button" onClick={() => setSection('products')} className="inline-flex items-center gap-1 text-xs font-semibold text-[#796348] hover:underline">View catalog <ArrowUpRight className="h-3.5 w-3.5" /></button></div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{[
+              { label: 'Total listings', value: countError ? '—' : counts?.total ?? '…', icon: Package, note:'All catalog entries' },
+              { label: 'Live products', value: countError ? '—' : counts?.published ?? '…', icon: CheckCircle2, note:'Published to shoppers' },
+              { label: 'Drafts', value: countError ? '—' : counts ? counts.total - counts.published : '…', icon: Clock3, note:'Not published yet' },
+            ].map(metric => <div key={metric.label} className="rounded-2xl border border-[#e6dfd5] bg-white p-4 sm:p-5"><div className="flex items-center justify-between"><span className="text-xs text-[#827568]">{metric.label}</span><metric.icon aria-hidden="true" className="h-4 w-4 text-[#a68a64]" /></div><p className="mt-5 text-3xl font-semibold tabular-nums text-[#29251f]">{metric.value}</p><p className="mt-1 text-[11px] text-[#928575]">{metric.note}</p></div>)}</div>
+            {countError && <p role="status" className="text-xs text-[#806d56]">Catalog totals are temporarily unavailable. Your products have not been changed.</p>}
+          </section>
+          <section className="overflow-hidden rounded-2xl border border-[#e6dfd5] bg-white" aria-labelledby="seller-queue-title">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#efe9e1] px-4 py-4 sm:px-6"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a68a64]">Fulfillment</p><h2 id="seller-queue-title" className="mt-1 text-lg font-semibold">Orders & attention</h2></div><button type="button" onClick={() => setSection('orders')} className="inline-flex items-center gap-1 text-xs font-semibold text-[#796348] hover:underline">Manage orders <ArrowUpRight className="h-4 w-4" /></button></div>
+            <div className="grid grid-cols-2 divide-x divide-y divide-[#efe9e1] sm:grid-cols-3 lg:grid-cols-5">
+              {[
+                { label: "Today's orders", count: fulfillment?.today },
+                { label: 'Awaiting approval', count: fulfillment?.pending },
+                { label: 'Preparing', count: fulfillment?.preparing },
+                { label: 'Ready', count: fulfillment?.ready },
+                { label: 'Out for delivery', count: fulfillment?.outForDelivery },
+              ].map(item => <button key={item.label} type="button" onClick={() => setSection('orders')} className="group min-h-28 px-4 py-5 text-left transition hover:bg-[#faf7f2] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#a98d69] sm:px-5"><p className="text-2xl font-semibold tabular-nums">{fulfillment ? item.count ?? '—' : '…'}</p><p className="mt-2 text-xs leading-4 text-[#817568]">{item.label}</p></button>)}
+            </div>
+            {fulfillment?.pending !== null && fulfillment?.pending !== undefined && fulfillment.pending > 0 && <button type="button" onClick={() => setSection('orders')} className="flex w-full items-center justify-between gap-3 border-t border-[#eadbc6] bg-[#fbf5ec] px-4 py-3 text-left text-xs font-medium text-[#805a36] sm:px-6"><span>{fulfillment.pending} order{fulfillment.pending === 1 ? '' : 's'} waiting for your response</span><ArrowUpRight className="h-4 w-4" /></button>}
+          </section>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <button type="button" onClick={() => setSection('products')} className="flex min-h-28 items-center justify-between gap-4 rounded-2xl border border-[#e6dfd5] bg-white p-5 text-left transition hover:border-[#baa48a]"><div><p className="text-[10px] font-semibold uppercase tracking-wider text-[#a68a64]">Inventory check</p><p className="mt-2 text-base font-semibold text-[#29251f]">Low stock</p><p className="mt-1 text-xs text-[#817568]">{fulfillment ? fulfillment.lowStock === null ? 'Unavailable' : `${fulfillment.lowStock} listings with 1–3 units remaining` : 'Checking your available products…'}</p></div><Package className="h-6 w-6 shrink-0 text-[#a68a64]" /></button>
+            <button type="button" onClick={() => setSection('store')} className="flex min-h-28 items-center justify-between gap-4 rounded-2xl border border-[#e6dfd5] bg-white p-5 text-left transition hover:border-[#baa48a]"><div><p className="text-[10px] font-semibold uppercase tracking-wider text-[#a68a64]">Your storefront</p><p className="mt-2 text-base font-semibold text-[#29251f]">Store settings</p><p className="mt-1 text-xs text-[#817568]">Update your branding, contact, pickup and delivery options.</p></div><Settings className="h-6 w-6 shrink-0 text-[#a68a64]" /></button>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={() => setSection('products')} className="rounded-full bg-[#eee6da] px-4 py-2 text-xs font-medium text-[#6d5336]">Low-stock listings (1–3 units): {fulfillment ? fulfillment.lowStock ?? '—' : '…'}</button>
-            {((seller.accessEndsAt as { toMillis?: () => number } | null)?.toMillis?.() ?? 0) < Date.now() + 7 * 86400000 && <span className="rounded-full bg-amber-50 px-4 py-2 text-xs text-amber-900">Seller access expires {dateText(seller.accessEndsAt)} · Contact admin to renew</span>}
-          </div>
-          <div className="rounded-2xl border border-[#e9e3d9] bg-white p-5 sm:rounded-3xl sm:p-7"><p className="eyebrow text-[#a68a64]">Store setup</p><div className="mt-2"><h3 className="font-medium">Get your store ready</h3><p className="mt-2 text-sm text-muted-foreground">Add high-quality photos, publish products and keep your business contact details current.</p><Button variant="outline" className="mt-4 rounded-full" onClick={() => setSection('products')}>Manage products <ArrowUpRight className="ml-2 h-4 w-4" /></Button></div></div>
+          {((seller.accessEndsAt as { toMillis?: () => number } | null)?.toMillis?.() ?? 0) < Date.now() + 7 * 86400000 && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">Seller access expires {dateText(seller.accessEndsAt)}. Contact TreatStory administration to renew.</p>}
         </div>}
         {section === 'products' && <div className="space-y-4">
           <div className="grid grid-cols-3 overflow-hidden rounded-2xl border border-[#e6dfd5] bg-white">
