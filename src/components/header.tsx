@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { ShoppingBag, ArrowUpRight, UserRound, Bell, Home, Search, Store } from 'lucide-react';
+import { ShoppingBag, ArrowUpRight, UserRound, Bell, Home, Search, Menu, LoaderCircle } from 'lucide-react';
+import { mobileProfileHref, isMobileProfilePath, mobileNavIsActive } from '@/lib/mobile-navigation';
+import { useMobileAttention } from '@/hooks/use-mobile-attention';
 import { useCart } from '@/context/cart-context';
 import { Badge } from '@/components/ui/badge';
 import { useAccountRole, useUser } from '@/firebase';
@@ -16,11 +18,18 @@ const navItems = [
 
 export function Header() {
   const { cartCount } = useCart();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const pathname = usePathname();
   const { role, isRoleLoading, roleError } = useAccountRole();
-  const sellHref = user && (isRoleLoading || roleError) ? "/dashboard" :
-    role === "admin" ? "/admin" : role === "seller" ? "/seller/dashboard" : "/become-a-seller";
+  // Use the same authoritative live role result as the dashboard router.
+  // Never assume customer access while role resolution is pending or failed.
+  const profileHref = mobileProfileHref({
+    authenticated: !!user, authLoading: isUserLoading, role,
+    roleLoading: isRoleLoading, roleError: !!roleError,
+  });
+  const pendingRole = !!user && isRoleLoading && !roleError;
+  const attention = useMobileAttention(user?.uid ?? null, role, !isRoleLoading && !roleError);
+  const actionPending = attention.orders || attention.applications;
 
   return (
     <>
@@ -62,7 +71,26 @@ export function Header() {
         </div>
       </header>
       <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 rounded-t-3xl border border-white/70 bg-[#fcfaf6]/95 px-1 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_4px_30px_rgba(35,29,23,0.18)] backdrop-blur-xl md:hidden">
-        {[{href:'/',label:'Home',icon:Home},{href:'/products',label:'Shop',icon:Search},{href:'/cart',label:cartCount ? `Cart (${cartCount})` : 'Cart',icon:ShoppingBag},{href:user ? '/account' : '/login',label:'Profile',icon:UserRound},{href:sellHref,label:'Sell',icon:Store}].map(item => <Link key={item.href} href={item.href} aria-current={pathname === item.href ? 'page' : undefined} className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] ${pathname === item.href ? 'bg-[#ece3d6] font-semibold text-[#59452b]' : 'text-[#756b60]'}`}><item.icon className="h-5 w-5"/><span className="truncate">{item.label}</span></Link>)}
+        {[
+          { href: '/', label: 'Home', icon: Home, active: pathname === '/' },
+          { href: '/products', label: 'Shop', icon: Search, active: mobileNavIsActive(pathname, 'shop') },
+          { href: '/cart', label: 'Cart', icon: ShoppingBag, active: pathname === '/cart' },
+          { href: profileHref, label: 'Profile', icon: UserRound, active: isMobileProfilePath(pathname, role) },
+          { href: '/more', label: 'More', icon: Menu, active: pathname === '/more' },
+        ].map(item => (
+          <Link key={item.label} href={item.href}
+            aria-label={item.label === 'Cart' && cartCount ? `Cart, ${cartCount} items` : item.label}
+            aria-current={item.active ? 'page' : undefined}
+            aria-busy={item.label === 'Profile' && pendingRole ? true : undefined}
+            className={`relative flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#9b7a51] ${item.active ? 'bg-[#ece3d6] font-semibold text-[#59452b]' : 'text-[#756b60] hover:bg-[#f3eee6]'}`}>
+            <span className="relative inline-flex h-5 w-6 items-center justify-center">
+              {item.label === 'Profile' && pendingRole ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <item.icon className="h-5 w-5" />}
+              {(item.label === 'More' || item.label === 'Profile') && actionPending && <span aria-label="Pending activity" className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-[#fcfaf6] bg-[#aa6447]"/>}
+              {item.label === 'Cart' && cartCount > 0 && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full border border-[#fcfaf6] bg-[#9a805f]" aria-hidden="true"/>}
+            </span>
+            <span className="truncate">{item.label}</span>
+          </Link>
+        ))}
       </nav>
     </>
   );
