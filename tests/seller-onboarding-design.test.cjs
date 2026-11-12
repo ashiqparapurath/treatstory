@@ -52,3 +52,19 @@ test('seller signup and sign-in calls to action stay horizontally aligned withou
   assert.match(actions, /min-h-12 w-full items-center justify-center/g);
   assert.doesNotMatch(actions, /md:w-48/);
 });
+
+test('seller landing hero and application form adapt to narrow mobile and wide desktop', () => {
+  const page = fs.readFileSync('src/app/become-a-seller/page.tsx','utf8');
+  assert.match(page,/lg:grid-cols-\[minmax\(0,1\.05fr\)_minmax\(0,0\.95fr\)\]/);
+  assert.match(page,/px-6 py-9 sm:px-10 sm:py-12/);
+  assert.match(page,/id="seller-page-heading"/);
+  assert.match(page,/href="#seller-application"/);
+  assert.match(page,/id="seller-application"/);
+  assert.ok(page.indexOf('id="seller-application"') < page.indexOf('id="how-it-works"'),
+    'Account creation and application must be accessible before long informational sections');
+  assert.match(page,/className="mt-8 space-y-6 rounded-\[24px\] bg-white p-5/);
+  assert.match(page,/sm:grid-cols-3/);
+  assert.match(page,/sm:flex-row md:w-64 md:shrink-0 md:flex-col/);
+  assert.doesNotMatch(page,/md:w-48/);
+  assert.match(page,/scroll-mt-28/);
+});

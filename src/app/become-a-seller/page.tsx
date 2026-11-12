@@ -63,66 +63,66 @@ export default function BecomeSellerPage() {
   return (
     <div className="min-h-screen bg-[#fcfaf6] text-[#30291f]">
       <Header />
-      <main className="section-shell mx-auto max-w-5xl pb-28 pt-7 sm:pt-12">
-        <div className="relative overflow-hidden rounded-[28px] bg-[#eee7db] px-6 py-9 sm:rounded-[32px] sm:px-10 sm:py-12 lg:px-14">
-          <div className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-[#f9f3e8]/80 blur-2xl" aria-hidden="true" />
-          <div className="relative max-w-2xl">
-            <p className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.19em] text-[#8b6d4a]">
-              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> For independent Kerala creators
-            </p>
-            <h1 className="mt-5 max-w-2xl text-[clamp(2.2rem,7vw,4.25rem)] font-medium leading-[1.06] tracking-[-0.045em]">
-              Made by you.<br />
-              <span className="font-serif italic font-normal text-[#9f805a]">Discovered by more.</span>
-            </h1>
-            <p className="mt-5 max-w-xl text-sm leading-7 text-[#6d6051] sm:text-base sm:leading-8">
-              Turn your home bakery, artwork or handmade creations into a storefront on TreatStory.
-              Meet customers who appreciate the care behind what you make.
-            </p>
-            <a href="#how-it-works" className="mt-5 inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-[#4c3f2e] underline decoration-[#b69d7e] underline-offset-4">
-              See how it works <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </a>
-          </div>
-        </div>
-
-        <section aria-label="Benefits for creators" className="mt-8 grid gap-6 border-b border-[#e7dfd3] pb-8 sm:mt-10 sm:grid-cols-3 sm:gap-8">
-          {[
-            { icon: Store, title: 'A storefront for your work', description: 'Showcase creations with product photos, details and prices.' },
-            { icon: ShoppingBag, title: 'Orders in one place', description: 'Keep track of customer orders through your seller dashboard.' },
-            { icon: Palette, title: 'Made for independent makers', description: 'A marketplace for the home bakers, artists and crafters of Kerala.' },
-          ].map(({ icon: Icon, title, description }) => (
-            <div key={title} className="flex items-start gap-3 sm:block">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f0e8dd] text-[#8e7351] sm:mb-3">
-                <Icon className="h-[19px] w-[19px]" aria-hidden="true" />
-              </span>
-              <div>
-                <h2 className="text-sm font-semibold text-[#342c23]">{title}</h2>
-                <p className="mt-1 text-xs leading-6 text-[#7c7165]">{description}</p>
+      <main className="section-shell mx-auto max-w-6xl pb-28 pt-6 sm:pt-10">
+        <section aria-labelledby="seller-page-heading" className="relative overflow-hidden rounded-[26px] bg-[#ede4d8] sm:rounded-[34px]">
+          <div className="pointer-events-none absolute -right-20 -top-44 h-96 w-96 rounded-full bg-[#fff7ea]/80 blur-3xl" aria-hidden="true" />
+          <div className="relative grid items-center gap-8 px-6 py-9 sm:px-10 sm:py-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-12 lg:px-14 lg:py-16">
+            <div className="min-w-0">
+              <p className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.21em] text-[#8d704e]">
+                <Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
+                TreatStory for creators
+              </p>
+              <h1 id="seller-page-heading" className="mt-5 max-w-2xl text-[clamp(2.25rem,6vw,4.2rem)] font-medium leading-[1.07] tracking-[-0.052em] text-[#30281f]">
+                Made by you.<br />
+                <span className="font-serif italic font-normal text-[#997957]">Discovered by more.</span>
+              </h1>
+              <p className="mt-5 max-w-lg text-sm leading-7 text-[#655a4e] sm:text-base sm:leading-8">
+                Your talent deserves to be seen. Bring your home bakes, art or handmade creations to a marketplace built around independent makers in Kerala.
+              </p>
+              <div className="mt-7 flex flex-wrap items-center gap-4">
+                <a href="#seller-application" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#30291f] px-6 text-sm font-semibold text-white transition hover:bg-[#4b4033] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#71583b]">
+                  Get started <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </a>
+                <a href="#how-it-works" className="inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-[#594c3e] underline decoration-[#aa906f] underline-offset-4 transition hover:text-[#30291f]">
+                  How it works
+                </a>
               </div>
+              <p className="mt-5 flex items-start gap-2 text-[11px] leading-5 text-[#827362]">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#897152]" aria-hidden="true" />
+                Seller access is reviewed before activation.
+              </p>
             </div>
-          ))}
+
+            <div aria-label="Creators featured at TreatStory" className="min-w-0 rounded-[23px] border border-white/60 bg-[#fffaf3]/85 p-5 shadow-[0_20px_50px_rgba(88,66,43,0.08)] sm:p-7">
+              <div className="flex items-center justify-between gap-3 border-b border-[#e8ded0] pb-4">
+                <span className="font-serif text-2xl tracking-[-0.04em] text-[#40352a]">TreatStory<span className="text-[#b69a74]">.</span></span>
+                <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#9a856d]">Creator community</span>
+              </div>
+              <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.17em] text-[#998166]">A place for what you make</p>
+              <div className="mt-3 space-y-1">
+                {[
+                  { icon: ShoppingBag, title: 'Home bakes', description: 'Made with care, shared with joy' },
+                  { icon: Palette, title: 'Art & illustrations', description: 'Creative ideas brought to life' },
+                  { icon: Store, title: 'Handmade crafts', description: 'Thoughtful pieces, lovingly made' },
+                ].map(({ icon: Icon, title, description }) => (
+                  <div key={title} className="flex items-center gap-3 border-b border-[#eee5d9] py-3 last:border-b-0">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f0e5d6] text-[#8a6b48]">
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-[#3e3429]">{title}</span>
+                      <span className="mt-0.5 block text-[11px] leading-5 text-[#897d6d]">{description}</span>
+                    </span>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-[#b09b83]" aria-hidden="true" />
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 font-serif text-base italic text-[#937a5e]">Little finds. Lovely stories.</p>
+            </div>
+          </div>
         </section>
 
-        <section id="how-it-works" className="scroll-mt-24 py-9 sm:py-12">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9f805a]">The next steps</p>
-          <h2 className="mt-2 text-2xl font-medium tracking-tight sm:text-3xl">A simple way to get started.</h2>
-          <ol className="mt-7 grid gap-6 sm:grid-cols-3 sm:gap-8">
-            {[
-              ['01', 'Create your account', 'Use your TreatStory profile to keep your application and future seller access together.'],
-              ['02', 'Tell us what you create', 'Share your business name, category and a little about your work.'],
-              ['03', 'We review your request', 'Our team reviews applications before seller access is activated.'],
-            ].map(([number, title, description]) => (
-              <li key={number} className="flex gap-4 sm:block">
-                <span className="font-serif text-2xl italic text-[#b59b7b]">{number}</span>
-                <div>
-                  <h3 className="mt-1 text-sm font-semibold text-[#342c23] sm:mt-3">{title}</h3>
-                  <p className="mt-1.5 text-xs leading-6 text-[#7a6f63]">{description}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <div className="border-t border-[#e7dfd3] pt-8 sm:pt-10">
+        <section id="seller-application" aria-label="Seller application" className="scroll-mt-28 mt-8 sm:mt-10">
           {isUserLoading || (user && isRoleLoading) ? (
             <div role="status" aria-live="polite" className="flex min-h-24 items-center gap-3 text-sm text-[#746958]">
               <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#d8c9b6] border-t-[#65513a]" aria-hidden="true" />
@@ -142,12 +142,12 @@ export default function BecomeSellerPage() {
               We couldn’t check your seller account access right now. Refresh this page or contact support if the problem continues.
             </section>
           ) : !user ? (
-            <section aria-labelledby="seller-account-heading" className="grid gap-6 rounded-[26px] bg-[#f3ede4] px-5 py-7 sm:px-9 sm:py-9 md:grid-cols-[1fr_auto] md:items-center md:gap-12">
+            <section aria-labelledby="seller-account-heading" className="grid min-w-0 gap-7 rounded-[24px] bg-[#f6f1e9] px-5 py-7 sm:rounded-[30px] sm:px-9 sm:py-10 md:grid-cols-[1fr_auto] md:items-center md:gap-12">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.19em] text-[#967854]">Your first step</p>
-                <h2 id="seller-account-heading" className="mt-2 text-2xl font-medium leading-tight tracking-tight sm:text-[28px]">Let’s get your creator journey started.</h2>
+                <h2 id="seller-account-heading" className="mt-2 text-2xl font-medium leading-tight tracking-tight sm:text-[28px]">Ready to make your creations discoverable?</h2>
                 <p className="mt-3 max-w-xl text-sm leading-7 text-[#73685b]">
-                  Create a free TreatStory profile, or sign in if you already have one. It helps us connect your application to the right account and keep you updated on the review.
+                  Start with a free TreatStory account. We’ll keep your application, review updates and future seller access connected to your profile.
                 </p>
                 <p className="mt-2 text-xs leading-6 text-[#897e70]">Applying is a request for review—not an automatic seller approval.</p>
               </div>
@@ -183,7 +183,7 @@ export default function BecomeSellerPage() {
               <p className="text-[10px] font-bold uppercase tracking-[0.19em] text-[#9f805a]">Your application</p>
               <h2 id="seller-form-heading" className="mt-2 text-2xl font-medium tracking-tight sm:text-3xl">Tell us about your creations.</h2>
               <p className="mt-3 max-w-xl text-sm leading-7 text-[#73685b]">A few details about your business will help us understand what you make. Your application will be reviewed before you can start selling.</p>
-              <form onSubmit={submit} className="mt-8 space-y-6">
+              <form onSubmit={submit} className="mt-8 space-y-6 rounded-[24px] bg-white p-5 shadow-[0_8px_32px_rgba(55,42,28,0.035)] sm:p-9">
                 <div className="space-y-2">
                   <Label htmlFor="businessName">Business / studio name</Label>
                   <Input id="businessName" required minLength={2} maxLength={120} value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="e.g. Little Bloom Bakery" className="min-h-12 bg-white" />
@@ -210,8 +210,61 @@ export default function BecomeSellerPage() {
               </form>
             </section>
           )}
-        </div>
-        <p className="mt-9 text-center text-[11px] tracking-wide text-[#aa9b89]">Little finds, lovely stories. Made by people like you.</p>
+        </section>
+
+        <section aria-label="Benefits for creators" className="mt-14 sm:mt-20">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.19em] text-[#a0835d]">Made for independent creators</p>
+              <h2 className="mt-2 text-2xl font-medium tracking-[-0.035em] text-[#312a22] sm:text-3xl">Your creativity. Our marketplace.</h2>
+            </div>
+            <span className="hidden text-[11px] font-semibold uppercase tracking-widest text-[#ab987e] sm:block">Home bakes · Art · Crafts</span>
+          </div>
+          <div className="mt-7 grid gap-5 sm:grid-cols-3 sm:gap-7">
+            {[
+              { icon: Store, title: 'Your own storefront', description: 'Present your products, photos and prices in one dedicated space.' },
+              { icon: ShoppingBag, title: 'A clearer way to manage orders', description: 'View incoming orders and keep track of each customer request.' },
+              { icon: Palette, title: 'A home for handmade work', description: 'Share the details that make your baking, artwork and crafts unique.' },
+            ].map(({ icon: Icon, title, description }) => (
+              <div key={title} className="group border-t border-[#dcd1c3] pt-5">
+                <div className="flex items-start gap-3 sm:block">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f0e6d9] text-[#846748] sm:mb-5">
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h3 className="text-[15px] font-semibold text-[#352d25]">{title}</h3>
+                    <p className="mt-2 text-[13px] leading-6 text-[#786e63]">{description}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="how-it-works" className="scroll-mt-28 mt-14 border-t border-[#e8dfd3] pt-12 sm:mt-20 sm:pt-16">
+          <div className="max-w-xl">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9f805a]">Simple from the start</p>
+            <h2 className="mt-2 text-2xl font-medium tracking-[-0.035em] sm:text-3xl">A simple way to get started.</h2>
+            <p className="mt-3 text-sm leading-7 text-[#73685b]">The first steps are straightforward, and you can get started at your own pace.</p>
+          </div>
+          <ol className="mt-8 grid gap-7 sm:grid-cols-3 sm:gap-10">
+            {[
+              ['01', 'Make your TreatStory account', 'Create a free profile or sign in to continue.'],
+              ['02', 'Introduce your business', 'Tell us what you create and how to contact you.'],
+              ['03', 'We review your application', 'Seller access is enabled after approval.'],
+            ].map(([number, title, description]) => (
+              <li key={number} className="flex min-w-0 gap-4 sm:block">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#d9c7b1] font-serif text-[15px] italic text-[#9b7f5d] sm:mb-5">{number}</span>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-[#352d25]">{title}</h3>
+                  <p className="mt-1.5 text-[13px] leading-6 text-[#756a5e]">{description}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <p className="mt-12 border-t border-[#eee6db] pt-7 text-center text-[11px] tracking-wide text-[#9e907f] sm:mt-16">Little finds, lovely stories. Made by people like you.</p>
       </main>
     </div>
   );
