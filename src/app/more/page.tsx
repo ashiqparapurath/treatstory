@@ -50,7 +50,7 @@ export default function MorePage() {
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
   const roleReady = !isUserLoading && (!user || (!isRoleLoading && !roleError && !!role));
-  const sections = morePageSections(roleReady && user ? role : null, !!user && roleReady, attention);
+  const sections = morePageSections(roleReady && user ? role : null, !!user, attention);
 
   async function logout() {
     if (!auth || busy) return;
