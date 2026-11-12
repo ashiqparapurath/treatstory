@@ -35,7 +35,10 @@ export function SellerStorefrontProducts({ limitCount, searchTerm }: { limitCoun
   const sku = limitCount || searchTerm !== undefined ? null : normalizeProductSku(deferredSearch);
   const [visibleCount, setVisibleCount] = useState(24);
   useEffect(() => setVisibleCount(24), [deferredSearch]);
-  const visible = useMemo(() => (data ?? []).filter(p => matchesProductSearch(p,deferredSearch)).slice(0, limitCount), [data, deferredSearch, limitCount]);
+  const visible = useMemo(() => {
+    const matches = (data ?? []).filter(p => matchesProductSearch(p, deferredSearch));
+    return limitCount === undefined ? matches : matches.slice(0, limitCount);
+  }, [data, deferredSearch, limitCount]);
   useEffect(()=>{if(!limitCount&&!sku&&deferredSearch.trim()&&visible.length<visibleCount&&hasMore&&!loadingMore&&!error)void loadMore();},[limitCount,sku,deferredSearch,visible.length,visibleCount,hasMore,loadingMore,error,loadMore]);
   const completePurchase = (p: MarketplaceProduct, intent: 'cart' | 'direct', option?: SellerCardWeightOption): string | null => {
     if (!canBuySellerSize(p, option)) {
