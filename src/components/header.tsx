@@ -78,7 +78,7 @@ export function Header() {
           { href: '/products', label: 'Shop', icon: Search, active: mobileNavIsActive(pathname, 'shop') },
           { href: '/cart', label: 'Cart', icon: ShoppingBag, active: pathname === '/cart' },
           { href: profileHref, label: 'Profile', icon: UserRound, active: isMobileProfilePath(pathname, role) },
-          { href: '/more', label: 'More', icon: Menu, active: pathname === '/more' },
+          { href: '/more', label: 'More', icon: Menu, active: mobileNavIsActive(pathname, 'more') },
         ].map(item => (
           <Link key={item.label} href={item.href}
             aria-label={item.label === 'Cart' && cartCount ? `Cart, ${cartCount} items` : item.label}

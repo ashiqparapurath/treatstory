@@ -26,7 +26,11 @@ export function isMobileProfilePath(pathname: string, role: MobileRole): boolean
   return false;
 }
 
-export function mobileNavIsActive(pathname: string, nav: 'shop'): boolean {
-  return nav === 'shop' && (pathname === '/products' || pathname.startsWith('/product/') ||
-    pathname.startsWith('/shop/') || pathname === '/new-arrivals');
+export function mobileNavIsActive(pathname: string, nav: 'shop' | 'more'): boolean {
+  if (nav === 'more') return pathname === '/more' ||
+    pathname.startsWith('/account/settings') || pathname.startsWith('/account/personal') ||
+    pathname.startsWith('/account/delivery') || pathname.startsWith('/account/privacy') ||
+    ['/notifications','/about','/support','/terms-of-service','/privacy-policy'].includes(pathname);
+  return pathname === '/products' || pathname.startsWith('/product/') ||
+    pathname.startsWith('/shop/') || pathname === '/new-arrivals';
 }

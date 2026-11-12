@@ -20,10 +20,11 @@ export function morePageSections(
 ): { account: MenuLink[]; marketplace: MenuLink[]; information: MenuLink[] } {
   const account: MenuLink[] = authenticated
     ? [
-      { label: 'Account & personal information', description: 'Profile, email and account details', href: '/account#profile-details', icon: UserRound },
-      { label: 'Delivery preferences', description: 'Your saved delivery address', href: '/account#delivery-address', icon: MapPin },
+      { label: 'Account settings', description: 'Your settings and preferences', href: '/account/settings', icon: Settings },
+      { label: 'Personal information', description: 'Name, email and verification', href: '/account/personal', icon: UserRound },
+      { label: 'Delivery addresses', description: 'Saved locations and your default address', href: '/account/delivery', icon: MapPin },
       { label: 'Notifications', description: 'Recent TreatStory updates', href: '/notifications', icon: Bell },
-      { label: 'Privacy & account deletion', description: 'Manage your account and privacy', href: '/account#delete-account', icon: ShieldCheck },
+      { label: 'Privacy & account deletion', description: 'Account security and deletion', href: '/account/privacy', icon: ShieldCheck },
     ]
     : [];
 

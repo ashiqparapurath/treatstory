@@ -17,6 +17,23 @@ export function readMoreJourney(): string[] {
 export function storeMoreJourney(list: string[]): void {
   try { sessionStorage.setItem(MORE_JOURNEY_KEY, JSON.stringify(list.slice(-50))); } catch { /* Ignore. */ }
 }
+/** Plain-language target for the inline back link. Never displays private route params. */
+export function moreJourneyBackLabel(href: string): string {
+  const route = href.split(/[?#]/, 1)[0];
+  const labels: Record<string, string> = {
+    '/more': 'More',
+    '/account': 'Profile',
+    '/account/settings': 'Account settings',
+    '/account/personal': 'Personal information',
+    '/account/delivery': 'Delivery addresses',
+    '/account/privacy': 'Privacy & security',
+    '/notifications': 'Notifications',
+    '/orders': 'Orders',
+    '/favorites': 'Saved items',
+  };
+  return labels[route] ?? 'previous page';
+}
+
 export function nextMoreJourney(history: string[], destination: string): string[] {
   if (history[0] !== '/more' || !destination.startsWith('/') || destination.startsWith('//')) return [];
   if (destination === '/more') return ['/more'];

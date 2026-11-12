@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { nextMoreJourney, readMoreJourney, storeMoreJourney } from '@/lib/more-journey';
+import { moreJourneyBackLabel, nextMoreJourney, readMoreJourney, storeMoreJourney } from '@/lib/more-journey';
 
 function JourneyContent() {
   const router = useRouter();
@@ -30,7 +30,7 @@ function JourneyContent() {
           router.push(previous, {scroll:true});
         }} className="inline-flex min-h-11 items-center gap-2 bg-transparent px-0 text-xs font-semibold text-[#76614a] transition-colors hover:text-[#30271f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a28a66]">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          {previous === '/more' ? 'Back to More' : 'Back'}
+          {previous === '/more' ? 'Back to More' : 'Back to ' + moreJourneyBackLabel(previous)}
         </button>
       </div>
     </nav>
