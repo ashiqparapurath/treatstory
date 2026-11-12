@@ -28,7 +28,8 @@ test('Become a Seller has responsive editorial copy and retains existing safe ap
   assert.match(page, /\/register\?next=%2Fbecome-a-seller/);
   assert.match(page, /\/login\?next=%2Fbecome-a-seller/);
   assert.match(page, /md:grid-cols-\[1fr_auto\]/);
-  assert.match(page, /grid gap-6 sm:grid-cols-3/);
+  assert.match(page, /mt-7 grid gap-5 sm:grid-cols-3/, 'Creator benefits should form a three-column grid on desktop');
+  assert.match(page, /mt-8 grid gap-7 sm:grid-cols-3/, 'Application steps should form a three-column grid on desktop');
   assert.match(page, /<form onSubmit=\{submit\}/);
   assert.match(page, /setDoc\(doc\(firestore, 'seller_applications', user.uid\)/);
   assert.match(page, /status: 'pending'/);
