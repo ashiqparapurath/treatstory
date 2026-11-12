@@ -82,7 +82,7 @@ export default function Home() {
       <main className="flex-1">
         <section className="section-shell pb-7 pt-5 sm:pb-10 sm:pt-8 lg:pb-12 lg:pt-10">
           <div className="grid items-center gap-5 md:grid-cols-[0.95fr_1.05fr] md:gap-8 lg:gap-10">
-            <div className="relative z-10 order-2 max-w-xl pb-1 md:order-1 md:pb-0">
+            <div className="relative z-10 order-1 max-w-xl pb-1 md:pb-0">
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#e6ded2] bg-white/70 px-3 py-2">
                 <Sparkles className="h-3.5 w-3.5 text-[#b28f62]" />
                 <span className="eyebrow text-[#8c7658]">Good things live here</span>
@@ -106,7 +106,7 @@ export default function Home() {
                 <p className="text-[11px] leading-relaxed text-muted-foreground">A little more joy in<br /><span className="font-semibold text-foreground">the everyday details.</span></p>
               </div>
             </div>
-            <div className="relative order-1 md:order-2">
+            <div className="relative order-1 hidden md:order-2 md:block">
               <div className="relative aspect-[1.3/1] overflow-hidden rounded-[22px] bg-[#e8dfd2] md:aspect-[1.18/1] lg:aspect-[1.4/1]">
                 <HeroImage alt="Artisanal cakes and homemade treats alongside embroidered crafts, handmade gifts and candles"/>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
