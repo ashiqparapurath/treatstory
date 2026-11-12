@@ -68,3 +68,11 @@ test('seller landing hero and application form adapt to narrow mobile and wide d
   assert.doesNotMatch(page,/md:w-48/);
   assert.match(page,/scroll-mt-28/);
 });
+
+test('small screens show concise creator categories instead of a tall decorative panel', () => {
+  const page = fs.readFileSync('src/app/become-a-seller/page.tsx','utf8');
+  assert.match(page,/aria-label="Marketplace creator categories" className="mt-5 flex flex-wrap gap-2 sm:hidden"/);
+  assert.match(page,/aria-label="Creators featured at TreatStory" className="hidden min-w-0/);
+  assert.match(page,/sm:block sm:p-7/);
+  assert.match(page,/Get started/);
+});

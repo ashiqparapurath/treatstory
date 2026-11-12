@@ -91,9 +91,14 @@ export default function BecomeSellerPage() {
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#897152]" aria-hidden="true" />
                 Seller access is reviewed before activation.
               </p>
+              <div aria-label="Marketplace creator categories" className="mt-5 flex flex-wrap gap-2 sm:hidden">
+                {['Home bakes', 'Art', 'Handmade'].map(category => (
+                  <span key={category} className="rounded-full border border-[#cebca6]/65 bg-[#fff8ed]/70 px-3 py-1.5 text-[10px] font-semibold tracking-wide text-[#7c6144]">{category}</span>
+                ))}
+              </div>
             </div>
 
-            <div aria-label="Creators featured at TreatStory" className="min-w-0 rounded-[23px] border border-white/60 bg-[#fffaf3]/85 p-5 shadow-[0_20px_50px_rgba(88,66,43,0.08)] sm:p-7">
+            <div aria-label="Creators featured at TreatStory" className="hidden min-w-0 rounded-[23px] border border-white/60 bg-[#fffaf3]/85 p-5 shadow-[0_20px_50px_rgba(88,66,43,0.08)] sm:block sm:p-7">
               <div className="flex items-center justify-between gap-3 border-b border-[#e8ded0] pb-4">
                 <span className="font-serif text-2xl tracking-[-0.04em] text-[#40352a]">TreatStory<span className="text-[#b69a74]">.</span></span>
                 <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#9a856d]">Creator community</span>
