@@ -104,8 +104,8 @@ export default function LoginPage() {
             <ArrowLeft className="h-[18px] w-[18px] shrink-0 sm:h-4 sm:w-4" aria-hidden="true" />
             <span className="sm:hidden">Shop</span><span className="hidden sm:inline">Back to shop</span>
           </Link>
-          <Link href="/" className="brand-wordmark absolute left-1/2 max-w-[55%] -translate-x-1/2 truncate text-[26px] leading-none text-[#27272a] sm:hidden">TreatStory</Link>
-          <span aria-hidden="true" className="w-12 sm:hidden" />
+          <Link href="/" className="brand-wordmark absolute left-1/2 max-w-[55%] -translate-x-1/2 truncate text-[26px] leading-none text-[#27272a] sm:text-[30px] lg:hidden">TreatStory</Link>
+          <span aria-hidden="true" className="w-12 lg:hidden" />
         </div>
         <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-start pb-7 pt-14 sm:justify-center sm:py-14">
           <div className="mb-9 sm:mb-8">
@@ -119,7 +119,10 @@ export default function LoginPage() {
                 <Input ref={emailInput} aria-invalid={formError?.field==='email'||formError?.field==='credentials'} aria-describedby={formError?'sign-in-error':undefined} id="email" type="email" autoComplete="email" inputMode="email" autoCapitalize="none" spellCheck={false} placeholder="you@example.com" value={email} onChange={e => {setEmail(e.target.value);setFormError(null);setResetSent(false);}} required disabled={isLoading} className="h-9 rounded-none border-0 bg-transparent px-0 text-base text-[#1c1c1e] shadow-none placeholder:text-[#aeaeb2] focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-12 sm:rounded-xl sm:border sm:border-[#ddd4c8] sm:bg-white sm:px-4 sm:text-sm sm:focus-visible:ring-[#a78c6a]" />
               </div>
               {!resetMode && <div className="space-y-1 border-t border-[#eeeef0] px-4 py-3 sm:space-y-2 sm:border-0 sm:px-0 sm:py-0">
-                <Label htmlFor="password" className="text-[12px] font-medium text-[#8e8e93] sm:text-xs sm:font-semibold sm:text-[#443b31]">Password</Label>
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="password" className="text-[12px] font-medium text-[#8e8e93] sm:text-xs sm:font-semibold sm:text-[#443b31]">Password</Label>
+                  <button type="button" onClick={() => { setResetMode(true); setResetSent(false); setFormError(null); }} className="hidden min-h-9 items-center text-xs font-semibold text-[#786044] underline decoration-[#c4aa89] underline-offset-4 hover:text-[#29251f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9f805a] sm:inline-flex">Forgot password?</button>
+                </div>
                 <div className="relative">
                   <Input ref={passwordInput} aria-invalid={formError?.field==='password'||formError?.field==='credentials'} aria-describedby={formError?'sign-in-error':undefined} id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={e => {setPassword(e.target.value);setFormError(null);}} required disabled={isLoading} className="h-9 rounded-none border-0 bg-transparent px-0 pr-12 text-base text-[#1c1c1e] shadow-none placeholder:text-[#aeaeb2] focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-12 sm:rounded-xl sm:border sm:border-[#ddd4c8] sm:bg-white sm:px-4 sm:pr-12 sm:text-sm sm:focus-visible:ring-[#a78c6a]" />
                   <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(v=>!v)} className="absolute -inset-y-1 right-0 flex w-11 items-center justify-center rounded-xl text-[#8e8e93] transition-colors hover:text-[#27272a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a88c6c] sm:inset-y-0 sm:right-1">{showPassword ? <EyeOff className="h-[19px] w-[19px]" /> : <Eye className="h-[19px] w-[19px]" />}</button>
@@ -127,7 +130,7 @@ export default function LoginPage() {
               </div>}
             </div>
             {!resetMode && <div className="flex justify-end">
-              <button type="button" onClick={() => { setResetMode(true); setResetSent(false); setFormError(null); }} className="inline-flex min-h-11 items-center text-[13px] font-medium text-[#80684c] transition-colors hover:text-[#27272a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a88c6c] sm:text-xs sm:font-semibold sm:underline sm:decoration-[#c4aa89] sm:underline-offset-4">Forgot password?</button>
+              <button type="button" onClick={() => { setResetMode(true); setResetSent(false); setFormError(null); }} className="inline-flex min-h-11 items-center text-[13px] font-medium text-[#80684c] transition-colors hover:text-[#27272a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a88c6c] sm:hidden">Forgot password?</button>
             </div>}
             {formError&&<div id="sign-in-error" role="alert" className="border-l-[3px] border-red-400 bg-red-50/80 px-3 py-3 text-sm text-red-800 sm:rounded-xl sm:border sm:border-red-200"><p className="font-semibold">{formError.title}</p><p className="mt-1 text-xs leading-5">{formError.description}</p></div>}
             {!auth&&<p role="status" className="text-xs text-amber-800">Sign-in is temporarily unavailable. Please try again later or contact support.</p>}
