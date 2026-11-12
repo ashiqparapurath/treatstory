@@ -14,3 +14,13 @@ test('original header divider remains visible on mobile and desktop', () => {
   assert.match(header,/shadow-\[0_3px_18px/);
   assert.doesNotMatch(header,/border-b-0 bg-background shadow-none/);
 });
+
+test('mobile homepage provides breathing room and vertically stacked compact-screen actions', () => {
+ const page=fs.readFileSync('src/app/page.tsx','utf8');
+ assert.match(page,/pb-10 pt-9 sm:pb-10 sm:pt-8/);
+ assert.match(page,/leading-\[1\.08\]/);
+ assert.match(page,/mt-7 flex flex-col items-stretch gap-4/);
+ assert.match(page,/min-\[400px\]:flex-row/);
+ assert.match(page,/min-h-12 w-full/);
+ assert.match(page,/sm:text-3xl">The latest from TreatStory/);
+});
