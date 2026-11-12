@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorNotice } from '@/lib/user-notices';
+import { StoreShareButton } from '@/components/store-share-button';
 
 type StoreDraft = {
   logoUrl: string;
@@ -153,7 +154,7 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
           </button>
         </div>
         <div className="min-w-0 flex-1"><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#d2b58b]">Store identity</p><h2 className="mt-2 break-words text-2xl font-semibold sm:text-3xl">{seller.businessName}</h2><p className="mt-2 max-w-xl text-xs leading-5 text-white/70">Tap the pencil on your logo to upload a JPG, PNG or WebP (up to 2 MB). Save your changes when you're ready.</p>
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2"><Link href={'/shop/' + user.uid} className="inline-flex text-xs font-medium text-[#eacda6] underline underline-offset-4">Preview public storefront</Link>{draft.logoUrl && <button type="button" onClick={() => update('logoUrl', '')} disabled={!active || busy || uploading} className="text-xs text-white/70 underline underline-offset-4 hover:text-white disabled:opacity-50">Remove logo</button>}</div>
+        <div className="mt-3 flex flex-wrap items-center gap-3"><Link href={'/shop/' + user.uid} className="inline-flex min-h-11 items-center text-xs font-medium text-[#eacda6] underline underline-offset-4">Preview public storefront</Link><StoreShareButton sellerId={user.uid} storeName={seller.businessName} dark />{draft.logoUrl && <button type="button" onClick={() => update('logoUrl', '')} disabled={!active || busy || uploading} className="text-xs text-white/70 underline underline-offset-4 hover:text-white disabled:opacity-50">Remove logo</button>}</div>
         {uploading && <p role="status" className="mt-2 text-xs text-[#eacda6]">Uploading logo…</p>}</div>
       </div>
     </div>
