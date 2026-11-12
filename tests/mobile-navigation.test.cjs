@@ -73,6 +73,10 @@ test('More menu offers only role-relevant, existing routes and actionable dots',
   assert.ok(!routes(buyer.marketplace).includes('/admin'));
   assert.ok(!routes(buyer.marketplace).includes('/seller/dashboard'));
   assert.ok(routes(guest.marketplace).includes('/become-a-seller'));
+  assert.deepEqual(routes(admin.account), ['/account/settings']);
+  assert.deepEqual(routes(seller.account), ['/account/settings']);
+  assert.deepEqual(routes(buyer.account), ['/account/settings']);
+  assert.deepEqual(routes(resolving.account), ['/account/settings']);
   assert.equal(guest.account.length, 0);
   assert.ok(!routes(guest.marketplace).includes('/orders'));
   assert.ok(!routes(resolving.marketplace).includes('/become-a-seller'), 'Unknown logged-in role is not guessed as buyer');
