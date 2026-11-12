@@ -888,14 +888,18 @@ test('home creator cards use an in-place weight/price selection dialog and keep 
   assert.match(detail, /<ProductSkuCopy sku=\{creator\.sku\}/);
 });
 
-test('homepage banners are short on mobile and Our Story uses its own illustration',()=>{
+test('homepage banners are short on mobile and Our Story uses its editorial banner responsively',()=>{
   const home=fs.readFileSync('src/app/page.tsx','utf8');
   const about=fs.readFileSync('src/app/about/page.tsx','utf8');
   const svg=fs.readFileSync('public/img/our-story-creators.svg','utf8');
   assert.match(home,/h-\[clamp\(200px,54vw,236px\)\]/);
   assert.doesNotMatch(home,/min-h-72 items-center justify-center/);
   assert.match(home,/sm:h-64 md:h-72 lg:h-\[340px\]/);
-  assert.match(about,/src="\/img\/our-story-creators\.svg"/);
+  assert.match(about,/our-story-banner\\.webp/);
+  assert.match(about,/aspect-\\[3\\/2\\]/);
+  assert.match(about,/bg-\\[length:200%_auto\\]/);
+  assert.match(about,/The Story Behind <em>TreatStory<\\/em>/);
+  assert.match(about,/our-story-creators\\.svg/);
   assert.doesNotMatch(about,/src="\/img\/landing-hero\.webp"/);
   assert.match(svg,/The creations behind TreatStory/);
   assert.match(svg,/<svg xmlns="http:\/\/www.w3.org\/2000\/svg"/);
