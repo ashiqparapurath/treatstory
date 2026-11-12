@@ -115,3 +115,40 @@ test('Next.js More route exports only a default page component', () => {
   assert.doesNotMatch(page, /export (?:const|function|type|interface) /);
   assert.match(fs.readFileSync('src/lib/more-navigation.ts','utf8'), /export function morePageSections/);
 });
+
+test('More menu links start a session-backed in-app navigation trail', () => {
+  const store = new Map();
+  const storage = {
+    setItem: (key, value) => store.set(key, value),
+    getItem: key => store.get(key) || null,
+    removeItem: key => store.delete(key),
+  };
+  const raw = fs.readFileSync('src/lib/more-journey.ts','utf8');
+  const js = ts.transpileModule(raw, { compilerOptions: {module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022} }).outputText;
+  const module = {exports:{}};
+  vm.runInNewContext(js, {module,exports:module.exports,sessionStorage:storage});
+  const flow=module.exports;
+  flow.startMoreJourney();
+  assert.equal(flow.readMoreJourney()[0], '/more');
+  const next=Array.from(flow.nextMoreJourney(flow.readMoreJourney(), '/account'));
+  assert.deepEqual(next,['/more','/account']);
+  const deeper=Array.from(flow.nextMoreJourney(next, '/orders'));
+  assert.deepEqual(deeper,['/more','/account','/orders']);
+  assert.deepEqual(Array.from(flow.nextMoreJourney(deeper,'/account')),['/more','/account'],
+    'Back from a nested page should return to the prior More step');
+  assert.deepEqual(Array.from(flow.nextMoreJourney(deeper,'/more')),['/more']);
+  flow.storeMoreJourney(deeper);
+  assert.equal(flow.readMoreJourney().length,3);
+  flow.clearMoreJourney();
+  assert.equal(flow.readMoreJourney().length,0);
+  const page=fs.readFileSync('src/app/more/page.tsx','utf8');
+  const history=fs.readFileSync('src/components/more-navigation-trail.tsx','utf8');
+  const layout=fs.readFileSync('src/app/layout.tsx','utf8');
+  assert.match(page,/onClick=\{startMoreJourney\}/);
+  assert.match(history,/aria-label="More navigation history"/);
+  assert.match(history,/router.push\(previous/);
+  assert.match(history,/Back to More/);
+  assert.match(layout,/<MoreNavigationTrail \/>/);
+  assert.match(page,/bg-transparent/,'More lists should use borderless surfaces');
+  assert.doesNotMatch(page,/overflow-hidden rounded-2xl border border-\[#e8e0d5\]/);
+});
