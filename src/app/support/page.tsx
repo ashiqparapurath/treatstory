@@ -58,7 +58,7 @@ export default function SupportPage(){
         </div>
         {crypto.privateKey&&crypto.keys?.teamPublicKey&&crypto.keys.ownKey&&<form onSubmit={start} className="space-y-4 rounded-2xl border bg-white p-5">
           <h2 className="text-lg font-semibold">Start a conversation</h2>
-          <label className="block text-xs font-semibold" htmlFor="support-topic">Topic</label>
+          <label htmlFor="support-topic" className="block text-xs font-semibold">Topic</label>
           <Select value={category} onValueChange={setCategory} disabled={busy}>
             <SelectTrigger id="support-topic" aria-label="Support topic" className="h-12"><SelectValue/></SelectTrigger>
             <SelectContent position="popper" sideOffset={6} className="max-h-[min(22rem,65dvh)]">
