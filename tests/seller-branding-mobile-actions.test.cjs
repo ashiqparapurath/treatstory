@@ -46,7 +46,7 @@ test('public seller card gives name its own responsive row and keeps status / sh
   const share = page.indexOf('<StoreShareButton');
   assert.ok(heading >= 0 && heading < disclaimer && disclaimer < badge && badge < share);
   assert.doesNotMatch(page, /flex flex-wrap items-start justify-between gap-4/);
-  assert.match(page, /<StoreShareButton sellerId=\{id\} storeName=\{seller.businessName\}/);
+  assert.match(page, /<StoreShareButton sellerId=\{id\} storeName=\{visibleSeller!\.businessName\}/);
 });
 
 test('seller settings exposes public storefront link and sharing without saving store settings', () => {
