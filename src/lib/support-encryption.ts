@@ -17,7 +17,7 @@ async function passwordKey(passphrase: string, salt: Uint8Array) {
 
 export async function generateSupportKey(passphrase: string): Promise<LockedSupportKey> {
   if (passphrase.length < 12) throw new Error('Choose an encryption passphrase of at least 12 characters.');
-  const pair = await crypto.subtle.generateKey({name:'RSA-OAEP',modulusLength:3072,publicExponent:new Uint8Array([1,0,1]) as BufferSource,hash:'SHA-256'},true,['encrypt','decrypt']);
+  const pair = await crypto.subtle.generateKey({name:'RSA-OAEP',modulusLength:3072,publicExponent:new Uint8Array([1,0,1]) as BufferSource,hash:'SHA-256'} as RsaHashedKeyGenParams,true,['encrypt','decrypt']);
   const publicKey = await crypto.subtle.exportKey('jwk',pair.publicKey);
   const privateKey = await crypto.subtle.exportKey('jwk',pair.privateKey);
   const salt = crypto.getRandomValues(new Uint8Array(16));
