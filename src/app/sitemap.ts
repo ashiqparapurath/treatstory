@@ -23,11 +23,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
   try {
     const { db } = getServerFirebase();
-    const [marketplace, legacy] = await Promise.all([
+    const [marketplace, legacy, stores] = await Promise.all([
       db.collection('marketplace_products').where('status', '==', 'published').limit(1000).get(),
       db.collection('products').limit(1000).get(),
+      db.collection('sellers').where('status','==','active').limit(1000).get(),
     ]);
     const seen = new Set(pages.map(page => page.url));
+    for (const store of stores.docs) {
+      const data=store.data();
+      if(data.status!=='active' || typeof data.businessName!=='string' || !data.businessName.trim())continue;
+      const url=new URL('/shop/'+encodeURIComponent(store.id),origin).href;
+      if(seen.has(url))continue;
+      seen.add(url);
+      const updated=data.updatedAt?.toDate?.()??data.createdAt?.toDate?.();
+      pages.push({url,...(updated instanceof Date&&!Number.isNaN(updated.getTime())?{lastModified:updated}:{}),
+        changeFrequency:'weekly',priority:0.7});
+    }
     for (const [snapshot, seller] of [[marketplace, true], [legacy, false]] as const) {
       for (const doc of snapshot.docs) {
         const product = doc.data();
