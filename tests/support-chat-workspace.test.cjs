@@ -5,7 +5,10 @@ const read=p=>fs.readFileSync(p,'utf8');
 
 test('support workspace occupies the viewport and has a responsive list/detail experience',()=>{
  const source=read('src/components/support-chat-workspace.tsx');
- assert.match(source,/fixed inset-0 z-\[80\]/);
+ assert.match(source,/fixed inset-0 z-\[200\]/);
+ assert.match(source,/createPortal/);
+ assert.match(source,/document.body/);
+ assert.match(source,/items-stretch overflow-hidden/);
  assert.match(source,/aria-label="Support conversations"/);
  assert.match(source,/aria-label="Selected support chat"/);
  assert.match(source,/hidden md:flex/);
