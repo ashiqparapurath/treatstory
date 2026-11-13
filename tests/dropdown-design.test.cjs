@@ -40,7 +40,7 @@ test('support topic options preserve all server accepted category codes',()=>{
     assert.ok(support.includes('<SelectItem value="'+value+'">'+label+'</SelectItem>'));
   }
   assert.match(support, /<Select value=\{category\} onValueChange=\{setCategory\} disabled=\{busy\}>/);
-  assert.match(support, /body:JSON\.stringify\(\{action:'create',subject,category,message,orderId\}\)/);
+  assert.match(support, /body:JSON\.stringify\(\{action:'create',category,encrypted,orderId\}\)/);
   assert.match(support, /<label htmlFor="support-topic"/);
   assert.match(support, /id="support-topic" aria-label="Support topic"/);
 });
