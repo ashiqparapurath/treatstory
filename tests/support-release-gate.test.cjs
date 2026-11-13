@@ -18,8 +18,12 @@ test('the admin inbox defaults to the working ticket responder and cannot activa
   assert.match(admin,/NEXT_PUBLIC_ENCRYPTED_SUPPORT_ENABLED === 'true' && process\.env\.NEXT_PUBLIC_SUPPORT_MATRIX_ENABLED === 'true' \? <SupportMatrixWorkspace team \/> : <SupportLegacyInbox \/>/);
   const legacy=read('src/components/admin/support-legacy-inbox.tsx');
   assert.match(legacy,/\/api\/support/);
-  assert.match(legacy,/Send reply/);
-  assert.match(legacy,/ticket\.encrypted!==true/);
+  assert.match(legacy,/SupportChatWorkspace/);
+  assert.match(legacy,/SupportTicketThread/);
+  assert.match(legacy,/ticket\.encrypted\s*!==\s*true/);
+  const thread=read('src/components/support-ticket-thread.tsx');
+  assert.match(thread,/Send message/);
+  assert.match(thread,/not end-to-end encrypted/);
 });
 
 test('unreviewed encrypted support API is disabled by default and key/message collections remain private',()=>{
