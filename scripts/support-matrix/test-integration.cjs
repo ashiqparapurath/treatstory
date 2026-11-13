@@ -1,6 +1,6 @@
 require('tsx/cjs');
 const projectRequire=require;
-const { chromium } = require('playwright');
+const { chromium, firefox, webkit, devices } = require('playwright');
 const { initializeApp, cert, getApps, deleteApp } = projectRequire('firebase-admin/app');
 const { getFirestore, Timestamp } = projectRequire('firebase-admin/firestore');
 const assert = require('node:assert/strict');
@@ -228,6 +228,41 @@ async function boot(browser,account){
   await a.page.getByRole('dialog').waitFor();
   assert.ok(await a.page.evaluate(()=>!!document.activeElement?.closest('[role="dialog"]')));
   console.log('desktop/mobile workspace, restored draft, keyboard viewport and accessible device dialog passed');
+
+  // Browser-engine compatibility, not physical-device certification.
+  // This uses the same locally served browser module as the verified Synapse test.
+  for (const [name, engine, options] of [
+    ['Firefox mobile viewport', firefox, { viewport: { width: 412, height: 915 } }],
+    ['WebKit iPhone emulation', webkit, devices['iPhone 13']],
+  ]) {
+    const candidate = await engine.launch({ headless: true });
+    try {
+      const context = await candidate.newContext(options);
+      const page = await context.newPage();
+      await page.goto(base);
+      await page.waitForFunction(() => typeof window.SecureSupportClient === 'function', null, { timeout: 30000 });
+      const capability = await page.evaluate(async () => {
+        const name = 'treatstory-browser-capability-' + crypto.randomUUID();
+        const req = indexedDB.open(name, 1);
+        const store = await new Promise((resolve, reject) => {
+          req.onupgradeneeded = () => req.result.createObjectStore('checks');
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        store.close();
+        indexedDB.deleteDatabase(name);
+        const sum = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('support'));
+        return { secure: isSecureContext, crypto: sum.byteLength === 32,
+          indexedDB: true, loaded: typeof window.SecureSupportClient === 'function',
+          viewport: document.documentElement.scrollWidth <= innerWidth };
+      });
+      assert.deepEqual(capability, { secure: true, crypto: true, indexedDB: true,
+        loaded: true, viewport: true }, name + ' failed capability smoke');
+      await context.close();
+      console.log(name + ' passed module, WebCrypto, IndexedDB and viewport smoke');
+    } finally { await candidate.close(); }
+  }
+
 
  }finally{await browser.close();server.close();for(const app of getApps())await getFirestore(app).terminate();await Promise.all(getApps().map(deleteApp));}
 })().catch(e=>{console.error(e);process.exitCode=1;});
