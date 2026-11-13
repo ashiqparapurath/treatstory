@@ -31,6 +31,7 @@ async function isAdmin(db: any,uid:string){return (await db.collection('roles_ad
 const checkId=(value:string)=>{if(value.includes('/')||value==='.'||value==='..')throw new ApiError(400,'Invalid conversation identifier.');return value;};
 
 export async function GET(request:NextRequest){
+  if (process.env.NEXT_PUBLIC_ENCRYPTED_SUPPORT_ENABLED !== 'true') return Response.json({error:'Secure chat is not enabled.'},{status:503,headers:{'Cache-Control':'no-store'}});
   try {
     const {uid,db}=await verifiedUser(request);
     const admin=await isAdmin(db,uid);
@@ -46,6 +47,7 @@ export async function GET(request:NextRequest){
 }
 
 export async function POST(request:NextRequest){
+  if (process.env.NEXT_PUBLIC_ENCRYPTED_SUPPORT_ENABLED !== 'true') return Response.json({error:'Secure chat is not enabled.'},{status:503,headers:{'Cache-Control':'no-store'}});
   try {
     const {uid,db}=await verifiedUser(request);
     const raw=await readJsonBody(request,20000);
