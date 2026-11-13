@@ -42,7 +42,7 @@ deployment host, not in CI or a shared terminal:
    Check that homeserver.yaml and the signing key were created; preserve them.
    Do not generate again for an enrolled server.
 4. In an isolated Python environment with PyYAML==6.0.3, run:
-   python3 configure.py
+   sudo python3 configure.py (when generated config is owned by the Synapse UID)
    This preserves server-generated identity/registration secrets, configures
    PostgreSQL and HS256 JWT login, disables public registration and federation
    listeners, and writes a private Nginx configuration. The script fails

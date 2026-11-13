@@ -59,6 +59,14 @@ def atomic_write(path, content):
             out.flush()
             os.fsync(out.fileno())
         os.chmod(name, 0o600)
+        # Synapse runs as its configured UID. Keep original ownership after
+        # replacing homeserver.yaml or the private 0600 file becomes unreadable.
+        if path.exists():
+            previous = path.stat()
+            try:
+                os.chown(name, previous.st_uid, previous.st_gid)
+            except PermissionError as exc:
+                raise RuntimeError("Run configuration as an authorized host administrator to preserve Synapse file ownership.") from exc
         os.replace(name, path)
     finally:
         if os.path.exists(name):

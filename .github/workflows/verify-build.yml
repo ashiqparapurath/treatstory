@@ -74,7 +74,7 @@ jobs:
           mkdir -p infra/support-matrix/private/secrets
           cp infra/support-matrix/env.sample infra/support-matrix/.env
           printf 'compose-validation-only\n' > infra/support-matrix/private/secrets/postgres_password
-          docker compose -f infra/support-matrix/compose.yaml config --quiet
+          docker compose --env-file infra/support-matrix/.env -f infra/support-matrix/compose.yaml config --quiet
           rm -rf infra/support-matrix/private infra/support-matrix/.env
       - name: Build application and test stylesheet
         run: npm run build
