@@ -1,140 +1,163 @@
-# Encrypted support investigation and implementation status
+# Encrypted support implementation and release status
 
-Status: **incomplete; draft only; do not enable production E2EE.**
+Implemented in draft PR #16; production remains disabled. The earlier statement
+that multi-device functionality was absent is superseded by this implementation.
+Setting a feature flag alone is insufficient to deploy this service.
 
-## Findings
+## Architecture and implemented behavior
 
-The warning is accurate for an unfamiliar browser. `support_chat_keys/team_device`
-is a single global administrator RSA recipient. Every new ticket snapshots that
-public key; each message contains exactly two wrapped content keys (`ownerKey`,
-`teamKey`). Adding a device row or replacing the public key cannot make those
-existing envelopes decryptable. Role membership alone must not authorize key
-transfer. The original RSA private keys are non-extractable in IndexedDB.
+New conversations use pinned `matrix-js-sdk` 45.1.0 with its Rust crypto WASM
+18.9.2 dependency (Olm/Megolm). Firebase verifies accounts, current administrator
+roles and conversation assignments; a private Synapse service transports
+ciphertext. Each account has an immutable pinned cross-signing root, separate
+device keys and no shared administrator decryption identity. The service bot
+controls membership without a crypto identity or message decryption keys.
 
-There is also a distinct defect on the **original administrator device**:
-`GET /api/support-chat` omitted `version` and `deviceOnly` from `teamDeviceKey`.
-The hook requires `version === 2`, so it rejected even the matching original key.
-This PR returns the persisted discriminator without inventing a version for old
-or malformed records. It deliberately retains the warning for unfamiliar devices.
+The first authenticated activation creates a new Matrix identity. Later devices
+remain pending until SAS verification with an approved device or recovery using
+a previously saved code. Buyers, sellers and assigned administrators use the
+same enrollment mechanism. Public device keys and signature chains are checked
+at the API; signing in does not authorize a device to send or obtain key backups.
+The device dialog lists devices, shows verification emojis, rejects approvals,
+notifies about new devices, revokes another device and configures recovery.
 
-The old local key creation sequence was read → generate → `put`, across separate
-transactions. Two tabs could both observe no key, generate different identities
-and overwrite one another. It also resolved at request success before transaction
-commit. This PR reads and inserts in one serialized read/write transaction,
-returns an existing identity if another tab won, uses `add` rather than `put`,
-and resolves only after commit. Aborts reject; no reset or deletion is performed.
+A device-only encrypted key backup supports history synchronization between
+approved devices. Optional user-held recovery attaches encrypted secret storage
+to that existing backup without replacing its version. Save the displayed code
+outside the browser and wait for backup synchronization before relying on it.
+The code is never sent to TreatStory. Losing all approved devices without a
+usable recovery code can permanently lose access. Matrix key storage is
+software storage encrypted with a locally stored device key; it is not a
+hardware-backed or nonextractable browser-key guarantee.
 
-The API accepted arbitrary fields in a public JWK (`passthrough`), including
-private RSA factors. A strict schema now accepts only the public 3072-bit
-RSA-OAEP-SHA-256 format the client generates, a canonical modulus, exponent 65537
-and encryption usage. Existing persisted records are not rewritten. This schema
-checks format, not trust, possession, enrollment or key transparency.
+Every messaging request passes through the Firebase-authenticated gateway,
+bound to its Matrix device session. Only the owner and assigned current agent
+may access a conversation. Reassignment removes the old agent before admitting
+the new one; stale assignment headers fail closed. Former administrators cannot
+reuse their old sessions by logging in as customers. Revocation blocks transport
+and future key delivery; outbound group sessions rotate for every message.
+Previously decrypted content and retained keys cannot be erased remotely.
 
-## Authorization and data boundaries found
+The SDK permits some replayed ciphertext under another event ID. TreatStory
+therefore checks authenticated application metadata (room, sender, device and
+message identity) inside the encrypted content and atomically persists local
+receipts binding that identity to its original event ID and ciphertext hash.
+The UI displays validated messages only. This application binding does not make
+the integration independently audited or equivalent to Signal/WhatsApp.
 
-- Firebase Admin verifies ID tokens with revocation checking. Support role access
-  currently means existence of `roles_admin/{uid}`; there is no separate support
-  agent assignment or cryptographic device authorization model.
-- Prototype API operations authorize every administrator across all encrypted
-  tickets. This must be replaced by explicit conversation membership, live role
-  checks and independently verified device membership before rollout.
-- Current Firestore rules deny direct access to support key and message
-  subcollections; stable ticket reads permit owners and administrators. Those
-  denies are preserved. Enabling the UI flag alone will not make the prototype
-  usable through its Firestore message listener.
-- Legacy tickets remain plaintext; encrypted pilot history remains in its
-  original documents. Neither format is migrated or relabeled by this PR.
-- Existing hybrid encryption detects content/nonce/envelope modification but
-  does not authenticate sender identity or bind a message to a conversation,
-  message ID, epoch or counter. It does not prevent replay, provide forward
-  secrecy or support revocation/rotation. Tests of tamper rejection do not prove
-  those missing guarantees.
+The full-screen workspace provides assigned conversation lists, local decrypted
+previews, unread counts, pagination, optimistic messages, encrypted local drafts,
+stable retry transaction IDs, connection status, close/reopen, verification and
+recovery. Desktop and mobile viewport layouts use independent scrolling,
+visual-viewport keyboard sizing, safe areas and focus-trapped security dialogs.
+Firestore listeners expose routing metadata only; message content uses Matrix.
 
-## Protocol evaluation and blocker
+## Existing history and migration
 
-Upstream repositories and READMEs checked on 2026-11-13:
+The old `/api/support-chat` creation/read path is retired (503 while disabled,
+410 when enabled). Its single-device identity is never silently replaced.
+Legacy RSA helpers remain as readers; existing keys, ciphertext and plaintext
+tickets remain intact. `/support-tickets` always provides the stable ticket flow.
+It does not relabel plaintext as encrypted or make old ciphertext readable.
 
-| Candidate | Fit | Work required before adoption |
-| --- | --- | --- |
-| [Matrix JS SDK](https://github.com/matrix-org/matrix-js-sdk) with Rust crypto/WASM | Browser/TypeScript integration, persistent crypto store, cross-signing, interactive own-device verification, secret storage and key backup APIs already exist. Prefer investigating this complete stack over inventing pairing and recovery. | Requires a Matrix homeserver/client-server transport and Firebase identity integration. It is not a crypto function that can simply be attached to Firestore. Review verified-device-only session sharing, room membership, historical sharing policy, recovery UX and current audit coverage of the selected release. Upstream warns multiple clients sharing an IndexedDB crypto store can corrupt state; use one crypto worker/owner across tabs. |
-| [OpenMLS](https://github.com/openmls/openmls) | RFC 9420 implementation in Rust, with WASM support; useful group membership/epoch building block. | Still needs browser bindings/storage, account/device credentials, delivery ordering, authenticated pairing, recovery and history-transfer design. Does not supply the complete requested application security model. Verify exact release/provider audit coverage before selection. |
-| Existing RSA/AES wrapper | Can read recoverable existing pilot history locally. | Retain only as a legacy reader. Extending it into an unreviewed enrollment/group protocol would not meet the request. |
+On an original browser with its historical RSA key, select an earlier encrypted
+conversation in the new workspace and import it into an authorized, verified
+conversation. Version-1 history may need its explicitly labeled old passphrase.
+Decryption and re-encryption occur locally. The scoped API returns ciphertext
+only; resumable journals reserve source IDs, verify target encrypted-event
+round trips and preserve source metadata, timestamps and records. Interrupted
+reservations resume on the same originating device; automatic cross-device
+reservation takeover is deliberately unavailable. Missing original keys cannot
+be reconstructed from Firebase login.
 
-Neither library is integrated in this PR. Repository activity is not proof of
-independent review. No applicable audit report for a pinned integration has been
-validated here. There is no configured homeserver or reviewed Firebase-only
-protocol design in the repository. That infrastructure/integration and a
-reviewed enrollment/history/recovery design remain necessary work, followed by
-independent security review. Do not substitute a new custom protocol or claim
-Signal/WhatsApp guarantees to remove the warning.
+After reassignment, new messages use the new verified agent. The owner can
+explicitly share locally readable earlier history, re-encrypted for that agent,
+with an idempotent transfer journal. It does not grant the replacement agent an
+old agent's identity or private key.
 
-## Preservation and migration procedure (design; not executed)
+## Deployment configuration
 
-1. Keep `NEXT_PUBLIC_ENCRYPTED_SUPPORT_ENABLED` unset/false. Retain working legacy
-   support. Do not clear browser storage or overwrite `team`, `team_device`,
-   `user_*`, ticket public keys or message envelopes. Back up Firestore using
-   existing restricted operational access; never export unwrapped local keys.
-2. Inventory legacy plaintext, version-1 wrapped identities and version-2 device
-   identities separately, retaining ticket IDs, associations, order references,
-   timestamps and status. Identify the original browsers; lost non-extractable
-   private keys cannot be reconstructed from Firebase login or public keys.
-3. After the replacement protocol and authorization model pass review, enroll
-   each participant/device through that protocol's verified pairing. An agent
-   must have both a current support role and explicit conversation membership.
-4. Only an original authorized browser that can decrypt history may migrate it.
-   Decrypt locally; re-encrypt into the reviewed target protocol for authorized
-   recipients. Do not export plaintext to Admin APIs, Firestore, logs or a
-   server-readable backup. Original encrypted documents remain immutable.
-5. Implement a separately versioned migration journal with deterministic source
-   message IDs, source integrity hashes, target IDs and per-batch checkpoints.
-   Validate a target round-trip and bindings before marking a batch complete.
-   Retry idempotently; preserve original timestamps/status/order associations.
-   These journal and migration tools are not yet implemented.
-6. A second verified device must prove it can read authorized history; interrupted
-   batches must resume without duplicates. Roll back by selecting the original
-   read path; retain originals. Do not promise recoverability when neither an
-   original key nor a previously configured recovery capability remains.
+Keep both public flags unset/false until release approval:
+`NEXT_PUBLIC_ENCRYPTED_SUPPORT_ENABLED` and `NEXT_PUBLIC_SUPPORT_MATRIX_ENABLED`.
+Both must be true at build time for the new UI, and at runtime for its APIs.
 
-## Verification and remaining acceptance criteria
+Provision a durable private Synapse deployment before activation. Required server
+configuration: `SUPPORT_MATRIX_HOMESERVER_URL`, `SUPPORT_MATRIX_SERVER_NAME`,
+`SUPPORT_MATRIX_JWT_SECRET` (at least 32 characters),
+`SUPPORT_MATRIX_SERVICE_TOKEN`, `SUPPORT_MATRIX_GATEWAY_SECRET` (at least 32
+characters for HTTPS), and `SUPPORT_MATRIX_PRIVATE_TRANSPORT_CONFIRMED=true`.
+Use independently generated secrets in the deployment secret manager, never in
+public environment variables or source control. Configure Synapse JWT login
+with the same HS256 secret, issuer and audience `treatstory-support`. The service
+account needs room-control and device-deletion administrative capabilities.
 
-New executable tests use WebCrypto, the actual API handler (mocked Firebase),
-and fake-indexeddb. They verify both legacy recipients, wrong-key and tamper
-rejection, public-only registration, complete admin device metadata, concurrent
-local initialization, reload persistence, non-extractability and transaction
-abort behavior. They do not establish secure enrollment or production readiness.
+Use `scripts/support-matrix/nginx-gateway.conf.example` as a starting template,
+substituting actual certificates and a secret header through secure deployment
+configuration. Synapse must be unreachable directly from clients, including its
+admin, federation and alternate client ports. Only the application gateway may
+reach it. The confirmation variable does not configure a firewall. A public
+unprotected homeserver would let Matrix bearer tokens bypass Firebase role and
+revocation checks. HTTPS is required outside explicitly allowed local fixtures.
+Deploy the included Firestore rules/indexes before activating the UI. Verify the
+private transport, backup retention, monitoring and role-removal controls in the
+actual target environment. Never change the configured Matrix identity namespace
+after enrollment; mismatches fail closed and preserve existing records.
 
-A separate real Chromium check runs two same-origin tabs concurrently, compares
-persisted identities, then reloads and checks IndexedDB persistence. It is a
-local browser storage check, not phone/desktop enrollment or a production test.
+## Reproducible verification
 
-Outstanding work before this assignment is complete:
+Use Node 24, Java 21, Docker, Python with PyYAML 6.0.3 and Playwright Chromium:
 
-- Protocol integration and independently verified per-device enrollment for all
-  roles, including replay/substitution protection and concurrent approvals.
-- Recovery setup/use, rejected approvals, lost-device handling, device list,
-  security notifications, revocation and key rotation.
-- Assigned support agents, secure reassignment, role-removal enforcement and
-  administrative audit logs.
-- Implemented and verified resumable migration and multi-device history access.
-- Message pagination, decrypted-message cache, idempotent retries, reconnect and
-  optimistic send behavior; full desktop/mobile UI and keyboard verification.
-- Firestore/API authorization implementation and emulator coverage for pending,
-  revoked and unauthorized devices and users.
-- Approximately 100-user measured workload with latency, Firestore usage and
-  failure rates. No capacity claim is made by this PR.
-- Android/iOS/PWA/browser matrix and an independent security review of the
-  complete integration. No production rollout or merge request is made.
+```sh
+npm ci
+python scripts/support-matrix/local-server.py
+npm run build
+npx firebase-tools@14 emulators:exec --only auth,firestore --project demo-treatstory --config firebase.audit.json 'SUPPORT_MATRIX_TEST_CONFIG=work/support-matrix-server/test-config.json npm run test:support-matrix'
+npm test
+npm run typecheck
+```
 
-Recorded local results on 2026-11-13 (Node 24.22.1):
+The loopback-only helper preserves existing fixture files and writes test secrets
+only to ignored `work/`. Its SQLite Synapse setup is a disposable test fixture,
+not a production deployment. The integration fixture executes actual Next API
+handlers, real Firebase Auth/Firestore emulators, Synapse, WASM crypto and separate
+Chromium browser contexts. Only the UI's Firebase hooks are replaced for fixture
+routing; API authentication still uses real emulator tokens.
 
-| Command | Result |
-| --- | --- |
-| `npm ci --ignore-scripts --cache /workspace/work/npm-cache` | Passed (custom cache avoids the read-only home directory). |
-| `npm test` | 165 passed, 0 failed. Includes six new behavioral tests. |
-| `npm run typecheck` | Passed. |
-| `npm run build` | Passed. |
-| `CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:support-browser` | Passed real Chromium two-tab initialization and reload checks. Use Playwright's installed Chromium if the variable is omitted. |
+Recorded local verification on 2026-11-13 includes encrypted realtime delivery,
+pending and rejected enrollment, cross-device SAS/history, backup completion,
+invalid-code rejection, recovery with original devices offline, reload
+persistence, revocation/future key exclusion, ciphertext tamper and replay
+rejection, scoped reassignment, role removal, preserved/idempotent legacy import,
+explicit idempotent history transfer to a verified replacement agent, routing
+metadata read/write authorization, and desktop/mobile viewport, draft, dropdown
+and dialog checks. `npm test` passes all 169 tests; typecheck, production build
+and the complete integration command exit successfully. Marketplace
+Firestore emulator regressions also pass. CI includes this integration job.
+Physical phone testing and production end-to-end testing are not claimed.
 
-No Firebase credentials or production data were used. Firestore emulator,
-phone/PWA, production end-to-end, recovery/enrollment and load tests have not
-passed or been claimed; the corresponding replacement functionality is absent.
+## Remaining release gates and threat limits
+
+- Provision and test the protected production messaging service and secrets;
+  no production server has been configured or enabled by this PR.
+- Independent security review of this complete integration, deployment and
+  migration. Upstream vodozemac has a published Least Authority audit:
+  https://matrix.org/media/Least%20Authority%20-%20Matrix%20vodozemac%20Final%20Audit%20Report.pdf
+  That report does not certify this SDK version or TreatStory's integration.
+- Measure approximately 100 concurrent active users, latency, failures and
+  Firestore/server usage. No capacity result has been measured here.
+- Verify physical Android/iOS/PWA/Safari and explicit seller/admin multi-device
+  acceptance scenarios; current multi-device behavioral coverage uses buyer
+  accounts plus separately assigned agent contexts in Chromium.
+- Account-root rotation through an authenticated continuity transition remains
+  unimplemented. Silent root reset is forbidden; per-message session rotation
+  and device revocation are implemented.
+- First activation of the new Matrix namespace is authenticated trust on first
+  use, not a cryptographic continuity proof from the previous RSA identity.
+  Served JavaScript/origin and Firebase routing administration remain trusted.
+  No malicious-origin resistance, retroactive erasure, or complete forward-
+  secrecy guarantee for retained history/recovery backups is claimed.
+- Corrupt local key/session stores are preserved and fail closed. Use an intact
+  approved device, a separate browser and saved recovery capability; do not
+  clear storage as an automatic repair.
+
+Keep the PR draft and both production flags off until these gates are satisfied.

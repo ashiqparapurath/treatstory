@@ -1,3 +1,10 @@
+# Design requirements and implementation mapping
+
+The following requirements are the design checklist. The Matrix implementation
+now supplies enrollment, recovery, revocation, assigned routing and history
+transfer; see [current implementation and remaining release gates](support-implementation-status.md).
+This checklist is not a statement that all production acceptance criteria passed.
+
 # TreatStory encrypted chat: multi-device requirements (all account roles)
 
 Status: **required architecture; NOT implemented by the existing device-key prototype. Keep replacement E2EE work in draft until these requirements pass.**

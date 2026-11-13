@@ -23,7 +23,7 @@ const BannerDialog = dynamic(() => import('@/components/admin/banner-dialog').th
 const CategoryList = dynamic(() => import('@/components/admin/category-list').then(m => m.CategoryList), { loading: () => <SectionSkeleton /> });
 const CategoryDialog = dynamic(() => import('@/components/admin/category-dialog').then(m => m.CategoryDialog), { loading: () => <SectionSkeleton /> });
 const PlatformSettings = dynamic(() => import('@/components/admin/platform-settings').then(m => m.PlatformSettings), { loading: () => <SectionSkeleton /> });
-const SupportInbox = dynamic(() => import('@/components/admin/support-inbox').then(m => m.SupportInbox), { loading: () => <SectionSkeleton /> });
+const SupportMatrixWorkspace = dynamic(() => import('@/components/support-matrix-workspace').then(m => m.SupportMatrixWorkspace), { loading: () => <SectionSkeleton /> });
 const ReviewModeration = dynamic(() => import('@/components/admin/review-moderation').then(m => m.ReviewModeration), { loading: () => <SectionSkeleton /> });
 import { LayoutDashboard, Store, ClipboardList, Package, ImageIcon, Tags, Settings, LogOut, ArrowUpRight, ShieldCheck, Headset, Star, Users } from 'lucide-react';
 
@@ -110,7 +110,7 @@ function AdminContent() {
         </div>
         {tab === 'overview' && <AdminOverview navigate={next => setTab(next === 'sellers' ? 'applications' : next as Tab)} />}
         {tab === 'orders' && <OrderManagement mode="admin" />}
-        {tab === 'support' && (process.env.NEXT_PUBLIC_ENCRYPTED_SUPPORT_ENABLED === 'true' ? <SupportInbox /> : <SupportLegacyInbox />)}
+        {tab === 'support' && (process.env.NEXT_PUBLIC_ENCRYPTED_SUPPORT_ENABLED === 'true' && process.env.NEXT_PUBLIC_SUPPORT_MATRIX_ENABLED === 'true' ? <SupportMatrixWorkspace team /> : <SupportLegacyInbox />)}
         {tab === 'reviews' && <ReviewModeration />}
         {tab === 'applications' && <SellerApplications />}
         {tab === 'sellers' && <SellerManagement />}

@@ -384,6 +384,14 @@ service cloud.firestore {
         (isSignedIn() && resource.data.ownerUid == request.auth.uid);
       allow create, update, delete: if false;
     }
+    // Matrix stores encrypted bodies on the messaging service. These documents
+    // contain routing metadata only; agent access requires a live role AND assignment.
+    match /support_matrix_conversations/{conversationId} {
+      allow get, list: if isSignedIn() &&
+        (resource.data.ownerUid == request.auth.uid ||
+          (isAdmin() && resource.data.agentUid == request.auth.uid));
+      allow create, update, delete: if false;
+    }
     match /support_limits/{limitId} {
       allow read, write: if false;
     }

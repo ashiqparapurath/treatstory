@@ -12,7 +12,7 @@ test('platform settings contains only unique support configuration and the exist
  assert.match(source,/doc\(db, 'settings', 'support'\)/);
 });
 test('configured support contact and notice appear on the customer support page', () => {
- const support=read('src/app/support/page.tsx');
+ const support=read('src/components/support-matrix-workspace.tsx');
  for(const name of ["doc(db, 'settings', 'support')",'supportSettings?.publicNotice','supportSettings?.contactEmail','mailto:','supportSettings.publicNotice']) assert.ok(support.includes(name),name);
  assert.match(support,/aria-label="Support contact information"/);
 });

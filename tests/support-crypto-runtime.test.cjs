@@ -43,22 +43,13 @@ test('registration schema rejects private factors, weak keys and inappropriate k
     assert.equal(schema.safeParse({ ...publicKey, ...changes }).success, false);
   }
 });
-test('admin GET returns the complete device discriminator without private local material', async () => {
-  const device = { publicKey: { kty: 'RSA', n: 'public-only' }, version: 2, deviceOnly: true, createdBy: 'admin' };
-  const db = { collection: name => ({ doc: id => ({ get: async () => ({
-    exists: name === 'roles_admin' || id === 'team_device', data: () => id === 'team_device' ? device : undefined,
-  }) }) }) };
+test('retired pilot never reads or rewrites key records, including when its old flag is enabled', async () => {
   const route = load('src/app/api/support-chat/route.ts', {
     process: { env: { NEXT_PUBLIC_ENCRYPTED_SUPPORT_ENABLED: 'true' } },
-    require: name => {
-      if (name === '@/lib/support-key-schema') return load('src/lib/support-key-schema.ts');
-      if (name === '@/lib/server/firebase-admin') return { verifiedUser: async () => ({ uid: 'admin', db }), safeResponse: error => { throw error; } };
-      if (name === '@/lib/server/request-body' || name === '@/lib/server/mail') return {};
-      if (name === 'firebase-admin/firestore') return { Timestamp: {} };
-      return require(name);
-    },
+    require: () => { throw Error('The retired endpoint must not load Firebase or mutate keys.'); },
   });
-  const response = await route.GET({});
-  assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { teamPublicKey: device.publicKey, teamDeviceKey: device, ownKey: null, teamKey: null });
+  assert.equal((await route.GET({})).status, 410);
+  assert.equal((await route.POST({})).status, 410);
+  const disabled = load('src/app/api/support-chat/route.ts', { process: { env: {} } });
+  assert.equal((await disabled.GET({})).status, 503);
 });

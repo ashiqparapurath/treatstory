@@ -15,7 +15,7 @@ test('native dropdown controls use the warm TreatStory input treatment',()=>{
 });
 test('open dropdown menus are custom TreatStory overlays, not native system pickers',()=>{
   const select=read('src/components/ui/select.tsx');
-  const support=read('src/app/support/page.tsx');
+  const support=read('src/components/support-matrix-workspace.tsx');
   const seller=read('src/app/become-a-seller/page.tsx');
   const address=read('src/components/default-delivery-address.tsx');
   assert.match(select,/rounded-\[14px\] border border-\[#e4dbd0\] bg-\[#fffdfa\]/);
@@ -31,7 +31,7 @@ test('open dropdown menus are custom TreatStory overlays, not native system pick
   }
 });
 test('support topic options preserve all server accepted category codes',()=>{
-  const support=read('src/app/support/page.tsx');
+  const support=read('src/components/support-matrix-workspace.tsx');
   for(const [value,label] of [
     ['order','An order or cancellation'],['delivery','Delivery or pickup'],
     ['payment','Payment'],['seller','A seller or product'],
@@ -39,8 +39,8 @@ test('support topic options preserve all server accepted category codes',()=>{
   ]) {
     assert.ok(support.includes('<SelectItem value="'+value+'">'+label+'</SelectItem>'));
   }
-  assert.match(support, /<Select value=\{category\} onValueChange=\{setCategory\} disabled=\{busy\}>/);
-  assert.match(support, /body:JSON\.stringify\(\{action:'create',category,encrypted,orderId\}\)/);
+  assert.match(support, /<Select value=\{category\}/);
+  assert.match(support, /action: 'create', requestId:/);
   assert.match(support, /<label htmlFor="support-topic"/);
   assert.match(support, /id="support-topic" aria-label="Support topic"/);
 });

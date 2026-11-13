@@ -5,10 +5,11 @@ const read=path=>fs.readFileSync(path,'utf8');
 
 test('customer support uses automatic local keys, no passphrase setup',()=>{
   const ui=read('src/app/support/page.tsx');
-  assert.match(ui,/useSupportEncryption\(false\)/);
+  assert.match(ui,/SupportMatrixWorkspace/);
   assert.doesNotMatch(ui,/support-passphrase|Your encryption key|Create an encryption passphrase/);
-  assert.match(ui,/Preparing secure messaging on this device/);
-  assert.match(ui,/original device|device where it was started/);
+  const client=read('src/lib/support-matrix/client.ts');
+  assert.match(client,/initRustCrypto/);
+  assert.match(client,/requestOwnUserVerification/);
 });
 
 test('customer private keys are non-extractable and kept in IndexedDB',()=>{
@@ -18,10 +19,10 @@ test('customer private keys are non-extractable and kept in IndexedDB',()=>{
   assert.match(key,/false,\['encrypt','decrypt'\]/);
   assert.match(key,/getRandomValues|RSA-OAEP/);
   assert.doesNotMatch(key,/exportKey\('jwk',pair\.privateKey\)/);
-  const hook=read('src/hooks/use-support-encryption.ts');
-  assert.match(hook,/createSupportDeviceKey/);
-  assert.match(hook,/registerUserDeviceKey/);
+  const client=read('src/lib/support-matrix/client.ts');
+  assert.match(client,/loadSupportDeviceKey/);
+  assert.doesNotMatch(client,/createSupportDeviceKey/);
   const api=read('src/app/api/support-chat/route.ts');
-  assert.match(api,/registerUserDeviceKey/);
-  assert.match(api,/deviceOnly:true/);
+  assert.match(api,/retired/);
+  assert.doesNotMatch(api,/tx\.create|tx\.set|store\.put/);
 });

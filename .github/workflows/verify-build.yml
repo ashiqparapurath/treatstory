@@ -41,3 +41,36 @@ jobs:
         run: npm run typecheck
       - name: Production build
         run: npm run build
+
+  encrypted-support:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Set up Java for Firebase emulators
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install test browser
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Prepare a private local test messaging server
+        run: |
+          python3 -m venv work/matrix-venv
+          work/matrix-venv/bin/pip install PyYAML==6.0.3
+          work/matrix-venv/bin/python scripts/support-matrix/local-server.py
+      - name: Build application and test stylesheet
+        run: npm run build
+      - name: Verify encrypted support with real Synapse, Firebase emulators and Chromium
+        env:
+          SUPPORT_MATRIX_TEST_CONFIG: work/support-matrix-server/test-config.json
+        run: npx --yes firebase-tools@14 emulators:exec --only auth,firestore --project demo-treatstory --config firebase.audit.json 'npm run test:support-matrix'
