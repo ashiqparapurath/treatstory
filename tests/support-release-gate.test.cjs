@@ -19,6 +19,7 @@ test('the admin inbox defaults to the working ticket responder and cannot activa
   const legacy=read('src/components/admin/support-legacy-inbox.tsx');
   assert.match(legacy,/\/api\/support/);
   assert.match(legacy,/Send reply/);
+  assert.match(legacy,/ticket\.encrypted!==true/);
 });
 
 test('unreviewed encrypted support API is disabled by default and Firestore rules remain unchanged',()=>{
