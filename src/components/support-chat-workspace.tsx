@@ -36,7 +36,7 @@ export function SupportChatWorkspace({tickets,title,backHref,backLabel,isLoading
     return ()=>{document.body.style.overflow=previous;window.visualViewport?.removeEventListener('resize',update);document.documentElement.style.removeProperty('--support-visible-height');};
   },[]);
   const sorted=[...tickets].sort((a,b)=>stamp(b)-stamp(a));
-  const visible=sorted.filter(t=>(statusFilter==='all'||t.status===statusFilter)&&[t.subject,t.category,t.orderId,t.ownerUid,t.lastPreview].some(value=>value?.toLowerCase().includes(filter.toLowerCase())));
+  const visible=sorted.filter(t=>(statusFilter==='all'||(statusFilter==='open'?t.status!=='closed':t.status===statusFilter))&&[t.subject,t.category,t.orderId,t.ownerUid,t.lastPreview].some(value=>value?.toLowerCase().includes(filter.toLowerCase())));
   const ticket=sorted.find(item=>item.id===selected)||null;
   useEffect(()=>{if(openTicketId&&tickets.some(item=>item.id===openTicketId)){setSelected(openTicketId);setCompose(false);}},[openTicketId,tickets]);
   function pick(id:string){setSelected(id);setCompose(false);}
