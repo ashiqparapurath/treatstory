@@ -26,10 +26,10 @@ services:
     image: matrixdotorg/synapse@sha256:c6b5dba477c41b22167e771174456364b7c9c83a4cb2d5d7ee1e530334c5cd06
     restart: unless-stopped
     environment:
-      SYNAPSE_SERVER_NAME: "\${MATRIX_SERVER_NAME:?set_MATRIX_SERVER_NAME_in_dot_env}"
+      SYNAPSE_SERVER_NAME: "${MATRIX_SERVER_NAME:?set_MATRIX_SERVER_NAME_in_dot_env}"
       SYNAPSE_REPORT_STATS: "no"
-      UID: "\${MATRIX_UID:-991}"
-      GID: "\${MATRIX_GID:-991}"
+      UID: "${MATRIX_UID:-991}"
+      GID: "${MATRIX_GID:-991}"
     depends_on:
       postgres:
         condition: service_healthy

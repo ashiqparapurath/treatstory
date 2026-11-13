@@ -78,7 +78,7 @@ jobs:
           rm -rf infra/support-matrix/private infra/support-matrix/.env
       - name: Build application and test stylesheet
         run: npm run build
-      - name: Verify encrypted support with real Synapse, Firebase emulators and Chromium
+      - name: Verify encrypted support and simulated Chromium, Firefox and WebKit browsers
         env:
           SUPPORT_MATRIX_TEST_CONFIG: work/support-matrix-server/test-config.json
         run: npx --yes firebase-tools@14 emulators:exec --only auth,firestore --project demo-treatstory --config firebase.audit.json 'npm run test:support-matrix'
