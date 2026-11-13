@@ -6,8 +6,8 @@ const read = path => fs.readFileSync(path, 'utf8');
 test('administrator inbox activates device keys without showing a team passphrase', () => {
   const inbox = read('src/components/admin/support-inbox.tsx');
   const hook = read('src/hooks/use-support-encryption.ts');
-  assert.match(inbox, /Secure support inbox/);
-  assert.match(inbox, /administrator device is ready/);
+  assert.match(inbox, /SupportChatWorkspace/);
+  assert.match(inbox, /Secure messaging ready on this browser/);
   assert.match(hook, /registerTeamDeviceKey/);
   assert.match(hook, /createSupportDeviceKey\(isTeam\?'team:'\+uid:uid\)/);
   assert.doesNotMatch(inbox, /Create team encryption passphrase|Unlock existing team key|Generate strong passphrase/);
@@ -16,7 +16,7 @@ test('administrator inbox activates device keys without showing a team passphras
 
 test('older encrypted team conversations retain optional legacy unlock only', () => {
   const inbox = read('src/components/admin/support-inbox.tsx');
-  assert.match(inbox, /Access older encrypted conversations/);
+  assert.match(inbox, /Older encrypted chats/);
   assert.match(inbox, /legacyConversations\.length>0/);
   assert.match(inbox, /crypto\.unlockLegacy/);
   const hook = read('src/hooks/use-support-encryption.ts');
