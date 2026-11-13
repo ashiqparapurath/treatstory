@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useSupportEncryption } from '@/hooks/use-support-encryption';
 import { encryptSupportMessage } from '@/lib/support-encryption';
 import { SupportChatThread, type SupportChatTicket } from '@/components/support-chat-thread';
-import { LockKeyhole, LifeBuoy, Info, Mail } from 'lucide-react';
+import { LifeBuoy, Info, Mail } from 'lucide-react';
 
 
 export default function SupportPage(){
@@ -18,7 +18,6 @@ export default function SupportPage(){
   const crypto=useSupportEncryption(false);
   const supportSettingsRef=useMemoFirebase(()=>db?doc(db, 'settings', 'support'):null,[db]);
   const {data:supportSettings}=useDoc<{contactEmail?:string;publicNotice?:string}>(supportSettingsRef);
-  const [passphrase,setPassphrase]=useState('');
   const [category,setCategory]=useState('order');
   const [message,setMessage]=useState('');const [orderId,setOrderId]=useState('');
   const [busy,setBusy]=useState(false);const [error,setError]=useState('');
@@ -45,17 +44,8 @@ export default function SupportPage(){
     {!user&&!isUserLoading?<Link href="/login" className="editorial-button mt-7">Sign in to chat with support</Link>:
     <div className="mt-8 grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
       <aside className="space-y-5">
-        <div className="rounded-2xl border bg-white p-5">
-          <p className="flex items-center gap-2 text-sm font-semibold"><LockKeyhole className="h-4 w-4"/> Your encryption key</p>
-          <p className="mt-2 text-xs leading-5 text-muted-foreground">Your private key is encrypted with a passphrase that only you know. It is never sent to our server unlocked. Losing this passphrase means losing access to encrypted history; TreatStory cannot reset it.</p>
-          {!crypto.keys?<p className="mt-4 text-sm">Loading secure chat…</p>:!crypto.keys.teamPublicKey?<p className="mt-4 text-sm text-amber-800">Secure support chat is being set up by the support team. Please try again later.</p>:
-          !crypto.privateKey?<form className="mt-4 space-y-3" onSubmit={e=>{e.preventDefault();void (crypto.keys?.ownKey?crypto.unlock(passphrase):crypto.setup(passphrase));setPassphrase('');}}>
-            <label className="block text-xs font-semibold" htmlFor="support-passphrase">{crypto.keys.ownKey?'Enter your encryption passphrase':'Create an encryption passphrase (12+ characters)'}</label>
-            <Input id="support-passphrase" type="password" autoComplete="off" required minLength={crypto.keys.ownKey?1:12} value={passphrase} onChange={e=>setPassphrase(e.target.value)}/>
-            <Button type="submit" disabled={crypto.busy} className="w-full">{crypto.keys.ownKey?'Unlock conversations':'Set up secure chat'}</Button>
-          </form>:<p className="mt-3 text-sm text-emerald-700">Encryption unlocked for this session.</p>}
-          {crypto.error&&<p role="alert" className="mt-3 text-xs text-red-700">{crypto.error}</p>}
-        </div>
+        {!crypto.keys?.teamPublicKey?<p className="rounded-2xl border bg-white p-4 text-sm text-muted-foreground">Support chat is temporarily unavailable while the support team completes setup.</p>:
+          !crypto.privateKey?<p role={crypto.error?'alert':undefined} className="rounded-2xl border bg-white p-4 text-sm text-muted-foreground">{crypto.error||'Preparing secure messaging on this device…'}</p>:null}
         {crypto.privateKey&&crypto.keys?.teamPublicKey&&crypto.keys.ownKey&&<form onSubmit={start} className="space-y-4 rounded-2xl border bg-white p-5">
           <h2 className="text-lg font-semibold">Start a conversation</h2>
           <label htmlFor="support-topic" className="block text-xs font-semibold">Topic</label>
@@ -82,7 +72,7 @@ export default function SupportPage(){
         [...data].sort((a,b)=>(b.updatedAt?.toDate?.()?.getTime()||0)-(a.updatedAt?.toDate?.()?.getTime()||0)).map(ticket=><article key={ticket.id} className="rounded-2xl border bg-white p-4 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{ticket.encrypted?'Secure conversation':ticket.subject||'Support request'}</h3><span className="rounded-full bg-[#f4eee5] px-3 py-1 text-xs capitalize">{ticket.status}</span></div>
           <p className="mt-1 text-xs capitalize text-muted-foreground">{ticket.category}{ticket.orderId?' · Order: '+ticket.orderId:''}</p>
-          {ticket.encrypted?(crypto.privateKey?<SupportChatThread ticket={ticket} privateKey={crypto.privateKey} role="owner"/>:<p className="mt-3 text-sm text-muted-foreground">Unlock your encryption key to read and reply.</p>):
+          {ticket.encrypted?(crypto.privateKey?<SupportChatThread ticket={ticket} privateKey={crypto.privateKey} role="owner"/>:<p className="mt-3 text-sm text-muted-foreground">This conversation can only be opened from the device where it was started. Your messages cannot be recovered if this device's browser data is erased.</p>):
           <div className="mt-4 rounded-xl bg-[#f8f6f2] p-4 text-sm"><p className="mb-2 text-xs font-semibold text-amber-800">Legacy ticket — not end-to-end encrypted</p><p className="whitespace-pre-wrap">{ticket.message}</p>{ticket.response&&<p className="mt-3 border-t pt-3"><strong>Team response:</strong> {ticket.response}</p>}</div>}
         </article>)}
       </section>
