@@ -1,8 +1,8 @@
 'use client';
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { collection, limit, query, where } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { collection, doc, limit, query, where } from 'firebase/firestore';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,12 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useSupportEncryption } from '@/hooks/use-support-encryption';
 import { encryptSupportMessage } from '@/lib/support-encryption';
 import { SupportChatThread, type SupportChatTicket } from '@/components/support-chat-thread';
-import { LockKeyhole, LifeBuoy } from 'lucide-react';
+import { LockKeyhole, LifeBuoy, Info, Mail } from 'lucide-react';
 
-const categories=[['order','Orders or cancellations'],['delivery','Delivery or pickup'],['payment','Payments'],['seller','Seller or product'],['account','My account'],['other','Other questions']] as const;
+
 export default function SupportPage(){
   const {user,isUserLoading}=useUser();const db=useFirestore();
   const crypto=useSupportEncryption(false);
+  const supportSettingsRef=useMemoFirebase(()=>db?doc(db, 'settings', 'support'):null,[db]);
+  const {data:supportSettings}=useDoc<{contactEmail?:string;publicNotice?:string}>(supportSettingsRef);
   const [passphrase,setPassphrase]=useState('');
   const [category,setCategory]=useState('order');
   const [message,setMessage]=useState('');const [orderId,setOrderId]=useState('');
@@ -27,7 +29,7 @@ export default function SupportPage(){
     setBusy(true);setError('');
     try{
       const encrypted=await encryptSupportMessage(message,crypto.keys.ownKey.publicKey,crypto.keys.teamPublicKey);
-      const res=await fetch('/api/support-chat',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'create',category,message:undefined,encrypted,orderId})});
+      const res=await fetch('/api/support-chat',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'create',category,encrypted,orderId})});
       const result=await res.json().catch(()=>({})) as {error?:string};
       if(!res.ok)throw new Error(result.error||'Could not start chat.');
       setMessage('');setOrderId('');
@@ -36,6 +38,10 @@ export default function SupportPage(){
   }
   return <div className="min-h-screen bg-[#f8f6f2]"><Header/><main className="section-shell pb-24 pt-12">
     <div className="flex items-start gap-3"><LifeBuoy className="mt-1 h-8 w-8 text-[#a68a64]"/><div><p className="eyebrow text-[#a68a64]">We are here to help</p><h1 className="mt-3 text-3xl font-medium sm:text-4xl">Private support chat</h1><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Message the TreatStory team about orders, deliveries or your account. New chats use end-to-end encryption.</p></div></div>
+    {(supportSettings?.publicNotice||supportSettings?.contactEmail)&&<aside aria-label="Support contact information" className="mt-6 max-w-3xl space-y-3 rounded-2xl border bg-white p-4">
+      {supportSettings.publicNotice&&<p className="flex items-start gap-2 text-sm"><Info className="h-4 w-4 shrink-0"/><span className="whitespace-pre-wrap">{supportSettings.publicNotice}</span></p>}
+      {supportSettings.contactEmail&&<a className="inline-flex items-center gap-2 text-sm underline" href={`mailto:${encodeURIComponent(supportSettings.contactEmail)}`}><Mail className="h-4 w-4"/>Email support: {supportSettings.contactEmail}</a>}
+    </aside>}
     {!user&&!isUserLoading?<Link href="/login" className="editorial-button mt-7">Sign in to chat with support</Link>:
     <div className="mt-8 grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
       <aside className="space-y-5">
@@ -53,7 +59,17 @@ export default function SupportPage(){
         {crypto.privateKey&&crypto.keys?.teamPublicKey&&crypto.keys.ownKey&&<form onSubmit={start} className="space-y-4 rounded-2xl border bg-white p-5">
           <h2 className="text-lg font-semibold">Start a conversation</h2>
           <label className="block text-xs font-semibold" htmlFor="support-topic">Topic</label>
-          <Select value={category} onValueChange={setCategory}><SelectTrigger id="support-topic" className="h-12"><SelectValue/></SelectTrigger><SelectContent>{categories.map(([id,title])=><SelectItem key={id} value={id}>{title}</SelectItem>)}</SelectContent></Select>
+          <Select value={category} onValueChange={setCategory} disabled={busy}>
+            <SelectTrigger id="support-topic" aria-label="Support topic" className="h-12"><SelectValue/></SelectTrigger>
+            <SelectContent position="popper" sideOffset={6} className="max-h-[min(22rem,65dvh)]">
+              <SelectItem value="order">An order or cancellation</SelectItem>
+              <SelectItem value="delivery">Delivery or pickup</SelectItem>
+              <SelectItem value="payment">Payment</SelectItem>
+              <SelectItem value="seller">A seller or product</SelectItem>
+              <SelectItem value="account">My account</SelectItem>
+              <SelectItem value="other">Something else</SelectItem>
+            </SelectContent>
+          </Select>
           <label className="block space-y-2 text-xs font-semibold">Order ID (optional)<Input value={orderId} maxLength={160} onChange={e=>setOrderId(e.target.value)}/></label>
           <label className="block space-y-2 text-xs font-semibold">Your message<textarea className="flex min-h-32 w-full rounded-xl border bg-white p-3 text-sm" value={message} minLength={1} maxLength={2000} required onChange={e=>setMessage(e.target.value)} placeholder="Describe what happened and how we can help…"/></label>
           <Button type="submit" className="w-full" disabled={busy||!message.trim()}>{busy?'Starting…':'Start secure chat'}</Button>
