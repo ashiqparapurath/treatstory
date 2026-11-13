@@ -1,0 +1,78 @@
+name: treatstory-support-matrix
+
+# Only the TLS gateway is published. Synapse and PostgreSQL have no host ports.
+# This is a single-host baseline, not an HA/SLA or independently audited system.
+services:
+  postgres:
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: synapse
+      POSTGRES_DB: synapse
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - matrix_private
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U synapse -d synapse"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  synapse:
+    image: matrixdotorg/synapse@sha256:c6b5dba477c41b22167e771174456364b7c9c83a4cb2d5d7ee1e530334c5cd06
+    restart: unless-stopped
+    environment:
+      SYNAPSE_SERVER_NAME: "\${MATRIX_SERVER_NAME:?set_MATRIX_SERVER_NAME_in_dot_env}"
+      SYNAPSE_REPORT_STATS: "no"
+      UID: "\${MATRIX_UID:-991}"
+      GID: "\${MATRIX_GID:-991}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./private/synapse:/data
+      - ./bootstrap_service.py:/opt/treatstory/bootstrap_service.py:ro
+    networks:
+      - matrix_private
+    # Intentionally no ports, expose or federation listener.
+
+  gateway:
+    image: nginx:1.28.0-alpine
+    restart: unless-stopped
+    depends_on:
+      - synapse
+    ports:
+      - "443:443"
+    volumes:
+      - ./private/gateway.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./private/tls:/etc/nginx/tls:ro
+    networks:
+      - matrix_private
+      - matrix_edge
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+      - /var/cache/nginx
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+volumes:
+  postgres_data:
+
+networks:
+  matrix_private:
+    internal: true
+  matrix_edge: {}
+
+secrets:
+  postgres_password:
+    file: ./private/secrets/postgres_password
