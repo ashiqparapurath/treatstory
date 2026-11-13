@@ -1,7 +1,7 @@
 # TreatStory SEO rollout checklist
 
 ## Technical changes implemented in this branch
-- Public `/robots.txt` and `/sitemap.xml` routes. Sitemap includes indexable marketing pages, active storefronts, published marketplace products and public legacy products (bounded at 1,000 records per collection pending pagination).
+- Public `/robots.txt` and `/sitemap.xml` routes. Sitemap includes indexable marketing pages, active storefronts, published marketplace products and public legacy products (paginated in 500-document batches, capped at 15,000 records per collection).
 - Unique canonical SEO metadata for the homepage, product collection, new arrivals, brand story, and seller application page.
 - Server-rendered public product and seller storefront content, with matching metadata and schema.org `Product`/`Store` JSON-LD. Product offers are only emitted when a public positive price is available; fake ratings, reviews and availability claims are not added.
 - `WebSite` and `Organization` schema, without invented contact addresses, social URLs or Google verification tokens.
@@ -18,8 +18,15 @@
 8. Compare search impressions, clicks, indexing coverage, and sales before and after release. Rankings and traffic increases are **not guaranteed**; Google indexing takes time and depends on site quality, authority and competition.
 
 ## Known limitations
-- Current dynamic sitemap fetches at most 1,000 records from each collection; paginate or split sitemaps when inventory grows.
+- Current dynamic sitemap paginates up to 15,000 records from each of the three public collections, keeping the total under the 50,000-URL Google sitemap limit. Split sitemaps with an index if inventory exceeds this cap; verify the sitemap doesn't time out under larger catalogs.
 - A server Firebase error can lead to generic metadata or a static-only sitemap instead of live product details. Monitor errors and ensure server credentials are configured, never expose service accounts to browser bundles.
 - Existing marketplace search/filter UI is primarily client-rendered; Google can reliably crawl server-rendered canonical product/store URLs, but a deeper server-rendered category/navigation experience remains a content project.
 - Public stores currently use `/shop/{sellerId}` URLs. Descriptive slug URLs are a separate compatibility/migration task; don't change canonical URLs without redirects.
 - The security-sensitive encrypted-support draft features in PR #15 are still not production-ready; SEO build checks are not approval to merge that encryption work.
+
+## Verification status (2026-11-13)
+
+- Repository SEO code is in draft PR #15 and is not deployed to production.
+- External requests to `https://treatstory.vercel.app`, `/robots.txt`, and `/sitemap.xml` could not be completed from the audit environment. **This does not prove the site is down or that Google cannot index it**; use a normal browser, Search Console URL Inspection and Vercel domain/access settings for a definitive live check.
+- Google Search Console property verification, sitemap submission and indexing reports require connected account access. No domain verification or sitemap submission is claimed in this PR.
+- Do not merge PR #15 until the encrypted support multi-device work and security review are complete.
