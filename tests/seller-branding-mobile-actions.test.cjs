@@ -14,7 +14,7 @@ test('seller logo is edited from the profile avatar without a large file chooser
 });
 
 test('mobile product image shows wishlist below share without duplicate mobile controls', () => {
-  const page = fs.readFileSync('src/app/product/[id]/page.tsx', 'utf8');
+  const page = fs.readFileSync('src/components/product-detail-client.tsx', 'utf8');
   const start = page.indexOf('absolute right-3 top-3 z-10 flex flex-col items-center gap-2 sm:hidden');
   assert.ok(start >= 0, 'mobile image overlay exists');
   const overlay = page.slice(start, page.indexOf('</div>', start));
@@ -35,7 +35,7 @@ test('browser tab uses original favicon and PWA artwork stays separate', () => {
 });
 
 test('public seller card gives name its own responsive row and keeps status / share actions separate', () => {
-  const page = fs.readFileSync('src/app/shop/[id]/page.tsx', 'utf8');
+  const page = fs.readFileSync('src/components/seller-store-client.tsx', 'utf8');
   assert.match(page, /mt-7 min-w-0 rounded-3xl border/);
   assert.match(page, /mt-5 flex min-w-0 items-center gap-3 sm:gap-5/);
   assert.match(page, /h1 className="min-w-0 flex-1 break-words text-\[clamp\(/);
@@ -46,7 +46,7 @@ test('public seller card gives name its own responsive row and keeps status / sh
   const share = page.indexOf('<StoreShareButton');
   assert.ok(heading >= 0 && heading < disclaimer && disclaimer < badge && badge < share);
   assert.doesNotMatch(page, /flex flex-wrap items-start justify-between gap-4/);
-  assert.match(page, /<StoreShareButton sellerId=\{id\} storeName=\{seller.businessName\}/);
+  assert.match(page, /<StoreShareButton sellerId=\{id\} storeName=\{visibleSeller!\.businessName\}/);
 });
 
 test('seller settings exposes public storefront link and sharing without saving store settings', () => {

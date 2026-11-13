@@ -1,5 +1,5 @@
 import type {Metadata, Viewport} from 'next';
-import{siteSocialMetadata}from'@/lib/social-metadata';
+import{siteSocialMetadata, siteOrigin}from'@/lib/social-metadata';
 import { pwaStartupImages } from '@/lib/pwa-startup-images';
 import branding from '@/lib/pwa-branding.json';
 import { pwaIcons } from '@/lib/pwa-icons';
@@ -12,6 +12,16 @@ import { CartProvider } from '@/context/cart-context';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
+const origin = siteOrigin();
+const searchIdentity = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'WebSite', '@id': origin + '/#website', url: origin + '/', name: 'TreatStory', inLanguage: 'en-IN',
+      description: 'Marketplace for home bakes, handmade gifts, art and crafts from independent creators in Kerala.' },
+    { '@type': 'Organization', '@id': origin + '/#organization', name: 'TreatStory', url: origin + '/',
+      description: 'Discover and support home bakers and handmade creators across Kerala.' },
+  ],
+};
 
 export const metadata: Metadata = {
   ...siteSocialMetadata(),
@@ -39,6 +49,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <head>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(searchIdentity).replace(/</g, '\\u003c') }} />
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="manifest" href="/manifest.json" crossOrigin="use-credentials" />
       </head>

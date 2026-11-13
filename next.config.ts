@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
     {key:'Referrer-Policy',value:'strict-origin-when-cross-origin'},
     {key:'Permissions-Policy',value:'camera=(), microphone=(), geolocation=(self)'},
     {key:'Content-Security-Policy',value:"frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'"},
+    // Avoid Google indexing temporary Vercel preview deployments as duplicate sites.
+    ...(process.env.VERCEL_ENV === 'preview' ? [{key:'X-Robots-Tag',value:'noindex, nofollow'}] : []),
   ]}];},
   images: {
     remotePatterns: [

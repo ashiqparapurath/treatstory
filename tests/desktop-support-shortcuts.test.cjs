@@ -20,9 +20,9 @@ test('desktop seller workspace has support shortcut without modifying mobile sec
   assert.match(dashboard,/type Section = 'overview' \| 'products' \| 'orders' \| 'store'/);
 });
 
-test('buyer and seller continue using the same support ticket page', () => {
+test('buyer and seller use the same encrypted support chat page', () => {
   const support = fs.readFileSync('src/app/support/page.tsx', 'utf8');
-  assert.match(support,/New support request/);
-  assert.match(support,/Your support requests/);
-  assert.match(support,/fetch\('\/api\/support'/);
+  assert.match(support,/Start a conversation/);
+  assert.match(support,/SupportChatWorkspace/);
+  assert.match(support,/fetch\('\/api\/support-chat'/);
 });

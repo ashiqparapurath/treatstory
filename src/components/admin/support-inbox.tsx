@@ -1,43 +1,49 @@
 'use client';
-import { ActionError } from '@/lib/user-notices';
-import { errorToast } from '@/lib/user-notices';
-
 import { useState } from 'react';
 import { collection, limit, orderBy, query } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { useToast } from '@/hooks/use-toast';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useSupportEncryption } from '@/hooks/use-support-encryption';
+import { SupportChatThread, type SupportChatTicket } from '@/components/support-chat-thread';
+import { SupportChatWorkspace } from '@/components/support-chat-workspace';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { LifeBuoy } from 'lucide-react';
-
-type Ticket = { id:string;ownerUid:string;subject:string;category:string;orderId:string;
-  message:string;status:'open'|'responded'|'closed';response?:string;createdAt?:{toDate?:()=>Date} };
+import { Input } from '@/components/ui/input';
 
 export function SupportInbox(){
   const db=useFirestore();
-  const {user}=useUser();
-  const {toast}=useToast();
-  const [busy,setBusy]=useState<string|null>(null);
-  const [answers,setAnswers]=useState<Record<string,string>>({});
+  const crypto=useSupportEncryption(true);
+  const [showLegacy,setShowLegacy]=useState(false);
+  const [legacyPassphrase,setLegacyPassphrase]=useState('');
   const ref=useMemoFirebase(()=>db?query(collection(db,'support_tickets'),orderBy('createdAt','desc'),limit(100)):null,[db]);
-  const {data,error,isLoading,retry}=useCollection<Ticket>(ref);
-  async function change(ticketId:string,action:'reply'|'close'){
-    if(!user||busy)return;setBusy(ticketId);
-    try{
-      const response=await fetch('/api/support',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await user.getIdToken()}`},
-        body:JSON.stringify({action,ticketId,...(action==='reply'?{message:answers[ticketId]?.trim()}: {})})});
-      const body=await response.json().catch(()=>({})) as {error?:string};
-      if(!response.ok)throw new ActionError(body.error||'Unable to update the ticket.',response.status);
-      toast({title:action==='close'?'Support ticket closed':'Reply sent to customer'});
-      setAnswers(p=>({...p,[ticketId]:''}));
-    }catch(error){toast(errorToast(error, 'support'));}
-    finally{setBusy(null);}
-  }
-  return <section className="space-y-5"><div><p className="eyebrow text-[#a68a64]">Customer care</p><h2 className="mt-2 text-2xl font-semibold">Support inbox</h2><p className="mt-2 text-sm text-muted-foreground">Only verified administrators can read and respond to customer requests. Up to the most recent 100 tickets are shown.</p></div>
-    {isLoading?<div className="h-36 animate-pulse rounded-2xl bg-[#eee8df]"/>:
-    error?<div className="rounded-xl border bg-white p-5"><p role="alert" className="text-sm">Support inbox is unavailable. Check admin permissions.</p><Button className="mt-4" variant="outline" onClick={retry}>Retry</Button></div>:
-    !data?.length?<div className="rounded-2xl border bg-white p-10 text-center"><LifeBuoy className="mx-auto h-8 w-8 text-[#a68a64]"/><p className="mt-4 text-sm">No support tickets yet.</p></div>:
-    <div className="space-y-4">{data.map(ticket=><article key={ticket.id} className="rounded-2xl border bg-white p-5 sm:p-7"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-lg font-semibold">{ticket.subject}</h3><p className="mt-1 text-xs capitalize text-muted-foreground">{ticket.category} · {ticket.createdAt?.toDate?.()?.toLocaleString('en-IN')||'Recently'}</p></div><span className="rounded-full bg-[#f4efe7] px-3 py-1 text-xs capitalize">{ticket.status}</span></div><p className="mt-4 whitespace-pre-wrap text-sm leading-6">{ticket.message}</p><p className="mt-4 break-all text-xs text-muted-foreground">Customer UID: {ticket.ownerUid}{ticket.orderId? ` · Order: ${ticket.orderId}`:''}</p>{ticket.response&&<div className="mt-4 rounded-xl bg-[#f7f5f0] p-4 text-sm"><strong>Latest response</strong><p className="mt-2 whitespace-pre-wrap">{ticket.response}</p></div>}
-      {ticket.status!=='closed'&&<div className="mt-5 space-y-3 border-t pt-5"><label className="block text-xs font-semibold">Reply to customer<Textarea rows={3} maxLength={2000} className="mt-2" placeholder="Write a clear response to this request." value={answers[ticket.id]||''} onChange={e=>setAnswers(p=>({...p,[ticket.id]:e.target.value}))}/></label><div className="flex flex-wrap gap-2"><Button disabled={busy!==null||(answers[ticket.id]?.trim().length||0)<5} onClick={()=>void change(ticket.id,'reply')}>{busy===ticket.id?'Saving…':'Send reply'}</Button><Button variant="outline" disabled={busy!==null} onClick={()=>void change(ticket.id,'close')}>Close ticket</Button></div></div>}</article>)}</div>}
-  </section>;
+  const {data,error,isLoading}=useCollection<SupportChatTicket>(ref);
+  const legacyConversations=(data??[]).filter(item=>item.encrypted&&item.teamKeyVersion!==2);
+  const notice=<div className="flex flex-wrap items-center justify-between gap-2">
+    <p role={crypto.error?'alert':undefined} className={crypto.error?'text-red-700':''}>
+      {crypto.error||(!crypto.keys?'Preparing secure messaging…':crypto.privateKey?'Secure messaging ready on this browser.':'Secure messaging is not available on this device.')}
+    </p>
+    {legacyConversations.length>0&&crypto.keys?.teamKey&&<div className="flex flex-wrap items-center gap-2">
+      <Button type="button" variant="outline" size="sm" className="h-8" onClick={()=>setShowLegacy(v=>!v)}>{showLegacy?'Hide legacy unlock':'Older encrypted chats'}</Button>
+      {showLegacy&&(crypto.legacyPrivateKey?<span className="text-xs text-emerald-700">Older chats unlocked</span>:
+      <form className="flex items-center gap-2" onSubmit={e=>{e.preventDefault();void crypto.unlockLegacy(legacyPassphrase);setLegacyPassphrase('');}}>
+        <label htmlFor="legacy-support-passphrase" className="sr-only">Previous team passphrase</label>
+        <Input id="legacy-support-passphrase" type="password" autoComplete="off" value={legacyPassphrase} onChange={e=>setLegacyPassphrase(e.target.value)} placeholder="Previous team passphrase" className="h-9 w-48" required/>
+        <Button size="sm" type="submit" disabled={crypto.busy||!legacyPassphrase}>Unlock</Button>
+      </form>)}
+    </div>}
+  </div>;
+  return <SupportChatWorkspace title="Customer care inbox" backHref="/admin?tab=overview" backLabel="Back to admin dashboard"
+    tickets={data??[]} isLoading={isLoading} error={!!error} topNotice={notice}
+    renderConversation={ticket=>{
+      if(!ticket.encrypted)return <div className="h-full overflow-y-auto p-5 sm:p-10"><div className="mx-auto max-w-3xl rounded-2xl border bg-white p-6">
+        <p className="mb-3 text-xs font-semibold text-amber-800">Legacy unencrypted ticket · view only</p>
+        <p className="mb-3 text-xs text-muted-foreground">Customer: {ticket.ownerUid}</p>
+        <p className="whitespace-pre-wrap text-sm leading-6">{ticket.message}</p>
+        {ticket.response&&<p className="mt-5 border-t pt-5 text-sm"><strong>Previous response:</strong> {ticket.response}</p>}
+      </div></div>;
+      const old=ticket.teamKeyVersion!==2;
+      const key=old?crypto.legacyPrivateKey:crypto.privateKey;
+      return key?<SupportChatThread ticket={ticket} privateKey={key} role="team"/>:
+        <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
+          {old?'This older conversation requires the previous team passphrase. Choose “Older encrypted chats” below.':'This conversation requires the authorized administrator device. Automatic multi-device enrollment is not yet available.'}
+        </div>;
+    }}/>;
 }
