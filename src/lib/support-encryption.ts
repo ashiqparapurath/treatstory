@@ -17,7 +17,7 @@ async function passwordKey(passphrase: string, salt: Uint8Array) {
 
 export async function generateSupportKey(passphrase: string): Promise<LockedSupportKey> {
   if (passphrase.length < 12) throw new Error('Choose an encryption passphrase of at least 12 characters.');
-  const pair = await crypto.subtle.generateKey({name:'RSA-OAEP',modulusLength:3072,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['encrypt','decrypt']);
+  const pair = await crypto.subtle.generateKey({name:'RSA-OAEP',modulusLength:3072,publicExponent:new Uint8Array([1,0,1]) as BufferSource,hash:'SHA-256'},true,['encrypt','decrypt']);
   const publicKey = await crypto.subtle.exportKey('jwk',pair.publicKey);
   const privateKey = await crypto.subtle.exportKey('jwk',pair.privateKey);
   const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -49,7 +49,7 @@ export async function encryptSupportMessage(message: string, ownerPublic: JsonWe
   const [cipher,ownerKey,teamKey] = await Promise.all([
     crypto.subtle.encrypt({name:'AES-GCM',iv:iv as BufferSource},aesKey,encoder.encode(message.trim()) as BufferSource),
     importPublic(ownerPublic).then(key => crypto.subtle.encrypt({name:'RSA-OAEP'},key,secret as BufferSource)),
-    importPublic(teamPublic).then(key => crypto.subtle.encrypt({name:'RSA-OAEP'},key,secret)),
+    importPublic(teamPublic).then(key => crypto.subtle.encrypt({name:'RSA-OAEP'},key,secret as BufferSource)),
   ]);
   return {ciphertext:b64(bytes(cipher)),iv:b64(iv),ownerKey:b64(bytes(ownerKey)),teamKey:b64(bytes(teamKey)),version:1};
 }
