@@ -1,4 +1,5 @@
 import { readJsonBody } from '@/lib/server/request-body';
+import { queueNotification } from '@/lib/server/mail';
 import { verifiedUser, ApiError, safeResponse } from '@/lib/server/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { z } from 'zod';
@@ -104,6 +105,11 @@ export async function POST(request:NextRequest){
         if(data.action!=='send')throw new ApiError(400,'Invalid action.');
         tx.create(ticketRef.collection('messages').doc(),{...data.encrypted,senderUid:uid,createdAt:now});
         tx.update(ticketRef,{status:admin?'responded':'open',updatedAt:now,lastSenderUid:uid});
+        if(admin)queueNotification(tx,db,ticketData.ownerUid,{
+          template:'support_reply',title:'New encrypted support reply',
+          message:'TreatStory support sent you a private message. Unlock your support chat to read it.',
+          kind:'support',href:'/support',orderId:ticketData.orderId||'',createdAt:now,read:false,
+        });
       }
     });
     return Response.json({ok:true});
