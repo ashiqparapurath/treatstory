@@ -14,7 +14,7 @@ test('seller logo is edited from the profile avatar without a large file chooser
 });
 
 test('mobile product image shows wishlist below share without duplicate mobile controls', () => {
-  const page = fs.readFileSync('src/app/product/[id]/page.tsx', 'utf8');
+  const page = fs.readFileSync('src/components/product-detail-client.tsx', 'utf8');
   const start = page.indexOf('absolute right-3 top-3 z-10 flex flex-col items-center gap-2 sm:hidden');
   assert.ok(start >= 0, 'mobile image overlay exists');
   const overlay = page.slice(start, page.indexOf('</div>', start));
