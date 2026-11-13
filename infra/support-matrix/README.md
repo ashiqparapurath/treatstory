@@ -4,7 +4,9 @@
 
 This single-host stack runs PostgreSQL, Synapse, and a TLS-terminating Nginx
 gateway. Only TCP 443 is published. Synapse and PostgreSQL live on an internal
-Docker network without host-published ports. Every gateway request needs a
+Docker network without host-published ports. PostgreSQL is initialized with
+UTF-8 encoding and C collation, as required by Synapse; this only applies to a
+new database and must not be used to overwrite an existing cluster. Every gateway request needs a
 server-only high-entropy header secret. All browser traffic must go through the
 Firebase-authenticated TreatStory Next.js API, never directly to Synapse.
 
