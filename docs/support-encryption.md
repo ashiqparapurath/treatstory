@@ -3,8 +3,9 @@
 New TreatStory support conversations use browser-side hybrid encryption.
 
 - Each buyer or seller creates an RSA-OAEP 3072-bit key pair in the browser. The private JWK is encrypted before upload using a PBKDF2-SHA-256 (310,000 iterations) derived AES-256-GCM key and a user-chosen passphrase.
-- One authorized administrator initializes a shared support-team key. Its private JWK is encrypted with a separate support-team passphrase. Only administrators may download that encrypted JWK. Agents must receive the passphrase outside TreatStory through an approved secure channel.
+- One authorized administrator initializes a shared support-team key. The admin screen can generate a 32-character passphrase (192 bits of entropy) locally with the browser's cryptographic random number generator; the admin must save it in a secure password manager and confirm that before activation. Alternatively, the admin can enter their own strong passphrase. Its private JWK is encrypted with that separate support-team passphrase. Only administrators may download that encrypted JWK. Agents must receive the passphrase outside TreatStory through an approved secure channel.
 - Each message gets a fresh 256-bit AES-GCM content key and a fresh 96-bit nonce. The content key is wrapped separately for the customer and support team with RSA-OAEP-SHA-256. Firestore stores ciphertext, wrapped keys, sender UID and timestamps, never new message plaintext.
+- Do **not** set the team passphrase as a Vercel environment variable or put it into server-side configuration: a server-accessible secret would defeat the intended end-to-end encryption boundary.
 - A user must unlock their key in each new page session. The passphrase is not stored in the browser or sent to the server. Admins need the team passphrase.
 - The team public key must be initialized before users can create chats. Only authenticated owners and administrators can read ticket message documents; all writes are authorized server-side. The server stores ciphertext only.
 
