@@ -5,7 +5,7 @@
 - Unique canonical SEO metadata for the homepage, product collection, new arrivals, brand story, and seller application page.
 - Server-rendered public product and seller storefront content, with matching metadata and schema.org `Product`/`Store` JSON-LD. Product offers are only emitted when a public positive price is available; fake ratings, reviews and availability claims are not added.
 - `WebSite` and `Organization` schema, without invented contact addresses, social URLs or Google verification tokens.
-- Noindex metadata for key account, checkout and admin screens. Existing PWA icon branding is unchanged.
+- Noindex metadata for key account, checkout and admin screens; Vercel preview deployments return `X-Robots-Tag: noindex, nofollow`. Existing PWA icon branding is unchanged.
 
 ## Required launch steps (not automatable from repository changes)
 1. Confirm the permanent production domain. Set Vercel `APP_URL` to that exact **HTTPS** origin. The current default is `https://treatstory.vercel.app`. Avoid letting preview URLs become canonical. Use 301 redirects to one canonical hostname if a custom domain is added.
