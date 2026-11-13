@@ -12,20 +12,21 @@ type Props={
   backHref:string;
   backLabel:string;
   isLoading?:boolean;
+  openTicketId?:string|null;
   error?:boolean;
   newConversation?:ReactNode;
   topNotice?:ReactNode;
   renderConversation:(ticket:SupportChatTicket)=>ReactNode;
 };
 const stamp=(ticket:SupportChatTicket)=>ticket.updatedAt?.toDate?.()?.getTime()||ticket.createdAt?.toDate?.()?.getTime()||0;
-export function SupportChatWorkspace({tickets,title,backHref,backLabel,isLoading,error,newConversation,topNotice,renderConversation}:Props){
+export function SupportChatWorkspace({tickets,title,backHref,backLabel,isLoading,error,openTicketId,newConversation,topNotice,renderConversation}:Props){
   const [selected,setSelected]=useState<string|null>(null);
   const [compose,setCompose]=useState(false);
   const [filter,setFilter]=useState('');
   const sorted=[...tickets].sort((a,b)=>stamp(b)-stamp(a));
   const visible=sorted.filter(t=>[t.subject,t.category,t.orderId,t.ownerUid].some(value=>value?.toLowerCase().includes(filter.toLowerCase())));
   const ticket=sorted.find(item=>item.id===selected)||null;
-  useEffect(()=>{if(selected&&!tickets.some(item=>item.id===selected))setSelected(null);},[selected,tickets]);
+  useEffect(()=>{if(openTicketId&&tickets.some(item=>item.id===openTicketId)){setSelected(openTicketId);setCompose(false);}},[openTicketId,tickets]);
   function pick(id:string){setSelected(id);setCompose(false);}
   return <div className="fixed inset-0 z-[80] flex flex-col overflow-hidden bg-[#f7f5f1] text-[#332d27]">
     <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#e8e2d8] bg-white px-4 sm:h-16 sm:px-6">
