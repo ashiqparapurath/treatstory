@@ -11,6 +11,7 @@ test('the production Synapse and PostgreSQL containers cannot publish ports', ()
   assert.doesNotMatch(beforeGateway, /^\s+expose:/m);
   assert.match(compose, /ports:\s*\n\s*- "443:443"/);
   assert.match(compose, /postgres_password:\s*\n\s*file: \.\/private\/secrets\/postgres_password/);
+  assert.match(compose, /POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"/);
   assert.match(compose, /synapse:[\s\S]*?networks:\s*\n\s*- matrix_private/);
 });
 
