@@ -1,3 +1,5 @@
+**Release safeguard:** This experimental chat is disabled by default. Until independently reviewed multi-device encryption is available, the public Support route and admin inbox use the established support-ticket system. Do not set `NEXT_PUBLIC_ENCRYPTED_SUPPORT_ENABLED=true` on production. The `/api/support-chat` endpoint rejects requests while disabled. Earlier encrypted pilot messages are preserved but not readable through the legacy ticket interface.
+
 # End-to-end encrypted support chat
 
 New TreatStory support conversations use browser-side hybrid encryption.
