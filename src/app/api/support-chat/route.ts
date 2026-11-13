@@ -22,6 +22,7 @@ const payload = z.discriminatedUnion('action',[
   z.object({action:z.literal('registerUserKey'),key:lockedKey}).strict(),
   z.object({action:z.literal('registerUserDeviceKey'),publicKey:lockedKey.shape.publicKey}).strict(),
   z.object({action:z.literal('registerTeamKey'),key:lockedKey}).strict(),
+  z.object({action:z.literal('registerTeamDeviceKey'),publicKey:lockedKey.shape.publicKey}).strict(),
   z.object({action:z.literal('create'),category:z.enum(['order','delivery','payment','seller','account','other']),encrypted,orderId:z.string().max(160).default('')}).strict(),
   z.object({action:z.literal('send'),ticketId:z.string().min(1).max(160),encrypted}).strict(),
   z.object({action:z.literal('close'),ticketId:z.string().min(1).max(160)}).strict(),
@@ -33,11 +34,12 @@ export async function GET(request:NextRequest){
   try {
     const {uid,db}=await verifiedUser(request);
     const admin=await isAdmin(db,uid);
-    const [team,own]=await Promise.all([
+    const [team,teamDevice,own]=await Promise.all([
       db.collection('support_chat_keys').doc('team').get(),
+      db.collection('support_chat_keys').doc('team_device').get(),
       db.collection('support_chat_keys').doc('user_'+uid).get(),
     ]);
-    const keys:Record<string,unknown>={teamPublicKey:team.data()?.publicKey??null,ownKey:own.exists?own.data():null};
+    const keys:Record<string,unknown>={teamPublicKey:teamDevice.data()?.publicKey??null,teamDeviceKey:admin&&teamDevice.exists?{publicKey:teamDevice.data()?.publicKey,createdBy:teamDevice.data()?.createdBy}:null,ownKey:own.exists?own.data():null};
     if(admin)keys.teamKey=team.exists?team.data():null;
     return Response.json(keys,{headers:{'Cache-Control':'no-store'}});
   }catch(e){return safeResponse(e);}
@@ -51,6 +53,15 @@ export async function POST(request:NextRequest){
     if(!result.success)throw new ApiError(400,'Invalid encrypted support request.');
     const data=result.data;
     const admin=await isAdmin(db,uid);
+    if(data.action==='registerTeamDeviceKey'){
+      if(!admin)throw new ApiError(403,'Administrator access required.');
+      const ref=db.collection('support_chat_keys').doc('team_device');
+      await db.runTransaction(async tx=>{
+        if((await tx.get(ref)).exists)throw new ApiError(409,'Support encryption is already paired to another administrator device.');
+        tx.create(ref,{publicKey:data.publicKey,version:2,deviceOnly:true,createdAt:Timestamp.now(),createdBy:uid});
+      });
+      return Response.json({ok:true});
+    }
     if(data.action==='registerTeamKey'){
       if(!admin)throw new ApiError(403,'Administrator access required.');
       const ref=db.collection('support_chat_keys').doc('team');
@@ -81,7 +92,7 @@ export async function POST(request:NextRequest){
       const date=new Date(Date.now()+330*60000).toISOString().slice(0,10);
       const output=await db.runTransaction(async tx=>{
         const keyRef=db.collection('support_chat_keys').doc('user_'+uid);
-        const teamRef=db.collection('support_chat_keys').doc('team');
+        const teamRef=db.collection('support_chat_keys').doc('team_device');
         const quotaRef=db.collection('support_limits').doc(uid+'_'+date);
         const orderRef=data.orderId?db.collection('seller_orders').doc(checkId(data.orderId)):null;
         const [ownerKey,teamKey,quota,order]=await Promise.all([
@@ -93,7 +104,7 @@ export async function POST(request:NextRequest){
         const ref=db.collection('support_tickets').doc();
         tx.create(ref,{ownerUid:uid,subject:'Encrypted support conversation',category:data.category,
           orderId:data.orderId,status:'open',encrypted:true,ownerPublicKey:ownerKey.data()!.publicKey,
-          teamPublicKey:teamKey.data()!.publicKey,createdAt:now,updatedAt:now,lastSenderUid:uid});
+          teamPublicKey:teamKey.data()!.publicKey,teamKeyVersion:2,createdAt:now,updatedAt:now,lastSenderUid:uid});
         tx.create(ref.collection('messages').doc(),{...data.encrypted,senderUid:uid,createdAt:now});
         tx.set(quotaRef,{ownerUid:uid,date,count:(quota.data()?.count||0)+1,updatedAt:now});
         return {ticketId:ref.id};
