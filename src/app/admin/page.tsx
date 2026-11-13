@@ -15,6 +15,7 @@ const ProductList = dynamic(() => import('@/components/admin/product-list').then
 const MarketplaceCatalog = dynamic(() => import('@/components/admin/marketplace-catalog').then(m => m.MarketplaceCatalog), { loading: () => <SectionSkeleton /> });
 const SellerApplications = dynamic(() => import('@/components/admin/seller-applications').then(m => m.SellerApplications), { loading: () => <SectionSkeleton /> });
 const SellerManagement = dynamic(() => import('@/components/admin/seller-management').then(m => m.SellerManagement), { loading: () => <SectionSkeleton /> });
+const SupportLegacyInbox = dynamic(() => import('@/components/admin/support-legacy-inbox').then(m => m.SupportLegacyInbox), { loading: () => <SectionSkeleton /> });
 const AdminOverview = dynamic(() => import('@/components/admin/admin-overview').then(m => m.AdminOverview), { loading: () => <SectionSkeleton /> });
 const ProductDialog = dynamic(() => import('@/components/admin/product-dialog').then(m => m.ProductDialog), { loading: () => <SectionSkeleton /> });
 const BannerList = dynamic(() => import('@/components/admin/banner-list').then(m => m.BannerList), { loading: () => <SectionSkeleton /> });
@@ -109,7 +110,7 @@ function AdminContent() {
         </div>
         {tab === 'overview' && <AdminOverview navigate={next => setTab(next === 'sellers' ? 'applications' : next as Tab)} />}
         {tab === 'orders' && <OrderManagement mode="admin" />}
-        {tab === 'support' && <SupportInbox />}
+        {tab === 'support' && (process.env.NEXT_PUBLIC_ENCRYPTED_SUPPORT_ENABLED === 'true' ? <SupportInbox /> : <SupportLegacyInbox />)}
         {tab === 'reviews' && <ReviewModeration />}
         {tab === 'applications' && <SellerApplications />}
         {tab === 'sellers' && <SellerManagement />}
