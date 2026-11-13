@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { LifeBuoy, Mail, Info } from 'lucide-react';
 
-type Ticket = { id:string;subject:string;category:string;message:string;status:string;response?:string;orderId?:string;createdAt?:{toDate?:()=>Date};updatedAt?:{toDate?:()=>Date} };
+type Ticket = { id:string;encrypted?:boolean;subject:string;category:string;message:string;status:string;response?:string;orderId?:string;createdAt?:{toDate?:()=>Date};updatedAt?:{toDate?:()=>Date} };
 export default function SupportPage(){
   const {user,isUserLoading}=useUser();
   const db=useFirestore();
@@ -39,6 +39,7 @@ export default function SupportPage(){
     }catch(error){toast(errorToast(error, 'support'));}
     finally{setBusy(false);}
   }
+  const visibleTickets=(data??[]).filter(ticket=>ticket.encrypted!==true);
   return <div className="min-h-screen bg-[#f8f6f2]"><Header/><main className="section-shell pb-24 pt-12"><div className="flex items-start gap-3"><LifeBuoy className="mt-1 h-8 w-8 text-[#a68a64]"/><div><p className="eyebrow text-[#a68a64]">We are here to help</p><h1 className="mt-3 text-4xl font-medium">TreatStory support</h1><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">For orders, delivery, cancellations, payments or account questions, contact the TreatStory team. Your ticket is private to you and administrators.</p></div></div>
     {(supportSettings?.publicNotice || supportSettings?.contactEmail) && <aside aria-label="Support contact information" className="mt-6 max-w-3xl space-y-3 rounded-2xl border border-[#e6dfd5] bg-white p-4 sm:p-5">
       {supportSettings.publicNotice && <p className="flex items-start gap-2 text-sm leading-6 text-[#594c3e]"><Info className="mt-1 h-4 w-4 shrink-0 text-[#a68a64]" /><span className="whitespace-pre-wrap break-words">{supportSettings.publicNotice}</span></p>}
@@ -69,7 +70,7 @@ export default function SupportPage(){
         <Button type="submit" className="h-12 w-full rounded-full" disabled={busy||!user}>{busy?'Sending…':'Submit request'}</Button>
       </form>
       <section className="rounded-3xl border bg-white p-5 sm:p-8"><h2 className="text-xl font-semibold">Your support requests</h2>
-        {isLoading||isUserLoading?<div className="mt-5 h-24 animate-pulse rounded-xl bg-[#eee8df]"/>:error?<p role="alert" className="mt-5 text-sm text-red-700">Unable to load support tickets. Check that you are signed in and try again.</p>:!data?.length?<p className="mt-5 text-sm text-muted-foreground">No support requests yet.</p>:<div className="mt-5 space-y-4">{[...data].sort((a,b)=>(b.createdAt?.toDate?.()?.getTime()||0)-(a.createdAt?.toDate?.()?.getTime()||0)).map(item=><article key={item.id} className="rounded-xl border p-4"><div className="flex flex-wrap justify-between gap-3"><h3 className="font-semibold">{item.subject}</h3><span className="rounded-full bg-[#f4eee5] px-3 py-1 text-xs capitalize">{item.status}</span></div><p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">{item.message}</p>{item.response&&<div className="mt-4 rounded-xl bg-[#f5f3ee] p-3"><p className="text-xs font-semibold">TreatStory support response</p><p className="mt-2 whitespace-pre-wrap text-sm">{item.response}</p></div>}{item.orderId&&<p className="mt-3 break-all text-xs text-muted-foreground">Order: {item.orderId}</p>}</article>)}</div>}
+        {isLoading||isUserLoading?<div className="mt-5 h-24 animate-pulse rounded-xl bg-[#eee8df]"/>:error?<p role="alert" className="mt-5 text-sm text-red-700">Unable to load support tickets. Check that you are signed in and try again.</p>:!visibleTickets.length?<p className="mt-5 text-sm text-muted-foreground">No support requests yet.</p>:<div className="mt-5 space-y-4">{[...visibleTickets].sort((a,b)=>(b.createdAt?.toDate?.()?.getTime()||0)-(a.createdAt?.toDate?.()?.getTime()||0)).map(item=><article key={item.id} className="rounded-xl border p-4"><div className="flex flex-wrap justify-between gap-3"><h3 className="font-semibold">{item.subject}</h3><span className="rounded-full bg-[#f4eee5] px-3 py-1 text-xs capitalize">{item.status}</span></div><p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">{item.message}</p>{item.response&&<div className="mt-4 rounded-xl bg-[#f5f3ee] p-3"><p className="text-xs font-semibold">TreatStory support response</p><p className="mt-2 whitespace-pre-wrap text-sm">{item.response}</p></div>}{item.orderId&&<p className="mt-3 break-all text-xs text-muted-foreground">Order: {item.orderId}</p>}</article>)}</div>}
       </section></div>}
   </main></div>;
 }
