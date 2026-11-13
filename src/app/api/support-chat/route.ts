@@ -1,3 +1,4 @@
+import { publicSupportKeySchema } from '@/lib/support-key-schema';
 import { readJsonBody } from '@/lib/server/request-body';
 import { queueNotification } from '@/lib/server/mail';
 import { verifiedUser, ApiError, safeResponse } from '@/lib/server/firebase-admin';
@@ -9,7 +10,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const lockedKey = z.object({
-  publicKey: z.object({kty:z.literal('RSA'),alg:z.string().optional(),e:z.string(),n:z.string(),ext:z.boolean().optional(),key_ops:z.array(z.string()).optional()}).passthrough(),
+  publicKey: publicSupportKeySchema,
   lockedPrivateKey:z.string().min(100).max(12000),salt:z.string().min(10).max(128),
   iv:z.string().min(10).max(128),version:z.literal(1),
 }).strict();
@@ -40,7 +41,7 @@ export async function GET(request:NextRequest){
       db.collection('support_chat_keys').doc('team_device').get(),
       db.collection('support_chat_keys').doc('user_'+uid).get(),
     ]);
-    const keys:Record<string,unknown>={teamPublicKey:teamDevice.data()?.publicKey??null,teamDeviceKey:admin&&teamDevice.exists?{publicKey:teamDevice.data()?.publicKey,createdBy:teamDevice.data()?.createdBy}:null,ownKey:own.exists?own.data():null};
+    const keys:Record<string,unknown>={teamPublicKey:teamDevice.data()?.publicKey??null,teamDeviceKey:admin&&teamDevice.exists?{publicKey:teamDevice.data()?.publicKey,createdBy:teamDevice.data()?.createdBy,version:teamDevice.data()?.version,deviceOnly:teamDevice.data()?.deviceOnly}:null,ownKey:own.exists?own.data():null};
     if(admin)keys.teamKey=team.exists?team.data():null;
     return Response.json(keys,{headers:{'Cache-Control':'no-store'}});
   }catch(e){return safeResponse(e);}

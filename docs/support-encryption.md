@@ -2,7 +2,9 @@
 
 # End-to-end encrypted support chat
 
-New TreatStory support conversations use browser-side hybrid encryption.
+**Experimental prototype, disabled by default.** The stable production support flow uses legacy tickets. The following describes the prototype only; it is not a production-ready multi-device implementation. See [implementation status](support-implementation-status.md).
+
+Prototype conversations use browser-side hybrid encryption.
 
 - New buyer/seller accounts generate an RSA-OAEP 3072-bit key pair automatically on the first trusted browser. A non-extractable private CryptoKey is stored locally using IndexedDB, while only the public key is registered with Firestore. Buyers and sellers do not see or manage passphrases. Previous version-1 passphrase-wrapped keys are not silently replaced. Device-local keys are **not** portable: clearing site data, device loss or signing in on another browser leaves existing encrypted messages inaccessible until a separately designed recovery or multi-device enrollment flow is implemented.
 - For new conversations, one authorized administrator's browser automatically creates a non-extractable device private key in IndexedDB and registers its public key as the initial support recipient (team_device). No passphrase is needed for normal admin access. **Only the originally paired administrator browser can decrypt these chats. Additional admin devices and new agents must not be treated as enrolled until an audited device-sharing or per-agent key system exists.** The previous shared team key remains readable only through an optional, explicitly labeled legacy unlock for historical conversations.
