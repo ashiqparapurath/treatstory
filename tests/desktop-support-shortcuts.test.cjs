@@ -23,6 +23,6 @@ test('desktop seller workspace has support shortcut without modifying mobile sec
 test('buyer and seller use the same encrypted support chat page', () => {
   const support = fs.readFileSync('src/app/support/page.tsx', 'utf8');
   assert.match(support,/Start a conversation/);
-  assert.match(support,/Your conversations/);
+  assert.match(support,/SupportChatWorkspace/);
   assert.match(support,/fetch\('\/api\/support-chat'/);
 });
