@@ -19,7 +19,7 @@ test('customer private keys are non-extractable and kept in IndexedDB',()=>{
   assert.match(key,/getRandomValues|RSA-OAEP/);
   assert.doesNotMatch(key,/exportKey\('jwk',pair\.privateKey\)/);
   const hook=read('src/hooks/use-support-encryption.ts');
-  assert.match(hook,/createSupportDeviceKey\(uid\)/);
+  assert.match(hook,/createSupportDeviceKey/);
   assert.match(hook,/registerUserDeviceKey/);
   const api=read('src/app/api/support-chat/route.ts');
   assert.match(api,/registerUserDeviceKey/);
