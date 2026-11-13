@@ -20,6 +20,7 @@ const encrypted = z.object({
 }).strict();
 const payload = z.discriminatedUnion('action',[
   z.object({action:z.literal('registerUserKey'),key:lockedKey}).strict(),
+  z.object({action:z.literal('registerUserDeviceKey'),publicKey:lockedKey.shape.publicKey}).strict(),
   z.object({action:z.literal('registerTeamKey'),key:lockedKey}).strict(),
   z.object({action:z.literal('create'),category:z.enum(['order','delivery','payment','seller','account','other']),encrypted,orderId:z.string().max(160).default('')}).strict(),
   z.object({action:z.literal('send'),ticketId:z.string().min(1).max(160),encrypted}).strict(),
@@ -56,6 +57,14 @@ export async function POST(request:NextRequest){
       await db.runTransaction(async tx=>{
         if((await tx.get(ref)).exists)throw new ApiError(409,'Support team encryption key already exists.');
         tx.create(ref,{...data.key,createdAt:Timestamp.now(),createdBy:uid});
+      });
+      return Response.json({ok:true});
+    }
+    if(data.action==='registerUserDeviceKey'){
+      const ref=db.collection('support_chat_keys').doc('user_'+uid);
+      await db.runTransaction(async tx=>{
+        if((await tx.get(ref)).exists)throw new ApiError(409,'This account already has support encryption keys. Use the original device to access existing conversations.');
+        tx.create(ref,{publicKey:data.publicKey,version:2,deviceOnly:true,createdAt:Timestamp.now()});
       });
       return Response.json({ok:true});
     }
