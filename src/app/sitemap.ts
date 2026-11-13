@@ -2,7 +2,24 @@ import type { MetadataRoute } from 'next';
 import { getServerFirebase } from '@/lib/server/firebase-admin';
 import { siteOrigin } from '@/lib/social-metadata';
 
-export const dynamic = 'force-dynamic';
+// Revalidate the sitemap periodically rather than reading the catalog for every bot request.
+export const revalidate = 3600;
+
+const PAGE_SIZE = 500;
+const MAX_PER_COLLECTION = 15000; // 3 collections, <50,000 total sitemap URLs
+
+async function getSitemapDocuments(query: FirebaseFirestore.Query) {
+  const docs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+  let after: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+  while (docs.length < MAX_PER_COLLECTION) {
+    const count = Math.min(PAGE_SIZE, MAX_PER_COLLECTION - docs.length);
+    const snapshot = await (after ? query.startAfter(after) : query).limit(count).get();
+    docs.push(...snapshot.docs);
+    if (snapshot.docs.length < count) break;
+    after = snapshot.docs[snapshot.docs.length - 1];
+  }
+  return docs;
+}
 
 // Only public, canonical, index-worthy URLs. Do not include dashboards, drafts,
 // private user data, or URL parameter variants.
@@ -24,12 +41,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const { db } = getServerFirebase();
     const [marketplace, legacy, stores] = await Promise.all([
-      db.collection('marketplace_products').where('status', '==', 'published').limit(1000).get(),
-      db.collection('products').limit(1000).get(),
-      db.collection('sellers').where('status','==','active').limit(1000).get(),
+      getSitemapDocuments(db.collection('marketplace_products').where('status', '==', 'published')),
+      getSitemapDocuments(db.collection('products')),
+      getSitemapDocuments(db.collection('sellers').where('status','==','active')),
     ]);
     const seen = new Set(pages.map(page => page.url));
-    for (const store of stores.docs) {
+    for (const store of stores) {
       const data=store.data();
       if(data.status!=='active' || typeof data.businessName!=='string' || !data.businessName.trim())continue;
       const url=new URL('/shop/'+encodeURIComponent(store.id),origin).href;
@@ -40,7 +57,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency:'weekly',priority:0.7});
     }
     for (const [snapshot, seller] of [[marketplace, true], [legacy, false]] as const) {
-      for (const doc of snapshot.docs) {
+      for (const doc of snapshot) {
         const product = doc.data();
         if (typeof product.name !== 'string' || !product.name.trim()) continue;
         if (seller && product.status !== 'published') continue;
