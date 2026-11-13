@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { ArrowLeft, LifeBuoy, LockKeyhole, MessageCircle, Plus, Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -23,13 +24,21 @@ export function SupportChatWorkspace({tickets,title,backHref,backLabel,isLoading
   const [selected,setSelected]=useState<string|null>(null);
   const [compose,setCompose]=useState(false);
   const [filter,setFilter]=useState('');
+  const [mounted,setMounted]=useState(false);
+  useEffect(()=>{
+    setMounted(true);
+    const previous=document.body.style.overflow;
+    document.body.style.overflow='hidden';
+    return ()=>{document.body.style.overflow=previous;};
+  },[]);
   const sorted=[...tickets].sort((a,b)=>stamp(b)-stamp(a));
   const visible=sorted.filter(t=>[t.subject,t.category,t.orderId,t.ownerUid].some(value=>value?.toLowerCase().includes(filter.toLowerCase())));
   const ticket=sorted.find(item=>item.id===selected)||null;
   useEffect(()=>{if(openTicketId&&tickets.some(item=>item.id===openTicketId)){setSelected(openTicketId);setCompose(false);}},[openTicketId,tickets]);
   function pick(id:string){setSelected(id);setCompose(false);}
-  return <div className="fixed inset-0 z-[80] flex flex-col overflow-hidden bg-[#f7f5f1] text-[#332d27]">
-    <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#e8e2d8] bg-white px-4 sm:h-16 sm:px-6">
+  if(!mounted)return null;
+  return createPortal(<div className="fixed inset-0 z-[200] isolate flex h-[100dvh] w-screen flex-col overflow-hidden bg-[#f7f5f1] text-[#332d27]">
+    <div className="flex h-16 shrink-0 items-center justify-between border-b border-[#e8e2d8] bg-white px-4 sm:px-6">
       <div className="flex min-w-0 items-center gap-3">
         <Link href={backHref} aria-label={backLabel} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#eee6dc] hover:bg-[#f6f0e9]"><ArrowLeft className="h-4 w-4"/></Link>
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#302a24] text-white"><LifeBuoy className="h-4 w-4"/></div>
@@ -37,9 +46,9 @@ export function SupportChatWorkspace({tickets,title,backHref,backLabel,isLoading
       </div>
       <span className="hidden items-center gap-1.5 text-xs text-[#887a69] sm:flex"><LockKeyhole className="h-3.5 w-3.5"/> Private conversations</span>
     </div>
-    <div className="flex min-h-0 flex-1">
+    <div className="flex min-h-0 flex-1 items-stretch overflow-hidden">
       <aside aria-label="Support conversations" className={`${ticket||compose?'hidden md:flex':'flex'} w-full shrink-0 flex-col border-r border-[#e8e2d8] bg-white md:w-[310px] lg:w-[365px]`}>
-        <div className="shrink-0 space-y-3 border-b border-[#ede7df] p-4">
+        <div className="shrink-0 space-y-3 border-b border-[#ede7df] bg-white p-4">
           <div className="flex items-center justify-between"><h2 className="font-semibold">Conversations</h2>{newConversation&&<button type="button" className="flex items-center gap-1 rounded-full bg-[#302a24] px-3 py-2 text-xs font-semibold text-white hover:bg-[#504238]" onClick={()=>{setCompose(true);setSelected(null);}}><Plus className="h-3.5 w-3.5"/>New chat</button>}</div>
           <div className="relative"><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-[#9b8e80]"/><Input aria-label="Search conversations" value={filter} onChange={e=>setFilter(e.target.value)} placeholder="Search conversations" className="h-10 rounded-xl border-[#e8e0d5] bg-[#faf8f5] pl-9"/></div>
         </div>
@@ -54,7 +63,7 @@ export function SupportChatWorkspace({tickets,title,backHref,backLabel,isLoading
           </button>)}
         </div>
       </aside>
-      <section aria-label="Selected support chat" className={`${ticket||compose?'flex':'hidden md:flex'} min-w-0 flex-1 flex-col bg-[#fbf9f5]`}>
+      <section aria-label="Selected support chat" className={`${ticket||compose?'flex':'hidden md:flex'} min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#fbf9f5]`}>
         {compose?<><div className="flex h-16 shrink-0 items-center gap-3 border-b bg-white px-4 sm:px-6"><button type="button" aria-label="Back to conversations" className="md:hidden" onClick={()=>setCompose(false)}><ArrowLeft className="h-5 w-5"/></button><h2 className="text-base font-semibold">New conversation</h2><button type="button" aria-label="Close new chat" className="ml-auto hidden md:block" onClick={()=>setCompose(false)}><X className="h-4 w-4"/></button></div><div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-8"><div className="mx-auto max-w-xl">{newConversation}</div></div></>:
         ticket?<><div className="flex h-16 shrink-0 items-center gap-3 border-b border-[#ece6dd] bg-white px-4 sm:px-6">
           <button type="button" aria-label="Back to conversations" className="grid h-9 w-9 place-items-center md:hidden" onClick={()=>setSelected(null)}><ArrowLeft className="h-5 w-5"/></button>
@@ -64,9 +73,9 @@ export function SupportChatWorkspace({tickets,title,backHref,backLabel,isLoading
         </div>
           <div className="min-h-0 flex-1">{renderConversation(ticket)}</div>
         </>:
-        <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center"><span className="grid h-16 w-16 place-items-center rounded-2xl bg-[#efe7dc]"><MessageCircle className="h-7 w-7 text-[#9d805e]"/></span><h2 className="text-lg font-semibold">Your messages, all in one place</h2><p className="max-w-sm text-sm text-[#8a7e6e]">Choose a conversation to read and reply, or start a new support request.</p>{newConversation&&<button type="button" onClick={()=>setCompose(true)} className="mt-2 rounded-full bg-[#302a24] px-5 py-3 text-sm text-white">Start new conversation</button>}</div>}
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center"><span className="grid h-16 w-16 place-items-center rounded-2xl bg-[#efe7dc]"><MessageCircle className="h-7 w-7 text-[#9d805e]"/></span><h2 className="text-lg font-semibold">Your messages, all in one place</h2><p className="max-w-sm text-sm text-[#8a7e6e]">Choose a conversation to read and reply, or start a new support request.</p>{newConversation&&<button type="button" onClick={()=>setCompose(true)} className="mt-2 rounded-full bg-[#302a24] px-5 py-3 text-sm text-white">Start new conversation</button>}</div>}
       </section>
     </div>
     {topNotice&&<div className="shrink-0 border-t border-[#e8e0d6] bg-white px-4 py-2 text-xs text-[#897a69]">{topNotice}</div>}
-  </div>;
+  </div>,document.body);
 }
