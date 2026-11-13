@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { collection, limit, orderBy, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { encryptSupportMessage, decryptSupportMessage, type EncryptedSupportMessage } from '@/lib/support-encryption';
@@ -19,6 +19,7 @@ export function SupportChatThread({ticket,privateKey,role}:{ticket:SupportChatTi
   const [draft,setDraft]=useState('');const [busy,setBusy]=useState(false);
   const [texts,setTexts]=useState<Record<string,string>>({});
   const [failure,setFailure]=useState('');
+  const endRef=useRef<HTMLDivElement|null>(null);
   const ref=useMemoFirebase(()=>db?query(collection(db,'support_tickets',ticket.id,'messages'),orderBy('createdAt','asc'),limit(200)):null,[db,ticket.id]);
   const {data,messagesLoading,error}=(()=>{const result=useCollection<Message>(ref);return {data:result.data,messagesLoading:result.isLoading,error:result.error};})();
   useEffect(()=>{
@@ -31,6 +32,7 @@ export function SupportChatThread({ticket,privateKey,role}:{ticket:SupportChatTi
     })).then(entries=>{if(active)setTexts(Object.fromEntries(entries));});
     return ()=>{active=false;};
   },[data,privateKey,role,ticket.id]);
+  useEffect(()=>{endRef.current?.scrollIntoView({block:'end',behavior:'smooth'});},[data?.length,texts]);
   async function post(action:'send'|'close',e?:FormEvent){
     e?.preventDefault();if(!user||busy)return;
     setBusy(true);setFailure('');
@@ -45,27 +47,36 @@ export function SupportChatThread({ticket,privateKey,role}:{ticket:SupportChatTi
     }catch(e){setFailure(e instanceof Error?e.message:'Could not send message.');}
     finally{setBusy(false);}
   }
-  return <div className="mt-4 rounded-2xl border border-[#e5ded3] bg-[#fcfaf6] p-3 sm:p-5">
-    <p className="flex items-center gap-2 text-xs text-[#76644e]"><LockKeyhole className="h-4 w-4"/> Message text is encrypted on your device. Existing conversations may be unavailable on a different device.</p>
-    <div className="mt-4 max-h-[420px] min-h-32 space-y-3 overflow-y-auto" aria-live="polite">
-      {messagesLoading?<p className="text-sm text-muted-foreground">Loading messages…</p>:error?<p role="alert" className="text-sm text-red-700">Messages unavailable. Check access permissions.</p>:
-        data?.map(item=><div key={item.id} className={'flex '+((role==='owner'?item.senderUid===user?.uid:item.senderUid!==ticket.ownerUid)?'justify-end':'justify-start')}>
-          <div className="max-w-[88%] rounded-2xl bg-white px-4 py-3 shadow-sm sm:max-w-[75%]">
-            <p className="mb-1 text-[11px] font-semibold text-[#8c755c]">{item.senderUid===ticket.ownerUid?'Customer':'TreatStory support'}</p>
-            <p className="whitespace-pre-wrap break-words text-sm">{texts[item.id]??'Decrypting…'}</p>
-            <p className="mt-2 text-[10px] text-muted-foreground">{item.createdAt?.toDate?.()?.toLocaleString()??''}</p>
-          </div>
-        </div>)}
-      {!data?.length&&!messagesLoading&&<p className="text-sm text-muted-foreground">No messages yet.</p>}
+  return <div className="flex h-full min-h-0 flex-col bg-[#fbf9f5]">
+    <div className="flex items-center justify-center gap-2 border-b border-[#ece6dd] bg-[#f8f5ef] px-4 py-2 text-[11px] text-[#827668]">
+      <LockKeyhole className="h-3 w-3 shrink-0"/> Message content is encrypted on this device
     </div>
-    {ticket.status!=='closed'?<form className="mt-4 flex flex-col gap-2 border-t pt-4" onSubmit={e=>void post('send',e)}>
-      <label className="text-xs font-semibold" htmlFor={'reply-'+ticket.id}>Reply securely</label>
-      <Textarea id={'reply-'+ticket.id} value={draft} onChange={e=>setDraft(e.target.value)} maxLength={2000} rows={3} placeholder="Write a message…" required/>
-      <div className="flex items-center justify-between gap-2"><span className="text-[11px] text-muted-foreground">{draft.length}/2000</span>
-        <div className="flex gap-2">{role==='team'&&<Button type="button" variant="outline" disabled={busy} onClick={()=>void post('close')}>Close chat</Button>}
-          <Button type="submit" disabled={busy||!draft.trim()}><Send className="mr-2 h-4 w-4"/>Send</Button></div>
+    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-5 sm:px-8 sm:py-7" aria-live="polite" aria-label="Conversation messages">
+      {messagesLoading?<p className="text-center text-sm text-muted-foreground">Loading messages…</p>:error?<p role="alert" className="text-center text-sm text-red-700">Messages unavailable. Check access permissions.</p>:
+        data?.map(item=>{
+          const outgoing=item.senderUid===user?.uid;
+          return <div key={item.id} className={`flex ${outgoing?'justify-end':'justify-start'}`}>
+            <div className={`max-w-[86%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[68%] ${outgoing?'rounded-br-md bg-[#e9e1d4] text-[#2f2a24]':'rounded-bl-md border border-[#eae5de] bg-white text-[#312d27]'}`}>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[#8a765e]">{item.senderUid===ticket.ownerUid?'Customer':'TreatStory support'}</p>
+              <p className="whitespace-pre-wrap break-words text-[14px] leading-6">{texts[item.id]??'Decrypting…'}</p>
+              <p className="mt-2 text-right text-[10px] text-[#897f73]">{item.createdAt?.toDate?.()?.toLocaleString()??''}</p>
+            </div>
+          </div>;
+        })}
+      {!data?.length&&!messagesLoading&&<p className="text-center text-sm text-muted-foreground">No messages yet.</p>}
+      <div ref={endRef}/>
+    </div>
+    {ticket.status!=='closed'?<form className="shrink-0 border-t border-[#ece6dd] bg-white px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6" onSubmit={e=>void post('send',e)}>
+      <div className="mx-auto flex max-w-5xl items-end gap-2 sm:gap-3">
+        <label className="sr-only" htmlFor={'reply-'+ticket.id}>Message</label>
+        <Textarea id={'reply-'+ticket.id} value={draft} onChange={e=>setDraft(e.target.value)}
+          onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();if(draft.trim()&&!busy)void post('send');}}}
+          maxLength={2000} rows={2} className="min-h-11 max-h-36 flex-1 resize-none rounded-2xl border-[#e7e0d6] bg-[#faf8f5] px-4 py-3 text-sm"
+          placeholder="Write a message…" required/>
+        <Button aria-label="Send message" type="submit" size="icon" className="h-11 w-11 shrink-0 rounded-full bg-[#312a23] text-white hover:bg-[#554536]" disabled={busy||!draft.trim()}><Send className="h-4 w-4"/></Button>
       </div>
-    </form>:<p className="mt-4 text-xs text-muted-foreground">Conversation closed.</p>}
-    {failure&&<p role="alert" className="mt-3 text-sm text-red-700">{failure}</p>}
+      {role==='team'&&<div className="mx-auto mt-2 flex max-w-5xl justify-end"><button type="button" className="text-xs text-[#857568] underline underline-offset-2" disabled={busy} onClick={()=>void post('close')}>Close conversation</button></div>}
+      {failure&&<p role="alert" className="mx-auto mt-2 max-w-5xl text-xs text-red-700">{failure}</p>}
+    </form>:<p className="shrink-0 border-t bg-white p-4 text-center text-sm text-muted-foreground">Conversation closed</p>}
   </div>;
 }
