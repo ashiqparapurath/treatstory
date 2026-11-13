@@ -4,6 +4,7 @@ import { queueNotification, queueMail, processMailQueue } from '@/lib/server/mai
 import { after } from 'next/server';
 import { z } from 'zod';
 import { Timestamp } from 'firebase-admin/firestore';
+import { randomUUID } from 'node:crypto';
 import type { NextRequest } from 'next/server';
 import { verifiedUser, ApiError, safeResponse } from '@/lib/server/firebase-admin';
 
@@ -18,6 +19,9 @@ const requestSchema = z.discriminatedUnion('action', [
     orderId: z.union([z.literal(''),firestoreDocumentId(160)]).default(''),
   }).strict(),
   z.object({ action: z.literal('reply'),
+    ticketId: firestoreDocumentId(160), message: z.string().trim().min(5).max(2000),
+  }).strict(),
+  z.object({ action: z.literal('followup'),
     ticketId: firestoreDocumentId(160), message: z.string().trim().min(5).max(2000),
   }).strict(),
   z.object({ action: z.literal('close'),
@@ -58,20 +62,44 @@ export async function POST(request: NextRequest) {
     const result=await db.runTransaction(async tx=>{
       const ticketRef=db.collection('support_tickets').doc(data.ticketId);
       const [admin,ticket]=await Promise.all([tx.get(adminRef),tx.get(ticketRef)]);
-      if(!admin.exists)throw new ApiError(403,'Only administrators can respond to support requests.');
-      if(!ticket.exists)throw new ApiError(404,'Support ticket not found.');
       const previous=ticket.data()!;
+      if(data.action==='followup' ? previous.ownerUid!==uid : !admin.exists)
+        throw new ApiError(403,'You cannot respond to this support request.');
+      if(previous.encrypted===true)throw new ApiError(403,'Encrypted conversations are not available through the ticket API.');
       if(previous.status==='closed')throw new ApiError(409,'This request is already closed.');
       const now=Timestamp.now();
-      tx.update(ticketRef,{status:data.action==='close'?'closed':'responded',
-        ...(data.action==='reply'?{response:data.message,respondedBy:uid}:{}),updatedAt:now});
-      queueNotification(tx,db,previous.ownerUid,{
-        template:data.action==='close'?'support_closed':'support_reply',
-        title:data.action==='close'?'Your support request has been closed':'TreatStory support replied to your request',
-        message:data.action==='close'?`“${previous.subject}” was marked closed. You can open a new request if you need more help.`:`There is a response to “${previous.subject}”. Open your support request to read it.`,kind:'support',href:'/support',
-        orderId:previous.orderId||'',createdAt:now,read:false,
-      });
-      return {ticketId:data.ticketId,status:data.action==='close'?'closed':'responded'};
+      if(data.action==='close'){
+        tx.update(ticketRef,{status:'closed',updatedAt:now});
+        queueNotification(tx,db,previous.ownerUid,{
+          template:'support_closed',title:'Your support request has been closed',
+          message:'“'+previous.subject+'” was marked closed. You can open a new request if you need more help.',
+          kind:'support',href:'/support',orderId:previous.orderId||'',createdAt:now,read:false,
+        });
+        return {ticketId:data.ticketId,status:'closed'};
+      }
+      // On the first threaded reply, keep the previous single-response record.
+      // All future replies are appended; no message can silently overwrite history.
+      const history=Array.isArray(previous.thread) ? [...previous.thread] : [];
+      if(!history.length && typeof previous.response==='string' && previous.response.trim()){
+        history.push({id:'legacy-support-response',sender:'support',body:previous.response,sentAt:previous.updatedAt||previous.createdAt||now});
+      }
+      if(history.length>=80)throw new ApiError(409,'This conversation has reached its message limit. Please start a new support request.');
+      history.push({id:randomUUID(),sender:data.action==='reply'?'support':'customer',body:data.message,sentAt:now});
+      const status=data.action==='reply'?'responded':'open';
+      tx.update(ticketRef,{status,thread:history,updatedAt:now,
+        ...(data.action==='reply'?{response:data.message,respondedBy:uid}:{})});
+      if(data.action==='reply'){
+        queueNotification(tx,db,previous.ownerUid,{
+          template:'support_reply',title:'TreatStory support replied to your request',
+          message:'There is a response to “'+previous.subject+'”. Open your support request to read it.',
+          kind:'support',href:'/support',orderId:previous.orderId||'',createdAt:now,read:false,
+        });
+      }else if(process.env.MAIL_SUPPORT_EMAIL){
+        queueMail(tx,db,uid,{template:'support_new',title:'Support request updated',
+          message:'A customer followed up on “'+previous.subject+'”. Open the support inbox.',
+          href:'/admin?tab=support'},undefined,false,process.env.MAIL_SUPPORT_EMAIL);
+      }
+      return {ticketId:data.ticketId,status};
     });
     after(async()=>{try{await processMailQueue(db,auth,3);}catch{console.error('Mail queue processing unavailable');}});
       return Response.json(result);

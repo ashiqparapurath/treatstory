@@ -7,7 +7,7 @@ This checklist is not a statement that all production acceptance criteria passed
 
 # TreatStory encrypted chat: multi-device requirements (all account roles)
 
-Status: **required architecture; NOT implemented by the existing device-key prototype. Keep replacement E2EE work in draft until these requirements pass.**
+Status: **Matrix multi-device implementation merged in PR #16; deployment and independent security acceptance remain pending.** The historical single-device RSA pilot remains retired.
 
 ## Product requirement
 
@@ -46,9 +46,13 @@ A buyer, seller or administrator can sign into TreatStory on a mobile phone, ano
 - Test browser reload, PWA, private mode, Chrome/Firefox/Safari, Android/iOS, offline/retry, concurrent enrollment, and compromised/revoked accounts.
 - All automated tests and independent cryptographic security review pass before production rollout.
 
-## Current PR blockers
+## Remaining production release blockers
 
-The existing prototype uses one device-local customer key per account and a global initial admin device key. It is **not** a safe implementation of the above requirements. Do not merge/deploy it until the protocol, migration, enrollment, recovery, and authorization are complete and verified. Simply creating a fresh key after login would make history inaccessible and potentially enable key substitution attacks.
+The new Matrix implementation has automated enrollment, recovery, assignment and
+migration tests, but physical-device validation, external security review,
+production network isolation, credential provisioning, backups and load testing
+remain required. Keep both encrypted support feature flags disabled until the
+release gates are approved. Never silently reset historical RSA keys.
 
 ## Investigation and preservation fixes
 

@@ -62,15 +62,23 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Install test browser
-        run: npx --no-install playwright install --with-deps chromium
+        run: npx --no-install playwright install --with-deps chromium firefox webkit
       - name: Prepare a private local test messaging server
         run: |
           python3 -m venv work/matrix-venv
           work/matrix-venv/bin/pip install PyYAML==6.0.3
           work/matrix-venv/bin/python scripts/support-matrix/local-server.py
+      - name: Check production deployment YAML, Python and secure defaults
+        run: |
+          python3 -m py_compile infra/support-matrix/configure.py infra/support-matrix/bootstrap_service.py infra/support-matrix/smoke.py
+          mkdir -p infra/support-matrix/private/secrets
+          cp infra/support-matrix/env.sample infra/support-matrix/.env
+          printf 'compose-validation-only\n' > infra/support-matrix/private/secrets/postgres_password
+          docker compose --env-file infra/support-matrix/.env -f infra/support-matrix/compose.yaml config --quiet
+          rm -rf infra/support-matrix/private infra/support-matrix/.env
       - name: Build application and test stylesheet
         run: npm run build
-      - name: Verify encrypted support with real Synapse, Firebase emulators and Chromium
+      - name: Verify encrypted support and simulated Chromium, Firefox and WebKit browsers
         env:
           SUPPORT_MATRIX_TEST_CONFIG: work/support-matrix-server/test-config.json
         run: npx --yes firebase-tools@14 emulators:exec --only auth,firestore --project demo-treatstory --config firebase.audit.json 'npm run test:support-matrix'

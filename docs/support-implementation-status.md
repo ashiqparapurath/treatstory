@@ -1,6 +1,6 @@
 # Encrypted support implementation and release status
 
-Implemented in draft PR #16; production remains disabled. The earlier statement
+Implemented in merged PR #16; production remains disabled. Infrastructure preparation is documented in infra/support-matrix/README.md. The deployment templates and internal security review are not evidence of an active production service. The earlier statement
 that multi-device functionality was absent is superseded by this implementation.
 Setting a feature flag alone is insufficient to deploy this service.
 
@@ -160,4 +160,16 @@ Physical phone testing and production end-to-end testing are not claimed.
   approved device, a separate browser and saved recovery capability; do not
   clear storage as an automatic repair.
 
-Keep the PR draft and both production flags off until these gates are satisfied.
+Keep both production flags off until these gates are satisfied. Treat the infrastructure branch as a deployment baseline, not a release authorization.
+
+
+## Production-readiness work after merge
+
+A private Synapse/PostgreSQL/TLS gateway Compose baseline, owner-only credential
+configuration/bootstrap scripts and a gateway/firewall smoke probe are now
+included under infra/support-matrix. The test suite includes static deployment
+checks and browser compatibility smoke for simulated Firefox and iPhone WebKit;
+these do not replace real phones. See docs/support-security-review.md for
+internal risk assessment and docs/support-device-acceptance.md for the
+required physical acceptance record. No host, Vercel secret or production
+Firestore deployment is provisioned by these repository files.

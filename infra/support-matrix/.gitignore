@@ -1,0 +1,5 @@
+# Never commit runtime configuration, signing keys, snapshots, tokens or certificates.
+private/
+.env
+*.log
+*.sqlite*
