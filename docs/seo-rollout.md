@@ -22,11 +22,11 @@
 - A server Firebase error can lead to generic metadata or a static-only sitemap instead of live product details. Monitor errors and ensure server credentials are configured, never expose service accounts to browser bundles.
 - Existing marketplace search/filter UI is primarily client-rendered; Google can reliably crawl server-rendered canonical product/store URLs, but a deeper server-rendered category/navigation experience remains a content project.
 - Public stores currently use `/shop/{sellerId}` URLs. Descriptive slug URLs are a separate compatibility/migration task; don't change canonical URLs without redirects.
-- The security-sensitive encrypted-support draft features in PR #15 are still not production-ready; SEO build checks are not approval to merge that encryption work.
+- The experimental encrypted-support chat remains **disabled by default** behind `NEXT_PUBLIC_ENCRYPTED_SUPPORT_ENABLED`, and the existing support-ticket system stays active. Do **not** enable that flag in production until secure multi-device enrollment, recovery and independent cryptography review are complete.
 
 ## Verification status (2026-11-13)
 
 - Repository SEO code is in draft PR #15 and is not deployed to production.
 - External requests to `https://treatstory.vercel.app`, `/robots.txt`, and `/sitemap.xml` could not be completed from the audit environment. **This does not prove the site is down or that Google cannot index it**; use a normal browser, Search Console URL Inspection and Vercel domain/access settings for a definitive live check.
 - Google Search Console property verification, sitemap submission and indexing reports require connected account access. No domain verification or sitemap submission is claimed in this PR.
-- Do not merge PR #15 until the encrypted support multi-device work and security review are complete.
+- The SEO implementation may be merged while experimental E2EE remains disabled; leave the flag unset in Vercel. Existing encrypted pilot conversations remain stored, but are hidden from the legacy ticket responder to avoid accidentally handling them in plaintext. Do not delete their keys.
