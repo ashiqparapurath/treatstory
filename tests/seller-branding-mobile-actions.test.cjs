@@ -35,7 +35,7 @@ test('browser tab uses original favicon and PWA artwork stays separate', () => {
 });
 
 test('public seller card gives name its own responsive row and keeps status / share actions separate', () => {
-  const page = fs.readFileSync('src/app/shop/[id]/page.tsx', 'utf8');
+  const page = fs.readFileSync('src/components/seller-store-client.tsx', 'utf8');
   assert.match(page, /mt-7 min-w-0 rounded-3xl border/);
   assert.match(page, /mt-5 flex min-w-0 items-center gap-3 sm:gap-5/);
   assert.match(page, /h1 className="min-w-0 flex-1 break-words text-\[clamp\(/);
