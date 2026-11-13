@@ -9,3 +9,8 @@ Administrators open Admin → Customer support. The inbox displays the newest 10
 Receipt, response and closure create an in-app notification and queue an email to the customer through the configured Apps Script relay. Setting `MAIL_SUPPORT_EMAIL` also queues a new-request email to that support inbox. Admins can still use the dashboard if this optional recipient is unset. Mail relay failures retry through the existing outbox/cron flow; queued or accepted mail is not proof of inbox delivery.
 
 This is a manual support inbox, not live chat. Replying to an email does not automatically add a ticket message. A ticket does not automatically refund a payment, cancel an order or update delivery; admins must take the relevant action separately.
+
+
+Encrypted messaging implementation, preserved legacy-history procedures and
+release gates are documented in [support implementation status](support-implementation-status.md).
+The stable ticket flow remains available at `/support-tickets`.

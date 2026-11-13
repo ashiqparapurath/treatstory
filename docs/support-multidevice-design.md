@@ -1,6 +1,13 @@
+# Design requirements and implementation mapping
+
+The following requirements are the design checklist. The Matrix implementation
+now supplies enrollment, recovery, revocation, assigned routing and history
+transfer; see [current implementation and remaining release gates](support-implementation-status.md).
+This checklist is not a statement that all production acceptance criteria passed.
+
 # TreatStory encrypted chat: multi-device requirements (all account roles)
 
-Status: **required architecture; NOT implemented by the existing device-key prototype. Keep PR #15 draft.**
+Status: **required architecture; NOT implemented by the existing device-key prototype. Keep replacement E2EE work in draft until these requirements pass.**
 
 ## Product requirement
 
@@ -42,3 +49,7 @@ A buyer, seller or administrator can sign into TreatStory on a mobile phone, ano
 ## Current PR blockers
 
 The existing prototype uses one device-local customer key per account and a global initial admin device key. It is **not** a safe implementation of the above requirements. Do not merge/deploy it until the protocol, migration, enrollment, recovery, and authorization are complete and verified. Simply creating a fresh key after login would make history inaccessible and potentially enable key substitution attacks.
+
+## Investigation and preservation fixes
+
+See [the implementation status](support-implementation-status.md) for the verified root cause, preservation fixes, protocol evaluation, migration plan, test evidence and outstanding release blockers. This design document is a requirement, not evidence of implementation.
