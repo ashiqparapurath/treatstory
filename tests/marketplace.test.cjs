@@ -297,7 +297,7 @@ test('fulfillment and cancellation preserve stock and prevent repeated release',
 test('a single seller listing supports separately priced weight and unit variants', () => {
   const editor = fs.readFileSync('src/components/seller-product-editor.tsx', 'utf8');
   const save = fs.readFileSync('src/app/seller/dashboard/page.tsx', 'utf8');
-  const detail = fs.readFileSync('src/app/product/[id]/page.tsx', 'utf8');
+  const detail = fs.readFileSync('src/components/product-detail-client.tsx', 'utf8');
   const card = fs.readFileSync('src/components/seller-product-card.tsx', 'utf8');
   const checkout = fs.readFileSync('src/lib/server/atomic-checkout.ts', 'utf8');
   assert.match(editor, /Weight, size & variant pricing/);
@@ -743,7 +743,7 @@ test('Instagram SKU codes normalize safely and match public catalog search', () 
   assert.match(rules, /match \/product_skus\/\{sku\} \{ allow read, write: if false;/);
   assert.match(rules, /request\.resource\.data\.get\('sku', ''\) == resource\.data\.get\('sku', ''\)/);
   const shop = fs.readFileSync('src/app/products/page.tsx', 'utf8');
-  const home = fs.readFileSync('src/app/page.tsx', 'utf8');
+  const home = fs.readFileSync('src/components/home-client.tsx', 'utf8');
   assert.doesNotMatch(shop, /SkuLookup|Seen a creation in an Instagram reel/);
   assert.doesNotMatch(home, /SkuLookup|Saw it on Instagram/);
   const legacySearch = fs.readFileSync('src/components/product-grid.tsx', 'utf8');
@@ -875,7 +875,7 @@ test('home creator cards use an in-place weight/price selection dialog and keep 
 
   const section=fs.readFileSync('src/components/seller-storefront-products.tsx','utf8');
   const card=fs.readFileSync('src/components/seller-product-card.tsx','utf8');
-  const detail=fs.readFileSync('src/app/product/[id]/page.tsx','utf8');
+  const detail=fs.readFileSync('src/components/product-detail-client.tsx','utf8');
   assert.match(section,/choices.length > 1/);
   assert.match(section,/setPendingChoice\(\{ product: p, intent \}\)/);
   assert.match(section,/<Dialog open=\{!!pendingChoice\}/);
@@ -889,7 +889,7 @@ test('home creator cards use an in-place weight/price selection dialog and keep 
 });
 
 test('homepage banners are short on mobile and Our Story uses its editorial banner responsively',()=>{
-  const home=fs.readFileSync('src/app/page.tsx','utf8');
+  const home=fs.readFileSync('src/components/home-client.tsx','utf8');
   const about=fs.readFileSync('src/app/about/page.tsx','utf8');
   const svg=fs.readFileSync('public/img/our-story-creators.svg','utf8');
   assert.match(home,/h-\[clamp\(200px,54vw,236px\)\]/);
