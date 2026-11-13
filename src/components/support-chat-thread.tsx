@@ -9,7 +9,7 @@ import { LockKeyhole, Send } from 'lucide-react';
 
 export type SupportChatTicket = {
   id:string;ownerUid:string;category:string;orderId?:string;subject?:string;
-  status:string;encrypted?:boolean;message?:string;response?:string;
+  status:string;encrypted?:boolean;teamKeyVersion?:number;message?:string;response?:string;
   ownerPublicKey:JsonWebKey;teamPublicKey:JsonWebKey;
   createdAt?:{toDate?:()=>Date};updatedAt?:{toDate?:()=>Date};
 };
