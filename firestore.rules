@@ -384,6 +384,22 @@ service cloud.firestore {
         (isSignedIn() && resource.data.ownerUid == request.auth.uid);
       allow create, update, delete: if false;
     }
+    // Key records contain passphrase-encrypted private key material; never public-read.
+    // Only the authenticated owner or an administrator may read the corresponding record.
+    match /support_chat_keys/{keyId} {
+      allow get: if isSignedIn() && (
+        (keyId == 'team' && isAdmin()) ||
+        keyId == 'user_' + request.auth.uid
+      );
+      allow list, create, update, delete: if false;
+    }
+    // Message writes use authenticated, validated server transactions only.
+    match /support_tickets/{ticketId}/messages/{messageId} {
+      allow get, list: if isAdmin() ||
+        (isSignedIn() &&
+         get(/databases/$(database)/documents/support_tickets/$(ticketId)).data.ownerUid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
     match /support_limits/{limitId} {
       allow read, write: if false;
     }
