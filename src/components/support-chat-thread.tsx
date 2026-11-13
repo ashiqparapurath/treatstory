@@ -46,7 +46,7 @@ export function SupportChatThread({ticket,privateKey,role}:{ticket:SupportChatTi
     finally{setBusy(false);}
   }
   return <div className="mt-4 rounded-2xl border border-[#e5ded3] bg-[#fcfaf6] p-3 sm:p-5">
-    <p className="flex items-center gap-2 text-xs text-[#76644e]"><LockKeyhole className="h-4 w-4"/> Messages are end-to-end encrypted. Only participants with their passphrase can read them.</p>
+    <p className="flex items-center gap-2 text-xs text-[#76644e]"><LockKeyhole className="h-4 w-4"/> Message text is encrypted on your device. Existing conversations may be unavailable on a different device.</p>
     <div className="mt-4 max-h-[420px] min-h-32 space-y-3 overflow-y-auto" aria-live="polite">
       {messagesLoading?<p className="text-sm text-muted-foreground">Loading messages…</p>:error?<p role="alert" className="text-sm text-red-700">Messages unavailable. Check access permissions.</p>:
         data?.map(item=><div key={item.id} className={'flex '+((role==='owner'?item.senderUid===user?.uid:item.senderUid!==ticket.ownerUid)?'justify-end':'justify-start')}>
