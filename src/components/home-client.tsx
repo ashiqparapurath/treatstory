@@ -93,9 +93,15 @@ export default function Home() {
               <p className="mt-5 max-w-[34ch] text-[15px] leading-7 text-muted-foreground sm:mt-4 sm:max-w-md sm:text-base">
                 Discover homemade bakes, handmade gifts and creative finds from independent makers across Kerala.
               </p>
-              <div className="mt-7 flex flex-col items-stretch gap-4 min-[400px]:flex-row min-[400px]:items-center sm:mt-5 sm:flex-wrap">
-                <Link href="/products" className="editorial-button min-h-12 w-full px-4 text-center min-[400px]:w-auto sm:min-h-0 sm:px-6">Explore the collection <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                <Link href="/about" className="inline-flex min-h-10 items-center justify-center text-xs font-semibold uppercase tracking-[0.14em] text-foreground underline min-[400px]:justify-start decoration-[#c7b08e] underline-offset-4 transition-colors hover:text-[#9b7d55]">Our story</Link>
+              <div className="hero-cta-container mt-7 w-full sm:mt-5">
+                <div className="flex flex-nowrap items-center gap-2 sm:gap-3">
+                  <Link href="/products" aria-label="Explore collection" className="editorial-button min-h-12 shrink-0 whitespace-nowrap px-4 text-center sm:px-5">
+                    <span className="hero-cta-short" aria-hidden="true">Explore</span>
+                    <span className="hero-cta-full" aria-hidden="true">Explore collection</span>
+                    <ArrowRight className="ml-2 h-4 w-4 shrink-0" />
+                  </Link>
+                  <Link href="/about" className="inline-flex min-h-12 shrink-0 items-center justify-center whitespace-nowrap text-xs font-semibold uppercase tracking-[0.14em] text-foreground underline decoration-[#c7b08e] underline-offset-4 transition-colors hover:text-[#9b7d55]">Our story</Link>
+                </div>
               </div>
               <div className="mt-6 hidden items-center gap-4 border-t border-[#e8e0d5] pt-5 sm:flex">
                 <div className="flex -space-x-2">

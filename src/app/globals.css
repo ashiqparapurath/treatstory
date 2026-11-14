@@ -154,3 +154,13 @@ select option { background-color: #fffdfa; color: #352c23; }
 @media (max-width: 767px) {
   select:not([multiple]) { font-size: 1rem; min-height: 50px; }
 }
+
+/* Use the landing hero text column's width (not device width) to choose
+   whether the two side-by-side CTAs can show the longer Explore label. */
+.hero-cta-container { container: hero-cta / inline-size; }
+.hero-cta-short { display: inline; }
+.hero-cta-full { display: none; }
+@container hero-cta (min-width: 24rem) {
+  .hero-cta-short { display: none; }
+  .hero-cta-full { display: inline; }
+}
