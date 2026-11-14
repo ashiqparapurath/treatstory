@@ -36,3 +36,16 @@ test('seller approvals and management retain mutation and confirmation workflows
  for(const marker of ['writeBatch','batch.commit()','review(application, true)','review(application, false)','LoadMoreRecords','requestSellerMail']) assert.ok(applications.includes(marker),marker);
  for(const marker of ['ConfirmActionDialog','updateDoc','manage(seller)','extend(seller)','saveExact(seller)','setStatusFilter','LoadMoreRecords']) assert.ok(sellers.includes(marker),marker);
 });
+
+test('admin Refresh overview animates while all database counts settle', () => {
+ const source=read('src/components/admin/admin-overview.tsx');
+ assert.match(source,/const \[refreshing, setRefreshing\] = useState\(false\)/);
+ assert.match(source,/disabled=\{!db \|\| refreshing\}/);
+ assert.match(source,/aria-busy=\{refreshing\}/);
+ assert.match(source,/setRefreshing\(true\); setRefresh\(v => v \+ 1\)/);
+ assert.match(source,/motion-safe:animate-spin/);
+ assert.match(source,/aria-live="polite"/);
+ assert.match(source,/Refreshing…/);
+ assert.match(source,/Promise\.allSettled\(groups\)\.then\(\(\) => \{ if \(live\) setRefreshing\(false\); \}\)/);
+ assert.match(source,/return \(\) => \{ live = false; \}/);
+});
