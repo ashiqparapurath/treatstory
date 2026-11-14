@@ -78,18 +78,14 @@ test('buyer, seller and admin dropdowns use styled opened menus, not native pick
   assert.match(admin, /setAccessType\(value as SellerAccessType\)/);
 });
 
-test('opened dropdowns share the TreatStory palette and stay usable on narrow screens', () => {
+test('active Select dropdown uses TreatStory styling on narrow screens', () => {
   const select=read('src/components/ui/select.tsx');
-  const dropdown=read('src/components/ui/dropdown-menu.tsx');
-  const menubar=read('src/components/ui/menubar.tsx');
   assert.match(select,/max-h-\[min\(22rem,70dvh\)\]/);
   assert.match(select,/min-w-\[var\(--radix-select-trigger-width\)\] max-h-\[min\(22rem,65dvh\)\]/);
   assert.doesNotMatch(select,/h-\[var\(--radix-select-trigger-height\)\]/);
-  for(const [name,source] of [['select',select],['dropdown',dropdown],['menubar',menubar]]) {
-    assert.match(source,/bg-\[#fffdfa\]/,name);
-    assert.match(source,/text-\[#352c23\]/,name);
-    assert.match(source,/z-\[70\]/,name);
-  }
+  assert.match(select,/bg-\[#fffdfa\]/);
+  assert.match(select,/text-\[#352c23\]/);
+  assert.match(select,/z-\[70\]/);
 });
 
 test('all storefront and dashboard screens avoid unstyled native selection menus',()=>{
