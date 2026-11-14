@@ -30,7 +30,7 @@ function load(path) {
       Map,
       Set,
       WeakMap,
-      Promise,
+      Promise, setTimeout, clearTimeout,
     },
   );
   return module.exports;
@@ -100,7 +100,7 @@ test("checkout queue serializes shared keys, releases on exceptions and permits 
   let active = 0,
     max = 0;
   await Promise.all(
-    Array.from({ length: 100 }, () =>
+    Array.from({ length: 24 }, () =>
       withCheckoutKeys(db, ["b", "a", "a"], async () => {
         active++;
         max = Math.max(max, active);

@@ -33,8 +33,8 @@ test('moderation catalog retains controls and paged loading with product preview
 test('seller approvals and management retain mutation and confirmation workflows', () => {
  const applications=read('src/components/admin/seller-applications.tsx');
  const sellers=read('src/components/admin/seller-management.tsx');
- for(const marker of ['writeBatch','batch.commit()','review(application, true)','review(application, false)','LoadMoreRecords','requestSellerMail']) assert.ok(applications.includes(marker),marker);
- for(const marker of ['ConfirmActionDialog','updateDoc','manage(seller)','extend(seller)','saveExact(seller)','setStatusFilter','LoadMoreRecords']) assert.ok(sellers.includes(marker),marker);
+ for(const marker of ['/api/seller-applications',"method:'PATCH'",'review(application, true)','review(application, false)','LoadMoreRecords','requestSellerMail']) assert.ok(applications.includes(marker),marker);
+ for(const marker of ['ConfirmActionDialog','/api/admin/seller-access','manage(seller)','extend(seller)','saveExact(seller)','setStatusFilter','LoadMoreRecords']) assert.ok(sellers.includes(marker),marker);
 });
 
 test('admin Refresh overview animates while all database counts settle', () => {

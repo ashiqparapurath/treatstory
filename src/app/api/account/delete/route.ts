@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { eraseExternalData } from '@/lib/server/external-erasure';
 import type { NextRequest } from 'next/server';
 import { FieldValue, Timestamp, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { ApiError, safeResponse, verifiedUser } from '@/lib/server/firebase-admin';
@@ -59,6 +61,7 @@ async function purgePersonalData(db: FirebaseDb, uid: string) {
       customerNote: '',
     }));
   }
+  for (const order of sellerOrders.docs) watch(writer.update(order.ref, {sellerId:'deleted-account'}));
   for (const checkout of checkouts.docs) {
     watch(writer.update(checkout.ref, {
       buyerUid: 'deleted-account',
@@ -68,12 +71,14 @@ async function purgePersonalData(db: FirebaseDb, uid: string) {
       customerNote: FieldValue.delete(),
     }));
   }
-  for (const item of [...products.docs, ...reviews.docs, ...support.docs, ...uniqueDocs(quoteBuyer, quoteSeller), ...bookings.docs, ...mail.docs, ...quoteLimits.docs, ...supportLimits.docs]) {
+  for (const item of [...products.docs, ...reviews.docs, ...uniqueDocs(quoteBuyer, quoteSeller), ...bookings.docs, ...mail.docs, ...quoteLimits.docs, ...supportLimits.docs]) {
     watch(writer.delete(item.ref));
   }
   await writer.close();
   if (failures.length) throw failures[0];
   // Delete nested items as well as parent docs (deleting a parent alone leaves subcollections).
+  for(const ticket of support.docs)await db.recursiveDelete(ticket.ref);
+  await db.recursiveDelete(db.doc('support_chat_keys/user_'+uid));
   await Promise.all([
     db.recursiveDelete(db.collection('favorites').doc(uid)),
     db.recursiveDelete(db.collection('notifications').doc(uid)),
@@ -127,6 +132,13 @@ export async function POST(request: NextRequest) {
         await marker.delete();
         throw new ApiError(409, 'You have outstanding custom-order requests. Contact support to close them before deleting your account.');
       }
+      const account=await auth.getUser(uid);
+      if(account.emailVerified&&account.email){
+        const guest=db.doc('seller_applications/guest_'+createHash('sha256').update(account.email.trim().toLowerCase()).digest('hex'));
+        const application=await guest.get();
+        if(application.exists&&!application.data()?.ownerUid)await guest.delete();
+      }
+      await eraseExternalData(db, uid);
       await purgePersonalData(db, uid);
       await auth.deleteUser(uid);
       await marker.set({ state: 'completed', completedAt: Timestamp.now() }).catch(() => {

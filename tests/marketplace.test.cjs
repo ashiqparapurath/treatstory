@@ -427,26 +427,30 @@ test('quote creation snapshots authoritative seller and product names with the r
   const db = { collection: name => ({doc: id => ({path:`${name}/${id || 'new-id'}`,id:id || 'new-id',collection: child=>({doc:()=>({path:`${name}/${id}/${child}/alert`})})})}),
     runTransaction: async fn => fn({get:async ref=>({exists:!!docs[ref.path],data:()=>docs[ref.path]}),create:(ref,data)=>{if(ref.path==='custom_quotes/new-id')created=data;},set(){}}) };
   const { POST } = load('src/app/api/quotes/route.ts', {
+    '@/lib/quote-checkout-schema':{quoteFulfillmentSchema:require('zod').z.any()},
+    '@/lib/server/quote-order':{convertQuote(){}},
     'next/server':{after(){}},
     'firebase-admin/firestore': {Timestamp:{now:()=>({toMillis:()=>now}),fromMillis:v=>v}},
     '@/lib/server/firebase-admin': {verifiedUser:async()=>({uid:'buyer',db}),ApiError:class extends Error{},safeResponse:e=>{throw e;}},
   }, {Response});
-  const response = await POST(new Request('https://shop.example/api/quotes',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'create',sellerId:'seller-12345',productId:'cake-1',occasion:'Birthday',description:'Chocolate cake with flowers',budget:1000,requestedDate:new Date(now+86400000).toISOString().slice(0,10),referenceUrl:'https://res.cloudinary.com/test/image/upload/example.jpg'})}));
+  const response = await POST(new Request('https://shop.example/api/quotes',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'create',sellerId:'seller-12345',productId:'cake-1',occasion:'Birthday',description:'Chocolate cake with flowers',budget:1000,requestedDate:new Date(now+86400000).toISOString().slice(0,10),referenceUrl:''})}));
   assert.equal(response.status,200);
   assert.equal(created.sellerName,'Little Bakery');
   assert.equal(created.productName,'Chocolate Cake');
-  assert.equal(created.referenceUrl,'https://res.cloudinary.com/test/image/upload/example.jpg');
+  assert.equal(created.referenceUrl,'');
 });
 
 test('reference photo uploads authenticate buyers, keep file checks and enforce a daily quota', async () => {
   let count = 0, upstreamCalls = 0, authenticated = true, deleting = false;
   const {POST} = load('src/app/api/cloudinary/upload/route.ts', {
+    '@/lib/server/media':{destroyMedia:async()=>{}},
+    'firebase-admin/firestore':{Timestamp:{now:()=>Date.now()}},
     'firebase-admin/app': {getApps:()=>[{name:'treatstory-image-upload'}]},
     'firebase-admin/auth': {getAuth:()=>({verifyIdToken:async()=>{if(!authenticated)throw Error('invalid');return {uid:'buyer'};}})},
     'next/server': {NextResponse:{json:(data,options)=>Response.json(data,options)}},
-    '@/lib/server/firebase-admin': {getServerFirebase:()=>({db:{collection:()=>({doc:()=>({get:async()=>({exists:deleting})})}),runTransaction:async fn=>fn({get:async()=>({data:()=>({count})}),set:(_ref,data)=>{count=data.count;}})}}),ApiError:class extends Error {constructor(status,message){super(message);this.status=status;}},safeResponse:error=>Response.json({error:error.message},{status:error.status})},
+    '@/lib/server/firebase-admin': {getServerFirebase:()=>({db:{doc:()=>({}),collection:()=>({doc:()=>({id:'asset-id',get:async()=>({exists:deleting})})}),runTransaction:async fn=>fn({get:async()=>({exists:deleting,data:()=>({count})}),create(){},update(){},set:(_ref,data)=>{count=data.count;}})}}),ApiError:class extends Error {constructor(status,message){super(message);this.status=status;}},safeResponse:error=>Response.json({error:error.message},{status:error.status})},
   }, {process:{env:{NEXT_PUBLIC_FIREBASE_PROJECT_ID:'test',CLOUDINARY_CLOUD_NAME:'test',CLOUDINARY_API_KEY:'test',CLOUDINARY_API_SECRET:'test'}},Blob,FormData,Buffer,Response,
-    fetch:async(_url,options)=>{upstreamCalls++;assert.equal(options.body.get('folder'),'treatstory/references/buyer');return {ok:true,json:async()=>({secure_url:'https://res.cloudinary.com/test/image/upload/photo.png',public_id:'photo'})};}});
+    fetch:async(_url,options)=>{upstreamCalls++;assert.equal(options.body.get('folder'),'treatstory/references/buyer');assert.equal(options.body.get('type'),'authenticated');return {ok:true,json:async()=>({secure_url:'https://res.cloudinary.com/test/image/upload/photo.png',public_id:'photo'})};}});
   const png = new Blob([new Uint8Array([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])],{type:'image/png'});
   const request = file => {const form=new FormData();form.set('kind','reference');form.set('file',file);return new Request('https://shop.example/api/cloudinary/upload',{method:'POST',headers:{authorization:'Bearer test'},body:form});};
   let response = await POST(request(png));
@@ -575,11 +579,11 @@ test('seller access confirmation opens without a write, awaits acknowledgment an
   const {SellerManagement}=load('src/components/admin/seller-management.tsx',{
     '@/firebase/firestore/use-paged-collection':{usePagedCollection:()=>({data:[seller],isLoading:false,hasMore:false,loadingMore:false,loadMore:async()=>{}})},
     '@/components/load-more-records':{LoadMoreRecords:()=>null},
-    '@/firebase':{useUser:()=>({user:{uid:'admin'}}),useFirestore:()=>db,useMemoFirebase:fn=>fn(),useCollection:()=>({data:[seller],isLoading:false})},
+    '@/firebase':{useUser:()=>({user:{uid:'admin',getIdToken:async()=> 'test-token'}}),useFirestore:()=>db,useMemoFirebase:fn=>fn(),useCollection:()=>({data:[seller],isLoading:false})},
     'firebase/firestore':{Timestamp,collection:()=>({}),doc:()=>({}),serverTimestamp:()=>0,updateDoc:()=>{writes++;return new Promise((resolve,reject)=>{resolveWrite=resolve;rejectWrite=reject;});}},
     '@/components/ui/button':{Button:'button'},'@/components/ui/input':{Input:'input'},'@/components/ui/label':{Label:'label'},
     '@/components/confirm-action-dialog':{ConfirmActionDialog:Dialog},'@/components/loading-states':{LoadError:()=>null},'@/hooks/use-toast':{useToast:()=>({toast:notice=>notices.push(notice)})},
-  },{window:{confirm:()=>{throw Error('Native dialog must not run');}}});
+  },{fetch:async()=>{writes++;await new Promise((resolve,reject)=>{resolveWrite=resolve;rejectWrite=reject;});return {ok:true,json:async()=>({saved:true})};},window:{confirm:()=>{throw Error('Native dialog must not run');}}});
   let tree;act(()=>{tree=create(React.createElement(SellerManagement));});
   const button=label=>tree.root.findAllByType('button').find(n=>n.children.includes(label));
   act(()=>button('Manage access').props.onClick());
@@ -590,12 +594,12 @@ test('seller access confirmation opens without a write, awaits acknowledgment an
   act(()=>dialog.props.onOpenChange(false));assert.equal(writes,0);
   act(()=>button('Save expiry').props.onClick());
   let first;
-  act(()=>{first=tree.root.findByType(Dialog).props.onConfirm();});
+  await act(async()=>{first=tree.root.findByType(Dialog).props.onConfirm();await Promise.resolve();});
   assert.equal(writes,1);assert.equal(tree.root.findByType(Dialog).props.busy,true);assert.equal(notices.length,0);
   await act(async()=>{await tree.root.findByType(Dialog).props.onConfirm();});assert.equal(writes,1);
   await act(async()=>{rejectWrite({code:'permission-denied'});await first;});
   assert.equal(tree.root.findByType(Dialog).props.open,true);assert.match(tree.root.findByType(Dialog).props.error,/correct account/);
-  act(()=>{first=tree.root.findByType(Dialog).props.onConfirm();});
+  await act(async()=>{first=tree.root.findByType(Dialog).props.onConfirm();await Promise.resolve();});
   await act(async()=>{resolveWrite();await first;});
   assert.equal(writes,2);assert.equal(tree.root.findByType(Dialog).props.open,false);assert.equal(notices.at(-1).title,'Seller access saved');
   act(()=>tree.unmount());
@@ -738,7 +742,7 @@ test('Instagram SKU codes normalize safely and match public catalog search', () 
   assert.match(lookup, /product\.data\(\)\?\.sku !== sku/);
   const seller = fs.readFileSync('src/lib/server/seller-product.ts', 'utf8');
   assert.match(seller, /tx\.create\(reservation/);
-  assert.match(seller, /sku, createdAt/);
+  assert.match(seller, /sku, searchPrefixes:productSearchPrefixes/);
   const rules = fs.readFileSync('firestore.rules', 'utf8');
   assert.match(rules, /match \/product_skus\/\{sku\} \{ allow read, write: if false;/);
   assert.match(rules, /request\.resource\.data\.get\('sku', ''\) == resource\.data\.get\('sku', ''\)/);

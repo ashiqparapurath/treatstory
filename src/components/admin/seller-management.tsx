@@ -4,8 +4,8 @@ import {LoadMoreRecords} from '@/components/load-more-records';
 import { requestSellerMail } from '@/lib/account-mail';
 
 import { useRef, useState } from 'react';
-import { collection, doc, serverTimestamp, updateDoc, Timestamp } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { collection, Timestamp } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import type { Seller, SellerAccessType } from '@/lib/marketplace-types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,7 +72,9 @@ export function SellerManagement() {
     const {seller,patch,action} = confirmation;
     setWorking(seller.id);setConfirmationError('');
     try {
-      await updateDoc(doc(db,'sellers',seller.id), {...patch,updatedAt:serverTimestamp()});
+      if(!user)throw new Error('Sign in again.');
+      const response=await fetch('/api/admin/seller-access',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await user.getIdToken()}`},body:JSON.stringify({sellerId:seller.id,expectedUpdatedAt:dateFrom(seller.updatedAt)?.getTime()??null,patch:{...patch,...(patch.accessEndsAt?{accessEndsAt:dateFrom(patch.accessEndsAt)?.getTime()}:{})}})});
+      const result=await response.json();if(!response.ok)throw new Error(result.error||'Unable to save seller access.');
       const end=longDate(patch.accessEndsAt || seller.accessEndsAt);
       toast({title:action==='suspend'?'Store suspended':action==='reactivate'?'Seller access reactivated':action==='extend'?'Seller access extended':'Seller access saved',
         description:action==='suspend'?`${seller.businessName} cannot receive new orders while suspended.`:`${seller.businessName} · ${patch.accessType || seller.accessType} access until ${end}.`});

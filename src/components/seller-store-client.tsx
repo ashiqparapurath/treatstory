@@ -13,7 +13,8 @@ import { StoreShareButton } from '@/components/store-share-button';
 const money = (price: number) => new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:0 }).format(price);
 
 export default function SellerStoreClient({ initialSeller = null, initialProducts = null }: { initialSeller?: Seller | null; initialProducts?: MarketplaceProduct[] | null }) {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id: string }>();
+  const id = initialSeller?.id || params.id;
   const db = useFirestore();
   const sellerRef = useMemoFirebase(() => db && id ? doc(db, 'sellers', id) : null, [db, id]);
   const { data: seller, isLoading, error } = useDoc<Seller>(sellerRef);
@@ -42,8 +43,9 @@ export default function SellerStoreClient({ initialSeller = null, initialProduct
         </p>
         <div className="mt-5 flex min-w-0 flex-wrap items-center gap-3">
           <span className={`inline-flex min-h-10 items-center rounded-full px-4 py-2 text-xs font-medium ${visibleSeller!.isOpen?'bg-[#edf3e8] text-[#416836]':'bg-amber-50 text-amber-800'}`}>{visibleSeller!.isOpen?'Accepting new orders':'On a break'}</span>
-          <StoreShareButton sellerId={id} storeName={visibleSeller!.businessName}/>
+          <StoreShareButton sellerId={visibleSeller!.slug || id} storeName={visibleSeller!.businessName}/>
         </div>
+        {visibleSeller!.foodLicenseNumber&&<p className="mt-4 text-xs">FSSAI registration / license: {visibleSeller!.foodLicenseNumber}</p>}
         <p className="mt-6 max-w-2xl whitespace-pre-wrap break-words text-sm leading-7 text-[#6f655a]">{visibleSeller!.description}</p>
         <div className="mt-5 flex min-w-0 flex-wrap gap-3 text-xs text-muted-foreground">
           <span className="rounded-full bg-[#f7f4ef] px-4 py-2">{visibleSeller!.businessCategory.replaceAll('-', ' ')}</span>

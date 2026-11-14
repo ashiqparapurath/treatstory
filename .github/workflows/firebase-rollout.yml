@@ -1,0 +1,28 @@
+name: Deploy Firebase rules and indexes
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Deploy reviewed database configuration
+        env:
+          FIREBASE_DEPLOY_CREDENTIALS: ${{ secrets.FIREBASE_DEPLOY_CREDENTIALS }}
+        run: |
+          umask 077
+          credential_file=$(mktemp)
+          trap 'rm -f "$credential_file"' EXIT
+          printf '%s' "$FIREBASE_DEPLOY_CREDENTIALS" > "$credential_file"
+          export GOOGLE_APPLICATION_CREDENTIALS="$credential_file"
+          node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS));if(c.project_id!=="treatstory-online")process.exit(1)'
+          npx --yes firebase-tools@14 deploy --only firestore:rules,firestore:indexes,storage --project treatstory-online --non-interactive

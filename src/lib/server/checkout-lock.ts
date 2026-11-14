@@ -18,10 +18,11 @@ export async function withCheckoutKeys<T>(
     queues.set(db, map);
   }
   const held: Array<() => void> = [];
+  const deadline=Date.now()+8000;
   try {
     for (const key of [...new Set(keys)].sort()) {
       const entry = map.get(key) || { tail: Promise.resolve(), waiting: 0 };
-      if (entry.waiting >= 256 || map.size >= 5000)
+      if (entry.waiting >= 32 || map.size >= 5000)
         throw new ApiError(429, "This item is busy. Please try again shortly.");
       const previous = entry.tail;
       let release!: () => void;
@@ -36,7 +37,13 @@ export async function withCheckoutKeys<T>(
         release();
         if (!entry.waiting && map!.get(key) === entry) map!.delete(key);
       });
-      await previous;
+      let timer:ReturnType<typeof setTimeout>|undefined;
+      try {
+        await Promise.race([previous,new Promise<never>((_,reject)=>{
+          timer=setTimeout(()=>reject(new ApiError(429,'This item is busy. Retry with the same checkout reference.')),Math.max(0,deadline-Date.now()));
+        })]);
+      } finally {if(timer)clearTimeout(timer);}
+
     }
     return await action();
   } finally {

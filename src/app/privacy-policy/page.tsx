@@ -1,49 +1,11 @@
-
 import { Header } from '@/components/header';
+import { LegalContact } from '@/components/legal-contact';
 import Link from 'next/link';
-
-export default function PrivacyPolicyPage() {
-  return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <Header />
-      <main className="flex-1">
-        <div className="section-shell py-12 md:py-20 lg:py-24">
-          <div className="max-w-3xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-8">
-              Privacy Policy
-            </h1>
-            <div className="space-y-6 text-muted-foreground">
-              <p>At TreatStory, accessible from treatstory.in, one of our main priorities is the privacy of our visitors. This Privacy Policy document contains types of information that is collected and recorded by TreatStory and how we use it.</p>
-              <h2 className="mt-6 text-xl font-semibold">Optional delivery location</h2>
-              <p>When you choose Use my location and grant browser permission, we send your coordinates through our server to an OpenStreetMap Nominatim geocoding service to suggest your locality, district, state and PIN. We do not track your location continuously or store coordinates in your address book. Only address details you confirm and save are kept for delivery. You can decline location access and enter your address manually.</p>
-              <p>If you have additional questions or require more information about our Privacy Policy, do not hesitate to contact us.</p>
-              
-              <h2 className="text-2xl font-bold text-foreground pt-4">Log Files</h2>
-              <p>TreatStory follows a standard procedure of using log files. These files log visitors when they visit websites. All hosting companies do this and a part of hosting services' analytics. The information collected by log files include internet protocol (IP) addresses, browser type, Internet Service Provider (ISP), date and time stamp, referring/exit pages, and possibly the number of clicks. These are not linked to any information that is personally identifiable. The purpose of the information is for analyzing trends, administering the site, tracking users' movement on the website, and gathering demographic information.</p>
-
-              <h2 className="text-2xl font-bold text-foreground pt-4">Cookies and Web Beacons</h2>
-              <p>Like any other website, TreatStory uses 'cookies'. These cookies are used to store information including visitors' preferences, and the pages on the website that the visitor accessed or visited. The information is used to optimize the users' experience by customizing our web page content based on visitors' browser type and/or other information.</p>
-
-              <h2 className="text-2xl font-bold text-foreground pt-4">Privacy Policies</h2>
-              <p>You may consult this list to find the Privacy Policy for each of the advertising partners of TreatStory.</p>
-              <p>Third-party ad servers or ad networks uses technologies like cookies, JavaScript, or Web Beacons that are used in their respective advertisements and links that appear on TreatStory, which are sent directly to users' browser. They automatically receive your IP address when this occurs. These technologies are used to measure the effectiveness of their advertising campaigns and/or to personalize the advertising content that you see on websites that you visit.</p>
-              <p>Note that TreatStory has no access to or control over these cookies that are used by third-party advertisers.</p>
-              
-              <h2 className="text-2xl font-bold text-foreground pt-4">Online Privacy Policy Only</h2>
-              <p>This Privacy Policy applies only to our online activities and is valid for visitors to our website with regards to the information that they shared and/or collect in TreatStory. This policy is not applicable to any information collected offline or via channels other than this website.</p>
-            </div>
-          </div>
-        </div>
-      </main>
-      <footer className="py-8 bg-background text-center text-sm text-muted-foreground border-t">
-        <div className="container flex flex-col md:flex-row justify-between items-center gap-4">
-          <p>© {new Date().getFullYear()} TreatStory. All rights reserved.</p>
-          <div className="flex gap-4">
-            <Link href="/terms-of-service" className="hover:text-primary transition-colors">Terms of Service</Link>
-            <Link href="/privacy-policy" className="hover:text-primary transition-colors">Privacy Policy</Link>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-}
+export const dynamic='force-dynamic';
+export default function Page(){return <div className="min-h-screen bg-background"><Header/><main className="section-shell mx-auto max-w-3xl py-12 pb-28"><h1 className="mb-3 text-4xl font-semibold">Privacy Policy</h1><p className="mb-8 text-sm text-muted-foreground">Updated 14 November 2026 · TreatStory marketplace</p><div className="space-y-8 text-sm leading-7 text-muted-foreground"><section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">Information we use</h2><p>We use account identifiers, names and email addresses to manage sign-in and account access. Seller applications include business and contact details. Orders include delivery or pickup information, contact numbers, requested dates and order history. You can optionally save addresses and favourites, submit reviews, request custom creations and contact support.</p></section>
+<section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">How information is shared</h2><p>The seller fulfilling your order receives the details needed to prepare and deliver it. A custom-order reference photo is shared with the creator you choose. Public storefronts, listings and reviews can be seen by visitors. Do not include private information in public reviews or product descriptions.</p></section>
+<section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">Service providers and browser storage</h2><p>Firebase provides authentication and database services; Vercel hosts the application; Cloudinary stores images; transactional emails use a Google Apps Script relay when configured. These services process data to run the marketplace. Browser storage supports sign-in, shopping preferences and application features. This policy does not describe an advertising network or sale of personal data.</p></section>
+<section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">Location is optional</h2><p>If you choose Use my location and permit browser access, coordinates are sent through our server to an OpenStreetMap Nominatim service to suggest your locality and PIN code. We do not continuously track location. Only the address details you confirm and save are stored in your address book; you can enter them manually.</p></section>
+<section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">Photos and messages</h2><p>New custom reference uploads require authorization for viewing. Older public reference links may already have been shared; contact support to remove or replace them. Support tickets are accessible to authorized support staff. Encrypted chat is unavailable unless separately activated after deployment and security review. Account deactivation cannot remove copies that recipients have already downloaded.</p></section>
+<section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">Retention and account deletion</h2><p>Account settings provide deletion after recent sign-in. Active orders and open custom requests must be resolved first. Deletion removes account data and tracked uploads, anonymizes buyer details in completed orders, and retains transaction records for dispute handling and accounting. External provider cleanup must succeed before account removal completes; a failed cleanup can be retried. Provider backups and previously downloaded copies may persist under their retention arrangements. Contact support for retention questions or a specific erasure request.</p></section>
+<section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">Your choices</h2><p>You may edit your profile and saved addresses, decline location access, request corrections or deletion, and report inappropriate disclosures through support. Sellers must use customer details only to fulfill orders and resolve related issues. We will update this notice when our processing changes.</p></section><LegalContact/></div><nav className="mt-8 flex gap-5 text-sm underline"><Link href="/privacy-policy">Privacy Policy</Link><Link href="/terms-of-service">Terms of Service</Link></nav></main></div>;}

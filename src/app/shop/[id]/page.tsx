@@ -1,3 +1,4 @@
+import { permanentRedirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import SellerStoreClient from '@/components/seller-store-client';
 import { getPublicStore } from '@/lib/server/public-store';
@@ -9,7 +10,7 @@ type Params = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const result = await getPublicStore(id);
-  const canonical = '/shop/' + encodeURIComponent(id);
+  const canonical = '/shop/' + encodeURIComponent(result.kind === 'found' ? result.data.seller.slug || id : id);
   if (result.kind === 'missing')
     return { title: 'Store unavailable', robots: { index: false, follow: false } };
   if (result.kind === 'unavailable')
@@ -35,6 +36,7 @@ export default async function SellerStorePage({ params }: Params) {
   const { id } = await params;
   const result = await getPublicStore(id);
   const data = result.kind === 'found' ? result.data : null;
+  if (data?.seller.slug && data.seller.slug !== id) permanentRedirect('/shop/' + encodeURIComponent(data.seller.slug));
   const schema = data ? {
     '@context': 'https://schema.org',
     '@type': 'Store',

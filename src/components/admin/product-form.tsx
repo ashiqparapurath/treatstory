@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useCollection, useFirestore, useMemoFirebase, useAccountRole } from '@/firebase';
+import { productSearchPrefixes } from '@/lib/search-index';
 import { collection, doc, serverTimestamp, addDoc, updateDoc } from 'firebase/firestore';
 import type { Product } from '@/lib/products';
 import { useToast } from '@/hooks/use-toast';
@@ -177,6 +178,7 @@ export function ProductForm({ product, onFinished }: ProductFormProps) {
     const categoryDoc = categories?.find(c => c.id === data.category);
 
     const productData = {
+      searchPrefixes:productSearchPrefixes({name:data.name,category:categoryDoc?.name}),
       name: data.name,
       description: data.description,
       price: data.price,

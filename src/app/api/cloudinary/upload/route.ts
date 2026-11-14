@@ -1,3 +1,5 @@
+import { destroyMedia } from '@/lib/server/media';
+import { Timestamp } from 'firebase-admin/firestore';
 import { readBodyBytes } from '@/lib/server/request-body';
 import { getServerFirebase, ApiError, safeResponse } from '@/lib/server/firebase-admin';
 import { randomUUID } from 'node:crypto';
@@ -133,10 +135,20 @@ export async function POST(request: NextRequest) {
   const upload = new FormData();
   upload.append('file', new Blob([bytes], { type: detected }), `photo.${detected.split('/')[1] === 'jpeg' ? 'jpg' : detected.split('/')[1]}`);
   upload.append('folder', folder);
-  upload.append('public_id', randomUUID());
+  const uploadId=randomUUID();
+  upload.append('public_id', uploadId);
   upload.append('overwrite', 'false');
+  if(kind === 'reference') upload.append('type','authenticated');
 
+  const {db}=getServerFirebase();
+  const asset=db.collection('media_assets').doc();
+  // Record the intended ID before contacting Cloudinary; a timeout may still create an asset.
   try {
+    await db.runTransaction(async tx=>{
+      const deleting=await tx.get(db.doc('account_deletions/'+uid));
+      if(deleting.exists)throw new ApiError(409,'This account is closing.');
+      tx.create(asset,{ownerUid:uid,kind,publicId:folder+'/'+uploadId,type:kind==='reference'?'authenticated':'upload',format:detected==='image/jpeg'?'jpg':detected.split('/')[1],status:'uploading',createdAt:Timestamp.now()});
+    });
     const response = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(cloudName)}/image/upload`, {
       method: 'POST',
       headers: { Authorization: 'Basic ' + Buffer.from(`${apiKey}:${apiSecret}`).toString('base64') },
@@ -152,7 +164,14 @@ export async function POST(request: NextRequest) {
     if (assetUrl.protocol !== 'https:' || assetUrl.hostname !== 'res.cloudinary.com') {
       return json({ error: 'The image could not be saved. Please try again.' }, 502);
     }
-    return json({ url: result.secure_url, publicId: result.public_id }, 200);
+    // Complete the ledger only if deletion has not started.
+    try { await db.runTransaction(async tx=>{
+      const deleting=await tx.get(db.doc('account_deletions/'+uid));
+      if(deleting.exists)throw new ApiError(409,'This account is closing.');
+      tx.update(asset,{publicId:result.public_id,status:'ready'});
+    });
+    } catch(error) { await destroyMedia(result.public_id,kind==='reference'?'authenticated':'upload'); throw error; }
+    return json({ url: kind==='reference'?'/api/reference-media/'+asset.id:result.secure_url, publicId: result.public_id }, 200);
   } catch (error) {
     console.error('Cloudinary upload transport failed', error);
     return json({ error: 'Image upload is temporarily unavailable. Please retry.' }, 502);

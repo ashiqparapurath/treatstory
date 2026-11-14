@@ -1,3 +1,4 @@
+import { productSearchPrefixes } from '@/lib/search-index';
 import type { z } from "zod";
 import { withCheckoutKeys } from "@/lib/server/checkout-lock";
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
@@ -34,10 +35,16 @@ export async function saveSellerProduct(
           const [seller, existing, quota] = await Promise.all([
             tx.get(db.doc("sellers/" + uid)), tx.get(ref), tx.get(quotaRef),
           ]);
+          const deletion=await tx.get(db.doc('account_deletions/'+uid));
+          if(deletion.exists)throw new ApiError(403,'Account deletion is in progress.');
           const store = seller.data();
           if (store?.status !== "active" || !store.accessEndsAt?.toMillis ||
               store.accessEndsAt.toMillis() <= Date.now())
             throw new ApiError(403, "Active seller access is required to save products.");
+          if(input.product.status==='published'&&store?.businessCategory==='home-bakery'){
+            if(!store.foodLicenseVerifiedUntil?.toMillis||store.foodLicenseVerifiedUntil.toMillis()<=Date.now())throw new ApiError(409,'Submit your current food license in Store settings and wait for verification before publishing.');
+            if(!input.product.ingredients?.trim()||!input.product.storageInstructions?.trim())throw new ApiError(400,'Food products need ingredients and storage instructions. Declare applicable allergens before publishing.');
+          }
           if (input.productId) {
             if (!existing.exists) throw new ApiError(404, "This product no longer exists.");
             if (existing.data()?.sellerId !== uid)
@@ -62,7 +69,7 @@ export async function saveSellerProduct(
             sku = candidate;
           }
           const now = Timestamp.now();
-          tx.set(ref, { ...input.product, sku, createdAt: existing.data()?.createdAt || now, updatedAt: now });
+          tx.set(ref, { ...input.product, sku, searchPrefixes:productSearchPrefixes({...input.product,sku}), createdAt: existing.data()?.createdAt || now, updatedAt: now });
           if (!oldSku) tx.create(reservation, { productId: ref.id, createdAt: now });
           tx.set(quota.ref, {
             sellerId: uid,

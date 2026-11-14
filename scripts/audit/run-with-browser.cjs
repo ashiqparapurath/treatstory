@@ -4,7 +4,7 @@ if (process.env.TREATSTORY_AUDIT !== "local-only")
   throw Error("Explicit local audit flag required");
 const load = spawn(
   process.execPath,
-  ["node_modules/tsx/dist/cli.mjs", "scripts/audit/load.ts"],
+  ["--import", "tsx", "scripts/audit/load.ts"],
   { env: process.env, stdio: ["ignore", "pipe", "inherit"] },
 );
 let buffer = "",

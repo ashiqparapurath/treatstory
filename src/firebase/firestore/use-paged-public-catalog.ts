@@ -1,4 +1,5 @@
 "use client";
+import { searchIndexTerm } from "@/lib/search-index";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   collection,
@@ -17,17 +18,16 @@ import { usePublicCatalog } from "./use-public-catalog";
 export function usePagedPublicCatalog<T>(
   name: "products" | "marketplace_products",
   previewLimit?: number,
+  searchTerm = "",
 ) {
   const db = useFirestore();
   const { user } = useUser();
   const size = previewLimit || 24;
-  const constraints = useCallback(
-    () =>
-      name === "marketplace_products"
-        ? [where("status", "==", "published")]
-        : [],
-    [name],
-  );
+  const term=process.env.NEXT_PUBLIC_INDEXED_SEARCH_ENABLED==='true'?searchIndexTerm(searchTerm):'';
+  const constraints=useCallback(()=>[
+    ...(name==='marketplace_products'?[where('status','==','published')]:[]),
+    ...(term?[where('searchPrefixes','array-contains',term)]:[]),
+  ],[name,term]);
   const ref = useMemoFirebase(
     () =>
       db
@@ -59,7 +59,7 @@ export function usePagedPublicCatalog<T>(
     return () => {
       generation.current++;
     };
-  }, [name, size, user?.uid]);
+  }, [name, size, user?.uid, term]);
   const hasMore =
     !previewLimit && !ended && (!!cursor || first.data?.length === size);
   const loadMore = useCallback(async () => {

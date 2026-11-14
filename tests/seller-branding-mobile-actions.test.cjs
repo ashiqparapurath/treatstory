@@ -46,13 +46,13 @@ test('public seller card gives name its own responsive row and keeps status / sh
   const share = page.indexOf('<StoreShareButton');
   assert.ok(heading >= 0 && heading < disclaimer && disclaimer < badge && badge < share);
   assert.doesNotMatch(page, /flex flex-wrap items-start justify-between gap-4/);
-  assert.match(page, /<StoreShareButton sellerId=\{id\} storeName=\{visibleSeller!\.businessName\}/);
+  assert.match(page, /<StoreShareButton sellerId=\{visibleSeller!\.slug \|\| id\} storeName=\{visibleSeller!\.businessName\}/);
 });
 
 test('seller settings exposes public storefront link and sharing without saving store settings', () => {
   const settings = fs.readFileSync('src/components/seller-store-settings.tsx', 'utf8');
   assert.match(settings, /Preview public storefront/);
-  assert.match(settings, /<StoreShareButton sellerId=\{user.uid\} storeName=\{seller.businessName\} dark/);
+  assert.match(settings, /<StoreShareButton sellerId=\{seller.slug \|\| user.uid\} storeName=\{seller.businessName\} dark/);
   const share = fs.readFileSync('src/components/store-share-button.tsx', 'utf8');
   assert.match(share, /type="button"/);
   assert.match(share, /navigator\.clipboard\?\.writeText/);

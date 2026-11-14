@@ -83,7 +83,9 @@ test('retry worker rejects missing or incorrect cron credentials',async()=>{
   class ApiError extends Error{constructor(status,message){super(message);this.status=status;}}
   let calls=0;
   const {GET}=load('src/app/api/email/process/route.ts',{
-    '@/lib/server/firebase-admin':{ApiError,getServerFirebase:()=>({db:{},auth:{}}),safeResponse:e=>Response.json({error:e.message},{status:e.status||503})},
+    '@/lib/server/operations':{remindSellerTrials:async()=>{}},
+    'firebase-admin/firestore':{Timestamp:{now:()=>0}},
+    '@/lib/server/firebase-admin':{ApiError,getServerFirebase:()=>({db:{doc:()=>({set:async()=>{}})},auth:{}}),safeResponse:e=>Response.json({error:e.message},{status:e.status||503})},
     '@/lib/server/mail':{processMailQueue:async()=>{calls++;return {configured:true,processed:0};}},
   },{process:{env:{CRON_SECRET:'fixture-only-secret'}}});
   assert.equal((await GET({headers:new Headers()})).status,401);assert.equal((await GET({headers:new Headers({authorization:'Bearer wrong'})})).status,401);assert.equal(calls,0);

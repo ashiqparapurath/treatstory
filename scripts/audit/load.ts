@@ -183,10 +183,8 @@ async function main() {
       try {
         resources.push({
           ...JSON.parse(readFileSync(output + "/server-metrics.json", "utf8")),
-          cgroupMemoryBytes: Number(
-            readFileSync("/sys/fs/cgroup/memory.current", "utf8"),
-          ),
-          cgroupCpu: readFileSync("/sys/fs/cgroup/cpu.stat", "utf8"),
+          cgroupMemoryBytes: (()=>{try{return Number(readFileSync('/sys/fs/cgroup/memory.current','utf8'));}catch{return null;}})(),
+          cgroupCpu: (()=>{try{return readFileSync('/sys/fs/cgroup/cpu.stat','utf8');}catch{return null;}})(),
         });
       } catch {}
     }, 1000);
@@ -336,7 +334,7 @@ async function main() {
                 ),
               );
               const document = snap.docs[0],
-                { createdAt, updatedAt, ...product } = document.data();
+                { createdAt, updatedAt, searchPrefixes, sku, ...product } = document.data();
               const r = await api("/api/seller/products", client.person.token, {
                 productId: document.id,
                 expectedUpdatedAt: updatedAt.toMillis(),
@@ -471,16 +469,8 @@ async function main() {
         {
           environment: {
             thinkTimeMs: thinkMs,
-            cpuLimit:
-              Number(
-                readFileSync("/sys/fs/cgroup/cpu.max", "utf8").split(" ")[0],
-              ) /
-              Number(
-                readFileSync("/sys/fs/cgroup/cpu.max", "utf8").split(" ")[1],
-              ),
-            memoryGiB:
-              Number(readFileSync("/sys/fs/cgroup/memory.max", "utf8")) /
-              1024 ** 3,
+            cpuLimit: (()=>{try{const [quota,period]=readFileSync('/sys/fs/cgroup/cpu.max','utf8').split(' ').map(Number);return Number.isFinite(quota/period)?quota/period:null;}catch{return null;}})(),
+            memoryGiB: (()=>{try{const value=Number(readFileSync('/sys/fs/cgroup/memory.max','utf8'))/1024**3;return Number.isFinite(value)?value:null;}catch{return null;}})(),
             project,
             providerDelivery: "stubbed",
             database: "emulator",
@@ -532,7 +522,7 @@ async function main() {
     await admin.doc("marketplace_products/" + raceProduct).get()
   ).data()!.stockQuantity;
   const won = race.filter((r) => r.status === 200);
-  const errors = race.filter((r) => ![200, 409].includes(r.status));
+  const errors = race.filter((r) => ![200, 409, 429].includes(r.status));
   const retryId = randomUUID();
   const repeat = await Promise.all(
     Array.from({ length: 25 }, () =>
@@ -549,6 +539,7 @@ async function main() {
   const correctness = {
     raceRequests: race.length,
     successfulOrders: won.length,
+    rateLimitedRequests: race.filter(r=>r.status===429).length,
     remainingStock: stock,
     unexpectedStatuses: errors.map((r) => r.status),
     duplicateRequests: repeat.length,

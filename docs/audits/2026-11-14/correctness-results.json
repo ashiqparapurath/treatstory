@@ -1,0 +1,11 @@
+{
+  "raceRequests": 100,
+  "successfulOrders": 1,
+  "rateLimitedRequests": 68,
+  "remainingStock": 0,
+  "unexpectedStatuses": [],
+  "duplicateRequests": 25,
+  "uniqueOrders": 1,
+  "duplicateUnexpectedStatuses": [],
+  "passed": true
+}
