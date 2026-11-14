@@ -1,5 +1,6 @@
 'use client';
 
+import { OperationsStatus } from './operations-status';
 import { useEffect, useState } from 'react';
 import { collection, getCountFromServer, limit, orderBy, query, Timestamp, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -109,6 +110,7 @@ export function AdminOverview({ navigate }: { navigate?: (tab: string) => void }
         <div className="mt-6 space-y-4">{counts.categories === null ? <p className="text-sm text-muted-foreground">Loading category counts…</p> : Object.values(categories).every(n => n === 0) ? <p className="text-sm text-muted-foreground">No sellers yet.</p> : Object.entries(categories).filter(([, value]) => value > 0).sort((a,b) => b[1]-a[1]).map(([name, count]) => <div key={name}><div className="mb-2 flex justify-between text-xs"><span className="capitalize">{name.replaceAll('-', ' ')}</span><span className="font-semibold">{count}</span></div><div className="h-2 overflow-hidden rounded-full bg-[#eee9e1]"><div className="h-full rounded-full bg-[#aa8d67]" style={{ width: `${count/max*100}%` }} /></div></div>)}</div>
       </div>
     </div>
+    <OperationsStatus/>
     <div className="flex items-start gap-3 rounded-2xl border border-[#e6dfd5] bg-[#f3eee6] p-4"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#967b58]" /><p className="text-xs leading-5 text-[#5b5145]">Order value is not confirmed revenue. Payment and settlement analytics will require protected backend tracking.</p></div>
   </section>;
 }

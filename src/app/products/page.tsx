@@ -16,7 +16,7 @@ import type { Product } from '@/lib/products';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function ProductsPageContent({ searchTerm }: { searchTerm: string }) {
-  const {data:products,isLoading,error,retry,hasMore,loadingMore,loadMore}=usePagedPublicCatalog<Product>('products');
+  const {data:products,isLoading,error,retry,hasMore,loadingMore,loadMore}=usePagedPublicCatalog<Product>('products',undefined,searchTerm);
 
   if (error) return <LoadError retry={retry} error={error} />;
   if (isLoading) return <ProductGridSkeleton count={8} />;

@@ -32,9 +32,7 @@ function ProductGrid({ products, categories, initialCategory, hasMore, loadingMo
       .filter((product) => matchesProductSearch(product,deferredSearch,true));
   }, [products, selectedCategory, deferredSearch]);
 
-  useEffect(() => {
-    if (!sku && (deferredSearch || selectedCategory !== 'All') && filteredProducts.length < visibleCount && hasMore && !loadingMore) void loadMore?.();
-  }, [deferredSearch, sku, selectedCategory, filteredProducts.length, visibleCount, hasMore, loadingMore, loadMore]);
+
 
   return (
     <div>

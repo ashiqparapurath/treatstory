@@ -1,12 +1,11 @@
 'use client';
-import { requestSellerMail } from '@/lib/account-mail';
+import { SELLER_TRIAL_MESSAGE } from '@/lib/seller-policy';
 import { errorToast } from '@/lib/user-notices';
 
 import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Header } from '@/components/header';
-import { useAccountRole, useFirestore, useUser } from '@/firebase';
+import { useAccountRole, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,7 +25,6 @@ const categories: { value: SellerCategory; label: string }[] = [
 export default function BecomeSellerPage() {
   const { user, isUserLoading } = useUser();
   const { seller, isRoleLoading, roleError } = useAccountRole();
-  const firestore = useFirestore();
   const { toast } = useToast();
   const [businessName, setBusinessName] = useState('');
   const [businessCategory, setBusinessCategory] = useState<SellerCategory>('home-bakery');
@@ -39,21 +37,14 @@ export default function BecomeSellerPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!firestore || !user || !user.displayName?.trim() || !user.email || submitting || seller || isRoleLoading || roleError) return;
+    if (submitting || seller || (user && (isRoleLoading || roleError))) return;
+    const website = new FormData(event.currentTarget).get('website') || '';
     setSubmitting(true);
     try {
-      await setDoc(doc(firestore, 'seller_applications', user.uid), {
-        ownerUid: user.uid,
-        businessName: businessName.trim(),
-        businessCategory,
-        contactEmail: contactEmail.trim(),
-        contactPhone: contactPhone.trim(),
-        description: description.trim(),
-        status: 'pending',
-        submittedAt: serverTimestamp(),
-      });
+      const response = await fetch('/api/seller-applications', {method:'POST',headers:{'Content-Type':'application/json',...(user?{Authorization:`Bearer ${await user.getIdToken()}`}:{})},body:JSON.stringify({businessName,businessCategory,contactEmail,contactPhone,description,website})});
+      const result = await response.json();
+      if(!response.ok)throw new Error(result.error || 'Application could not be submitted.');
       setSubmitted(true);
-      try{await requestSellerMail(user,'application',user.uid);}catch{toast({title:'Application saved; email update delayed',description:'Track your application here. You do not need to submit it again.'});}
       toast({ title: 'Application submitted', description: 'Your request is awaiting review.' });
     } catch(error) {toast(errorToast(error,'seller-application'));
     } finally {
@@ -90,7 +81,7 @@ export default function BecomeSellerPage() {
               </div>
               <p className="mt-5 flex items-start gap-2 text-[11px] leading-5 text-[#827362]">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#897152]" aria-hidden="true" />
-                Seller access is reviewed before activation.
+                {SELLER_TRIAL_MESSAGE}
               </p>
               <div aria-label="Marketplace creator categories" className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 sm:hidden">
                 {['Home bakes', 'Art', 'Handmade'].map((category, index) => (
@@ -149,39 +140,12 @@ export default function BecomeSellerPage() {
             <section role="alert" className="bg-transparent px-0 py-2 text-sm leading-7 text-amber-950 sm:rounded-[24px] sm:bg-amber-50 sm:p-6">
               We couldn’t check your seller account access right now. Refresh this page or contact support if the problem continues.
             </section>
-          ) : !user ? (
-            <section aria-labelledby="seller-account-heading" className="grid min-w-0 gap-5 bg-transparent px-0 py-0 sm:gap-7 sm:rounded-[30px] sm:bg-[#f6f1e9] sm:px-9 sm:py-10 md:grid-cols-[1fr_auto] md:items-center md:gap-12">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.19em] text-[#967854]">Your first step</p>
-                <h2 id="seller-account-heading" className="mt-2 text-2xl font-medium leading-tight tracking-tight sm:text-[28px]">Ready to make your creations discoverable?</h2>
-                <p className="mt-3 max-w-xl text-sm leading-7 text-[#73685b]">
-                  Start with a free TreatStory account. We’ll keep your application, review updates and future seller access connected to your profile.
-                </p>
-                <p className="mt-2 text-xs leading-6 text-[#897e70]">Applying is a request for review—not an automatic seller approval.</p>
-              </div>
-              <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row md:w-64 md:shrink-0 md:flex-col">
-                <Link href="/register?next=%2Fbecome-a-seller" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#30291f] px-5 text-sm font-semibold text-white transition hover:bg-[#554737]">
-                  Create account <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
-                </Link>
-                <Link href="/login?next=%2Fbecome-a-seller" className="inline-flex min-h-12 w-full items-center justify-center whitespace-nowrap bg-transparent px-2 text-sm font-semibold text-[#433629] underline decoration-[#c5ae91] underline-offset-4 transition hover:text-[#70583d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9f805a] sm:rounded-full sm:bg-white/75 sm:px-4 sm:no-underline sm:hover:bg-white">
-                  I already have an account
-                </Link>
-              </div>
-            </section>
-          ) : !user.displayName?.trim() ? (
-            <section className="bg-transparent p-0 sm:rounded-[26px] sm:bg-[#f3ede4] sm:p-9">
-              <p className="text-[10px] font-bold uppercase tracking-[0.19em] text-[#967854]">Almost ready</p>
-              <h2 className="mt-2 text-2xl font-medium">Add your name to your profile.</h2>
-              <p className="mt-3 max-w-xl text-sm leading-7 text-[#73685b]">Your name helps us identify your application. Once your profile is complete, you can return here to share your business details.</p>
-              <Link href="/account?next=%2Fbecome-a-seller" className="mt-5 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#30291f] px-6 text-sm font-semibold text-white">
-                Complete profile <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            </section>
           ) : submitted ? (
             <section role="status" className="bg-transparent p-0 sm:rounded-[26px] sm:bg-[#edf2e9] sm:p-9">
               <CheckCircle2 className="h-8 w-8 text-[#688259]" aria-hidden="true" />
               <h2 className="mt-4 text-2xl font-medium">Your story is on its way.</h2>
-              <p className="mt-3 max-w-xl text-sm leading-7 text-[#617459]">We've received your application. We'll review the details and contact you using your TreatStory account email.</p>
+              <p className="mt-3 max-w-xl text-sm leading-7 text-[#617459]">We've received your application. We'll review the details and contact you using the contact details you provided.</p>
+              {!user&&<p className="mt-4 text-sm"><Link href="/register?next=%2Fbecome-a-seller" className="underline">Create an account</Link> with the same contact email and verify it before seller activation. <Link href="/login?next=%2Fbecome-a-seller" className="underline">Already registered? Sign in.</Link></p>}
               <Link href="/" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#455b3d] underline underline-offset-4">
                 Back to TreatStory <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
@@ -192,6 +156,7 @@ export default function BecomeSellerPage() {
               <h2 id="seller-form-heading" className="mt-2 text-2xl font-medium tracking-tight sm:text-3xl">Tell us about your creations.</h2>
               <p className="mt-3 max-w-xl text-sm leading-7 text-[#73685b]">A few details about your business will help us understand what you make. Your application will be reviewed before you can start selling.</p>
               <form onSubmit={submit} className="mt-7 space-y-6 bg-transparent p-0 shadow-none sm:mt-8 sm:rounded-[24px] sm:bg-white sm:p-9 sm:shadow-[0_8px_32px_rgba(55,42,28,0.035)]">
+                <input name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" />
                 <div className="space-y-2">
                   <Label htmlFor="businessName">Business / studio name</Label>
                   <Input id="businessName" required minLength={2} maxLength={120} value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="e.g. Little Bloom Bakery" className="min-h-12 bg-white" />
@@ -214,12 +179,12 @@ export default function BecomeSellerPage() {
                 <div className="space-y-2">
                   <Label htmlFor="description">A little about your work</Label>
                   <Textarea id="description" required maxLength={2000} rows={5} value={description} onChange={e => setDescription(e.target.value)} placeholder="What do you make, and what makes your creations special?" className="bg-white" />
-                  <p className="text-xs leading-5 text-[#8d8174]">Tell us your story in your own words.</p>
+                  <p className="text-xs leading-5 text-[#8d8174]">Tell us your story in your own words. Home bakers must submit current FSSAI registration or license details for review in Store settings before publishing products.</p>
                 </div>
-                <Button type="submit" className="min-h-12 w-full rounded-full bg-[#30291f] text-white hover:bg-[#554737] sm:w-auto sm:px-9" disabled={submitting || !firestore}>
+                <Button type="submit" className="min-h-12 w-full rounded-full bg-[#30291f] text-white hover:bg-[#554737] sm:w-auto sm:px-9" disabled={submitting}>
                   {submitting ? 'Sending your application…' : 'Send seller application'}
                 </Button>
-                <p className="max-w-xl text-xs leading-6 text-[#8d8174]">Your request is linked to your signed-in TreatStory profile. Approval is not automatic.</p>
+                <p className="max-w-xl text-xs leading-6 text-[#8d8174]">No account is needed to apply. Before activation, register and verify the same contact email. Approval is not automatic.</p>
               </form>
             </section>
           )}
@@ -262,7 +227,7 @@ export default function BecomeSellerPage() {
           </div>
           <ol className="mt-8 grid gap-7 sm:grid-cols-3 sm:gap-10">
             {[
-              ['01', 'Make your TreatStory account', 'Create a free profile or sign in to continue.'],
+              ['01', 'Apply without an account', 'Share your business and contact details.'],
               ['02', 'Introduce your business', 'Tell us what you create and how to contact you.'],
               ['03', 'We review your application', 'Seller access is enabled after approval.'],
             ].map(([number, title, description]) => (

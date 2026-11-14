@@ -17,6 +17,8 @@ import { ApiError } from "@/lib/server/firebase-admin";
 
 type SellerRecord = {
   ownerUid?: string;
+  businessCategory?:string;
+  foodLicenseVerifiedUntil?:Timestamp;
   businessName?: string;
   status?: string;
   isOpen?: boolean;
@@ -263,6 +265,7 @@ export async function placeAtomicCheckout(
                     " is not accepting new orders.",
                 );
               }
+              if(s.businessCategory==='home-bakery'&&(!s.foodLicenseVerifiedUntil?.toMillis||s.foodLicenseVerifiedUntil.toMillis()<=Date.now()))throw new ApiError(409,'This food seller must renew their license verification before accepting new orders.');
               if (
                 s.deliveryMethods?.length &&
                 !s.deliveryMethods.includes(input.deliveryMode)

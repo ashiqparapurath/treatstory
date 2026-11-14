@@ -16,7 +16,7 @@ const allowed: Record<string, string[]> = {
   completed: [], rejected: [], cancelled: [],
 };
 type OrderInfo = {
-  buyerUid: string; sellerId: string; productId: string; status: string; orderReference?:string; subtotal?:number; deliveryFee?:number; deliveryAddress?:string; requestedSlot?:string; customerName?:string; customerPhone?:string; advancePaymentRequired?:boolean; productName?: string; deliveryMode?: string;
+  quoteId?: string; buyerUid: string; sellerId: string; productId: string; status: string; orderReference?:string; subtotal?:number; deliveryFee?:number; deliveryAddress?:string; requestedSlot?:string; customerName?:string; customerPhone?:string; advancePaymentRequired?:boolean; productName?: string; deliveryMode?: string;
   quantity: number; stockSource?: 'product' | 'option' | 'none';
   stockReserved?: boolean; stockReleasedAt?: Timestamp; bookingReleasedAt?: Timestamp;
   selectedWeight?: {value: number; unit: string}|null;
@@ -38,6 +38,8 @@ export async function applyOrderAction(db: Firestore, uid: string, orderId: stri
     const isAdmin = adminSnap.exists;
     if (!isBuyer && !isSeller && !isAdmin) throw new ApiError(403, 'You cannot manage this order.');
 
+    const quoteRef=order.quoteId?db.doc('custom_quotes/'+order.quoteId):null;
+    const quote=quoteRef?await tx.get(quoteRef):null;
     const now = Timestamp.now();
     const event = { at: now, by: uid, action, ...(reason ? { note: reason } : {}) };
     const history = [...(order.history || []).slice(-29), event];
@@ -88,6 +90,7 @@ export async function applyOrderAction(db: Firestore, uid: string, orderId: stri
       bookingRef && !order.bookingReleasedAt ? tx.get(bookingRef) : Promise.resolve(null),
     ]) : [null, null];
 
+    if(quoteRef&&quote?.exists&&['completed','rejected','cancelled'].includes(action))tx.update(quoteRef,{status:action==='completed'?'completed':'cancelled',updatedAt:now});
     let needsInventoryReview = false;
     if (productSnap?.exists && order.stockReserved && !order.stockReleasedAt) {
       const p = productSnap.data() as { stockQuantity?: number; weightOptions?: Array<{value:number;unit:string;stockQuantity?:number}> };

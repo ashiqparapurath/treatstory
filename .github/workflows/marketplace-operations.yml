@@ -1,0 +1,25 @@
+name: Marketplace notification worker
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+permissions:
+  contents: read
+concurrency:
+  group: marketplace-notification-worker
+  cancel-in-progress: false
+jobs:
+  drain:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Process notifications and seller reminders
+        env:
+          SITE_URL: ${{ vars.TREATSTORY_SITE_URL }}
+          CRON_SECRET: ${{ secrets.TREATSTORY_CRON_SECRET }}
+        run: |
+          if [ -z "$SITE_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo 'Worker not configured: set TREATSTORY_SITE_URL and TREATSTORY_CRON_SECRET.'
+            exit 1
+          fi
+          case "$SITE_URL" in https://*) ;; *) echo 'HTTPS origin required'; exit 1;; esac
+          curl --fail --silent --show-error --max-time 65 --header "Authorization: Bearer $CRON_SECRET" "$SITE_URL/api/email/process"

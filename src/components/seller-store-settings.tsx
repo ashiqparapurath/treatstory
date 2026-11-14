@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorNotice } from '@/lib/user-notices';
+import { SellerCompliance } from '@/components/seller-compliance';
 import { StoreShareButton } from '@/components/store-share-button';
 
 type StoreDraft = {
@@ -159,7 +160,7 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
           </button>
         </div>
         <div className="min-w-0 flex-1"><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#d2b58b]">Store identity</p><h2 className="mt-2 break-words text-2xl font-semibold sm:text-3xl">{seller.businessName}</h2><p className="mt-2 max-w-xl text-xs leading-5 text-white/70">Tap the pencil on your logo to upload a JPG, PNG or WebP (up to 2 MB). Save your changes when you're ready.</p>
-        <div className="mt-3 flex flex-wrap items-center gap-3"><Link href={'/shop/' + user.uid} className="inline-flex min-h-11 items-center text-xs font-medium text-[#eacda6] underline underline-offset-4">Preview public storefront</Link><StoreShareButton sellerId={user.uid} storeName={seller.businessName} dark />{draft.logoUrl && <button type="button" onClick={() => update('logoUrl', '')} disabled={!active || busy || uploading} className="text-xs text-white/70 underline underline-offset-4 hover:text-white disabled:opacity-50">Remove logo</button>}</div>
+        <div className="mt-3 flex flex-wrap items-center gap-3"><Link href={'/shop/' + (seller.slug || user.uid)} className="inline-flex min-h-11 items-center text-xs font-medium text-[#eacda6] underline underline-offset-4">Preview public storefront</Link><StoreShareButton sellerId={seller.slug || user.uid} storeName={seller.businessName} dark />{draft.logoUrl && <button type="button" onClick={() => update('logoUrl', '')} disabled={!active || busy || uploading} className="text-xs text-white/70 underline underline-offset-4 hover:text-white disabled:opacity-50">Remove logo</button>}</div>
         {uploading && <p role="status" className="mt-2 text-xs text-[#eacda6]">Uploading logo…</p>}</div>
       </div>
     </div>
@@ -224,5 +225,6 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
       <div><p className="flex items-center gap-2 font-semibold text-[#8b3b31]"><ShieldCheck className="h-4 w-4" />Account & privacy</p><p className="mt-1 text-xs text-muted-foreground">You can request permanent account deletion from your profile. Open orders must be completed first.</p></div>
       <Link href="/account#delete-account" className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-full border border-[#d9b4ad] px-4 text-xs font-semibold text-[#8b3b31]">Manage account</Link>
     </div>}
-  </form>;
+  </form>
+      {seller.businessCategory==='home-bakery'&&<SellerCompliance/>};
 }

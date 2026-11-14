@@ -11,7 +11,7 @@ export type PublicStoreResult =
 
 const sellerFields = [
   'businessName','businessCategory','description','logoUrl','coverUrl','isOpen',
-  'deliveryMethods','deliveryPincodes','status',
+  'deliveryMethods','deliveryPincodes','status','slug','foodLicenseNumber',
 ] as const;
 const productFields = [
   'name','description','price','category','imageUrls','showPrice','sellerId',
@@ -24,17 +24,19 @@ export const getPublicStore = cache(async (id: string):Promise<PublicStoreResult
   const load = async ():Promise<PublicStoreResult> => {
     try {
       const { db } = getServerFirebase();
-      const snapshot = await db.collection('sellers').doc(id).get();
+      const mapping = await db.doc('store_slugs/' + id).get();
+      const sellerId = mapping.data()?.sellerId || id;
+      const snapshot = await db.collection('sellers').doc(sellerId).get();
       if (!snapshot.exists) return { kind: 'missing' };
       const data = snapshot.data()!;
       if (data.status !== 'active' || typeof data.businessName !== 'string' || !data.businessName.trim())
         return { kind: 'missing' };
-      const seller:Record<string,unknown>={ id };
+      const seller:Record<string,unknown>={ id: sellerId };
       for (const field of sellerFields) if(data[field] !== undefined && data[field] !== null) seller[field]=data[field];
       let products:MarketplaceProduct[]=[];
       try {
         const listing = await db.collection('marketplace_products')
-          .where('sellerId','==',id).where('status','==','published').limit(32).get();
+          .where('sellerId','==',sellerId).where('status','==','published').limit(32).get();
         products=listing.docs.map(doc=>{
           const fields:Record<string,unknown>={id:doc.id};
           const source=doc.data();

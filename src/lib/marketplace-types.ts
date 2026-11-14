@@ -25,6 +25,8 @@ export interface Seller {
   description: string;
   contactEmail: string;
   contactPhone: string;
+  foodLicenseNumber?: string;
+  foodLicenseVerifiedUntil?: unknown;
   whatsappNumber?: string;
   logoUrl?: string;
   coverUrl?: string;

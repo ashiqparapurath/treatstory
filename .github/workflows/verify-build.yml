@@ -2,7 +2,7 @@ name: Verify TreatStory build
 
 on:
   push:
-    branches: [multi-vendor-foundation]
+    branches: [main, multi-vendor-foundation]
   pull_request:
 
 # Only the newest commit on each pull request needs a full verification run.
@@ -36,7 +36,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Validate rules and execute real atomic-checkout Firestore emulator tests
-        run: npx --yes firebase-tools@14 emulators:exec --only firestore,storage --project demo-treatstory --config firebase.json 'npx --no-install tsx tests/atomic-checkout-emulator.ts && npx --no-install tsx tests/seller-product-rules.ts && npx --no-install tsx tests/seller-store-rules.ts && npx --no-install tsx tests/seller-product-server.ts && npx --no-install tsx tests/mail-emulator.ts'
+        run: npx --yes firebase-tools@14 emulators:exec --only firestore,storage --project demo-treatstory --config firebase.json 'npx --no-install tsx tests/atomic-checkout-emulator.ts && npx --no-install tsx tests/seller-product-rules.ts && npx --no-install tsx tests/seller-store-rules.ts && npx --no-install tsx tests/seller-product-server.ts && npx --no-install tsx tests/mail-emulator.ts && npx --no-install tsx tests/quote-order-emulator.ts'
       - name: TypeScript validation
         run: npm run typecheck
       - name: Production build

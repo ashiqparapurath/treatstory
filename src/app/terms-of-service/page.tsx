@@ -1,59 +1,13 @@
-
 import { Header } from '@/components/header';
+import { LegalContact } from '@/components/legal-contact';
 import Link from 'next/link';
-
-export default function TermsOfServicePage() {
-  return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <Header />
-      <main className="flex-1">
-        <div className="section-shell py-12 md:py-20 lg:py-24">
-          <div className="max-w-3xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-8">
-              Terms of Service
-            </h1>
-            <div className="space-y-6 text-muted-foreground">
-              <p>Welcome to TreatStory. These terms and conditions outline the rules and regulations for the use of TreatStory's Website, located at treatstory.in.</p>
-              <p>By accessing this website we assume you accept these terms and conditions. Do not continue to use TreatStory if you do not agree to take all of the terms and conditions stated on this page.</p>
-
-              <h2 className="text-2xl font-bold text-foreground pt-4">Cookies</h2>
-              <p>We employ the use of cookies. By accessing TreatStory, you agreed to use cookies in agreement with the TreatStory's Privacy Policy.</p>
-              <p>Most interactive websites use cookies to let us retrieve the user's details for each visit. Cookies are used by our website to enable the functionality of certain areas to make it easier for people visiting our website. Some of our affiliate/advertising partners may also use cookies.</p>
-
-              <h2 className="text-2xl font-bold text-foreground pt-4">License</h2>
-              <p>Unless otherwise stated, TreatStory and/or its licensors own the intellectual property rights for all material on TreatStory. All intellectual property rights are reserved. You may access this from TreatStory for your own personal use subjected to restrictions set in these terms and conditions.</p>
-              <p>You must not:</p>
-              <ul className="list-disc list-inside pl-4">
-                <li>Republish material from TreatStory</li>
-                <li>Sell, rent or sub-license material from TreatStory</li>
-                <li>Reproduce, duplicate or copy material from TreatStory</li>
-                <li>Redistribute content from TreatStory</li>
-              </ul>
-              <p>This Agreement shall begin on the date hereof.</p>
-
-              <h2 className="text-2xl font-bold text-foreground pt-4">Disclaimer</h2>
-              <p>To the maximum extent permitted by applicable law, we exclude all representations, warranties and conditions relating to our website and the use of this website. Nothing in this disclaimer will:</p>
-              <ul className="list-disc list-inside pl-4">
-                  <li>limit or exclude our or your liability for death or personal injury;</li>
-                  <li>limit or exclude our or your liability for fraud or fraudulent misrepresentation;</li>
-                  <li>limit any of our or your liabilities in any way that is not permitted under applicable law; or</li>
-                  <li>exclude any of our or your liabilities that may not be excluded under applicable law.</li>
-              </ul>
-              <p>As long as the website and the information and services on the website are provided free of charge, we will not be liable for any loss or damage of any nature.</p>
-
-            </div>
-          </div>
-        </div>
-      </main>
-      <footer className="py-8 bg-background text-center text-sm text-muted-foreground border-t">
-        <div className="container flex flex-col md:flex-row justify-between items-center gap-4">
-          <p>© {new Date().getFullYear()} TreatStory. All rights reserved.</p>
-          <div className="flex gap-4">
-            <Link href="/terms-of-service" className="hover:text-primary transition-colors">Terms of Service</Link>
-            <Link href="/privacy-policy" className="hover:text-primary transition-colors">Privacy Policy</Link>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-}
+export const dynamic='force-dynamic';
+export default function Page(){return <div className="min-h-screen bg-background"><Header/><main className="section-shell mx-auto max-w-3xl py-12 pb-28"><h1 className="mb-3 text-4xl font-semibold">Terms of Service</h1><p className="mb-8 text-sm text-muted-foreground">Updated 14 November 2026 · TreatStory marketplace</p><div className="space-y-8 text-sm leading-7 text-muted-foreground"><section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">The marketplace</h2><p>TreatStory connects buyers with independent home bakers, artists and handmade creators. Listings identify the seller responsible for the creation, product information, preparation and fulfillment. Marketplace approval does not certify a seller’s identity, product quality or food safety.</p></section>
+<section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">Orders and pricing</h2><p>Review the product, size, price, delivery fee, requested date, availability and seller details before ordering. An order submitted through checkout is pending until the seller confirms it. Stock and capacity are checked when an order is placed. A custom quote becomes an order only when you submit its fulfillment details and confirm the total.</p></section>
+<section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">Payment</h2><p>The current checkout supports cash on delivery or pickup, subject to seller confirmation. Some catalog items disclose seller-arranged advance payment before checkout; confirm the recipient and terms with the seller. TreatStory does not currently collect online checkout payments or operate automated seller settlements. An order’s value is not proof that payment was received.</p></section>
+<section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">Delivery and pickup</h2><p>Each seller sets supported delivery methods, service PIN codes, slots, preparation time, fees and capacity. Provide accurate contact and address details. Contact support with the order reference if a delivery is delayed, incomplete or incorrect. Do not mark an order received before receiving it.</p></section>
+<section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">Cancellation, returns and complaints</h2><p>Request cancellation from Orders as early as possible; a seller must respond once preparation or fulfillment is underway. Perishable, personalized and made-to-order goods may have different change-of-mind return arrangements, which the seller must explain before purchase. These arrangements do not remove remedies for defective, unsafe, misdescribed or undelivered goods. Report the problem through support with the order reference and available evidence. Refunds for money paid directly to a seller require coordination with that seller; there is no automated online refund service yet.</p></section>
+<section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">Seller responsibilities and food information</h2><p>Sellers must provide accurate descriptions, inclusive pricing and fulfillment information, use only images they may lawfully publish, and comply with applicable registration and licensing requirements. Food sellers must provide applicable FSSAI details, ingredients, allergens, storage and shelf-life information and take responsibility for safe preparation and delivery. Buyers with allergies should confirm suitability directly before ordering; an empty allergen field is not an allergen-free guarantee.</p></section>
+<section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">Six-month seller trial</h2><p>Approved new sellers receive six calendar months of free access beginning at approval. There is no automatic paid renewal or charge. Choose whether to continue after evaluating the service; any future paid plan and charges must be explained and agreed separately. When access expires, new selling activity stops until access is renewed, while existing order obligations remain.</p></section>
+<section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">Accounts and acceptable use</h2><p>Keep account credentials private, provide truthful information and do not submit fraudulent orders, abusive messages or unauthorized content. TreatStory may restrict access for misuse or unresolved safety concerns. Account deletion requires recent sign-in and resolution of active commitments. Review the Privacy Policy for data handling.</p></section>
+<section className="space-y-3"><h2 className="text-xl font-semibold text-foreground">Your rights</h2><p>These terms do not waive rights or remedies available under applicable consumer law. Contact support to raise a complaint or request correction. Material changes to the service or terms will be reflected here before they apply to new transactions.</p></section><LegalContact/></div><nav className="mt-8 flex gap-5 text-sm underline"><Link href="/privacy-policy">Privacy Policy</Link><Link href="/terms-of-service">Terms of Service</Link></nav></main></div>;}

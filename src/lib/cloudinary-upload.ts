@@ -27,6 +27,6 @@ export async function uploadTreatStoryPhoto(user: User, file: File, kind: ImageK
   }
   const result = await response.json().catch(() => null) as { url?: string; error?: string;code?:string;details?:{code?:string} } | null;
   if (!response.ok || !result?.url) throw new ActionError(result?.error || 'The image could not be uploaded.', response.status,result?.code||result?.details?.code);
-  if (!result.url.startsWith('https://res.cloudinary.com/')) throw new Error('Unexpected image upload response.');
+  if (!(kind === 'reference' ? /^\/api\/reference-media\/[a-zA-Z0-9_-]+$/.test(result.url) : result.url.startsWith('https://res.cloudinary.com/'))) throw new Error('Unexpected image upload response.');
   return result.url;
 }

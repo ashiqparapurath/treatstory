@@ -180,6 +180,15 @@ service cloud.firestore {
         (slots.size() <= 5 || (slots[5] is string && slots[5].size() > 0 && slots[5].size() <= 60));
     }
 
+    match /seller_compliance/{sellerId} {
+      allow get: if isAdmin() || (isSignedIn() && request.auth.uid == sellerId);
+      allow list: if isAdmin();
+      allow write: if false;
+    }
+    match /store_slugs/{slug} {
+      allow get: if true;
+      allow list, write: if false;
+    }
     match /sellers/{sellerId} {
       // A signed-in user may read their own UID document even if it does not yet
       // exist. This is needed for a reliable non-seller role lookup.

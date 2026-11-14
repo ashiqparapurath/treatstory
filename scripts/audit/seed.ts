@@ -1,3 +1,4 @@
+import { productSearchPrefixes } from '../../src/lib/search-index';
 import { generateKeyPairSync } from "node:crypto";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { initializeApp } from "firebase-admin/app";
@@ -88,6 +89,7 @@ async function main() {
   let batch = db.batch(),
     writes = 0;
   async function put(path: string, data: Record<string, unknown>) {
+    if (/^(products|marketplace_products)\//.test(path)) data.searchPrefixes=productSearchPrefixes(data);
     batch.set(db.doc(path), data);
     writes++;
     if (writes === 400) {
@@ -103,6 +105,8 @@ async function main() {
       slug: s.uid,
       businessName: `Audit Bakery ${i}`,
       businessCategory: "home-bakery",
+      foodLicenseNumber: "00000000000000", // Synthetic emulator-only fixture
+      foodLicenseVerifiedUntil: Timestamp.fromMillis(Date.now()+180*86400000),
       contactEmail: s.email,
       contactPhone: "9876543210",
       description: "Synthetic staging seller",
@@ -193,6 +197,8 @@ async function main() {
         .uid,
       businessName: "Audit applicant " + i,
       businessCategory: "home-bakery",
+      foodLicenseNumber: "00000000000000", // Synthetic emulator-only fixture
+      foodLicenseVerifiedUntil: Timestamp.fromMillis(Date.now()+180*86400000),
       contactEmail: "applicant@example.test",
       contactPhone: "9876543210",
       description: "Synthetic application",
