@@ -28,6 +28,7 @@ export function AdminOverview({ navigate }: { navigate?: (tab: string) => void }
   const [counts, setCounts] = useState<Counts>(blank);
   const [errors, setErrors] = useState<string[]>([]);
   const [refresh, setRefresh] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Only the five newest pending applications are streamed. Other figures are
   // server-side aggregations, not document downloads or approximate revenue.
@@ -53,21 +54,25 @@ export function AdminOverview({ navigate }: { navigate?: (tab: string) => void }
       catch { if (live) setErrors(v => [...v, name]); return null; }
     }
     const patch = (value: Partial<Counts>) => { if (live) setCounts(v => ({ ...v, ...value })); };
-    // Groups run independently: a slow or unavailable statistic doesn't block the others.
-    void Promise.all([
-      count('total sellers', sellers),
-      count('active sellers', query(sellers, where('status', '==', 'active'), where('accessEndsAt', '>', Timestamp.now()))),
-    ]).then(([total, active]) => patch({ active, restricted: total !== null && active !== null ? total - active : null }));
-    void count('pending applications', query(apps, where('status', '==', 'pending'))).then(pending => patch({ pending }));
-    void Promise.all([
-      count('seller catalog', listings),
-      count('legacy catalog', collection(db, 'products')),
-      count('published products', query(listings, where('status', '==', 'published'))),
-    ]).then(([sellerTotal, legacyTotal, published]) => patch({ catalog: sellerTotal !== null && legacyTotal !== null ? sellerTotal + legacyTotal : null, published }));
-    void count('delayed orders', query(orders, where('status', '==', 'pending'), where('createdAt', '<=', Timestamp.fromMillis(Date.now() - 86400000)))).then(delayed => patch({ delayed }));
-    void count('unavailable listings', query(listings, where('status', '==', 'published'), where('availability', '==', 'unavailable'))).then(unavailable => patch({ unavailable }));
-    void Promise.all(businessCategories.map(category => count(category, query(sellers, where('businessCategory', '==', category)))))
-      .then(values => patch({ categories: values.every(v => v !== null) ? Object.fromEntries(businessCategories.map((v, i) => [v, values[i] as number])) : null }));
+    // Groups render as they finish. The button keeps animating until every
+    // count request settles, including failed requests, without delaying cards.
+    const groups = [
+      Promise.all([
+        count('total sellers', sellers),
+        count('active sellers', query(sellers, where('status', '==', 'active'), where('accessEndsAt', '>', Timestamp.now()))),
+      ]).then(([total, active]) => patch({ active, restricted: total !== null && active !== null ? total - active : null })),
+      count('pending applications', query(apps, where('status', '==', 'pending'))).then(pending => patch({ pending })),
+      Promise.all([
+        count('seller catalog', listings),
+        count('legacy catalog', collection(db, 'products')),
+        count('published products', query(listings, where('status', '==', 'published'))),
+      ]).then(([sellerTotal, legacyTotal, published]) => patch({ catalog: sellerTotal !== null && legacyTotal !== null ? sellerTotal + legacyTotal : null, published })),
+      count('delayed orders', query(orders, where('status', '==', 'pending'), where('createdAt', '<=', Timestamp.fromMillis(Date.now() - 86400000)))).then(delayed => patch({ delayed })),
+      count('unavailable listings', query(listings, where('status', '==', 'published'), where('availability', '==', 'unavailable'))).then(unavailable => patch({ unavailable })),
+      Promise.all(businessCategories.map(category => count(category, query(sellers, where('businessCategory', '==', category)))))
+        .then(values => patch({ categories: values.every(v => v !== null) ? Object.fromEntries(businessCategories.map((v, i) => [v, values[i] as number])) : null })),
+    ];
+    void Promise.allSettled(groups).then(() => { if (live) setRefreshing(false); });
     return () => { live = false; };
   }, [db, refresh]);
 
@@ -84,7 +89,7 @@ export function AdminOverview({ navigate }: { navigate?: (tab: string) => void }
       <div aria-hidden="true" className="pointer-events-none absolute -right-14 -top-24 h-64 w-64 rounded-full border border-white/10 sm:h-80 sm:w-80" />
       <div className="relative flex flex-wrap items-center justify-between gap-5">
         <div className="max-w-lg"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#cbb28c]">Marketplace command center</p><h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">A clearer view of everything.</h2><p className="mt-2 max-w-md text-sm leading-6 text-white/70">Keep creators supported, orders moving and the catalog healthy.</p><span className="mt-4 inline-flex rounded-full border border-white/20 px-3 py-1.5 text-[11px] text-white/80">Admin operations · Seller network</span></div>
-        <Button type="button" variant="outline" onClick={() => setRefresh(v => v + 1)} className="h-11 rounded-xl border-white/25 bg-white text-[#29251f] hover:bg-[#f0e6d9]"><RefreshCw className="mr-2 h-4 w-4" />Refresh overview</Button>
+        <Button type="button" variant="outline" disabled={!db || refreshing} aria-busy={refreshing} onClick={() => { setRefreshing(true); setRefresh(v => v + 1); }} className="h-11 rounded-xl border-white/25 bg-white text-[#29251f] hover:bg-[#f0e6d9]"><RefreshCw aria-hidden="true" className={`mr-2 h-4 w-4 ${refreshing ? 'motion-safe:animate-spin' : ''}`} /><span aria-live="polite">{refreshing ? 'Refreshing…' : 'Refresh overview'}</span></Button>
       </div>
     </div>
     <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a68a64]">Marketplace health</p><h3 className="mt-1 text-lg font-semibold text-[#29251f]">Your platform at a glance</h3></div><p className="text-[11px] text-[#867766]">Database counts · Refresh to update</p></div>
