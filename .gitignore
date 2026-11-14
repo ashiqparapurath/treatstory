@@ -45,3 +45,7 @@ firebase-debug.log
 firestore-debug.log
 # local support test data and credentials
 /work/
+
+# Local IDE / transient marker files (no longer used for this Vercel project)
+.idx/
+.modified
