@@ -1,0 +1,13 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { LegalContact } from '@/components/legal-contact';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogTitle, AlertDialogDescription } from '@/components/ui/alert-dialog';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { SupportChatWorkspace } from '@/components/support-chat-workspace';
+const long = 'customer-support-' + 'longaddress'.repeat(9) + '@treatstory.example';
+const mode = new URLSearchParams(location.search).get('mode');
+const fields = <><Input aria-label="Contact email" defaultValue={long}/><Select defaultValue="long"><SelectTrigger aria-label="Delivery location"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="long">{long}</SelectItem><SelectItem value="short">Pickup</SelectItem></SelectContent></Select><LegalContact/></>;
+const view = mode === 'dialog' ? <Dialog open><DialogContent><DialogTitle>Delivery details</DialogTitle><DialogDescription>Review your contact details.</DialogDescription>{fields}</DialogContent></Dialog> : mode === 'alert' ? <AlertDialog open><AlertDialogContent><AlertDialogTitle>Account confirmation</AlertDialogTitle><AlertDialogDescription>{long}</AlertDialogDescription>{fields}</AlertDialogContent></AlertDialog> : mode === 'support' ? <SupportChatWorkspace tickets={[]} title="Your support requests" secure={false} backHref="/account" backLabel="Back to account" newConversation={fields} topNotice={<a href={'mailto:'+long}>{long}</a>} renderConversation={()=>null}/> : <main style={{maxWidth:700,margin:'auto',padding:16}}>{fields}</main>;
+createRoot(document.getElementById('app')!).render(view);
