@@ -14,8 +14,8 @@ This change does not certify production readiness. It supplies application fixes
 Use a protected shell with server credentials for the intended project. Never paste secrets into an issue, PR, browser environment or build output. The scripts are operator-invoked and must first be rehearsed on a synthetic staging project.
 
 1. Set `NEXT_PUBLIC_FIREBASE_PROJECT_ID` and server-only `FIREBASE_SERVICE_ACCOUNT_JSON` to the **same project**.
-2. Deploy reviewed Firestore rules/indexes and Storage rules with the Firebase CLI. Vercel does **not** deploy them. The manual **Deploy Firebase rules and indexes** workflow targets `treatstory-online`, only runs on `main`, and requires `FIREBASE_DEPLOY_CREDENTIALS` plus the protected `production` GitHub environment. It has not been dispatched here.
-3. Run `node --import tsx scripts/verify-firebase-rollout.ts`. It compares the current Firestore release source and declared composite indexes using read-only provider APIs. Missing inspection permissions are a failed verification, never assumed success. Verify the deployed Storage rules separately.
+2. Deploy reviewed Firestore rules and indexes with the Firebase CLI (`firebase deploy --only firestore:rules,firestore:indexes --project treatstory-online`). Vercel does **not** deploy them. The manual **Deploy Firebase rules and indexes** workflow targets `treatstory-online`, only runs on `main`, and requires `FIREBASE_DEPLOY_CREDENTIALS` plus the protected `production` GitHub environment. The workflow deliberately excludes Firebase Storage: production uses Firebase Authentication and Firestore, with media in Cloudinary. No Storage API, bucket or Storage IAM role is required for this deployment. The Storage rules/configuration remain for existing emulator security tests; do not run an unrestricted `firebase deploy` for this rollout.
+3. Run `node --import tsx scripts/verify-firebase-rollout.ts`. It compares the current Firestore release source and declared composite indexes using read-only provider APIs. Missing inspection permissions are a failed verification, never assumed success.
 4. Run `node --import tsx scripts/migrate-store-slugs.ts`. This reserves stable name-based addresses without exposing UIDs. Existing UID URLs redirect; reservations are never reused. Resolve a reported collision before proceeding.
 5. Run `node --import tsx scripts/backfill-search.ts`. Wait for the search index to become READY, then set **build-time** `NEXT_PUBLIC_INDEXED_SEARCH_ENABLED=true` and rebuild. Until then, the existing paged catalog remains usable, with manual loading instead of an automatic whole-catalog scan. Search uses the first word's prefix index; it is not fuzzy/full-text search.
 6. With server-only Cloudinary credentials configured, run `node --import tsx scripts/migrate-private-references.ts`. It validates ownership and changes old reference assets to authenticated delivery with invalidation. External/non-owned legacy URLs deliberately stop migration for manual review. Previously downloaded images cannot be recalled; confirm old public delivery is blocked after CDN invalidation.
@@ -43,7 +43,7 @@ Provider retention, backup schedules, a definitive transaction-retention period 
 
 ## Release gates still requiring external evidence
 
-- Current production Firebase/Storage deployment and live role smoke test.
+- Current production Firestore rules/index deployment and live role smoke test.
 - Real legal operator/grievance contacts and policy review.
 - Verified food sellers and applicable platform food licensing.
 - Production 100-user performance and a longer soak; cold/warm regions and multiple app instances.
