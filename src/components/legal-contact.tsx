@@ -6,7 +6,7 @@ export function LegalContact() {
   const officer = process.env.LEGAL_GRIEVANCE_OFFICER;
   const phone = process.env.LEGAL_CONTACT_PHONE;
   return (
-    <section className="space-y-3 rounded-2xl border p-5">
+    <section className="min-w-0 space-y-3 rounded-2xl border p-4 [overflow-wrap:anywhere] sm:p-5">
       <h2 className="text-xl font-semibold text-foreground">
         Contact and complaints
       </h2>

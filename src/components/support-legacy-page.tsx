@@ -104,10 +104,10 @@ export default function SupportPage() {
     </label>
     <Button type="submit" disabled={busy} className="h-12 w-full rounded-full">{busy ? 'Sending…' : 'Submit request'}</Button>
   </form>;
-  const topNotice = <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2">
-    <span className="inline-flex items-center gap-1.5"><Info className="h-3.5 w-3.5" /> Support messages are not end-to-end encrypted. Replies are handled by our team.</span>
-    {supportSettings?.publicNotice && <span className="max-w-md break-words">{supportSettings.publicNotice}</span>}
-    {supportSettings?.contactEmail && <a href={'mailto:' + encodeURIComponent(supportSettings.contactEmail)} className="inline-flex items-center gap-1 underline"><Mail className="h-3.5 w-3.5" /> Email support</a>}
+  const topNotice = <div className="mx-auto flex min-w-0 max-w-5xl flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+    <span className="inline-flex min-w-0 items-start gap-1.5"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Support messages are not end-to-end encrypted. Replies are handled by our team.</span>
+    {supportSettings?.publicNotice && <span className="min-w-0 max-w-md [overflow-wrap:anywhere]">{supportSettings.publicNotice}</span>}
+    {supportSettings?.contactEmail && <a href={'mailto:' + encodeURIComponent(supportSettings.contactEmail)} className="inline-flex min-h-8 items-center gap-1 underline"><Mail className="h-3.5 w-3.5 shrink-0" /> Email support</a>}
   </div>;
 
   return <SupportChatWorkspace

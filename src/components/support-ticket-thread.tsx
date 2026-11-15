@@ -72,7 +72,7 @@ export function SupportTicketThread({ ticket, perspective, onSend, onClose }: Pr
   return <div className="flex h-full min-h-0 flex-col bg-[#fbf9f5]">
     <div ref={viewport} aria-label="Support message history" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-8 sm:py-7">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-        <div className="mx-auto max-w-xl rounded-2xl border border-[#ebe2d6] bg-white p-4 text-center sm:p-5">
+        <div className="mx-auto min-w-0 max-w-full [overflow-wrap:anywhere] sm:max-w-xl rounded-2xl border border-[#ebe2d6] bg-white p-4 text-center sm:p-5">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9a805d]">TreatStory customer care</p>
           <h3 className="mt-2 break-words text-base font-semibold text-[#302a24]">{ticket.subject}</h3>
           <p className="mt-2 text-xs capitalize text-[#867a6c]">{ticket.category} · {ticket.status === 'closed' ? 'Closed' : ticket.status === 'responded' ? 'Replied' : 'Open'}{ticket.orderId ? ' · Order linked' : ''}</p>
@@ -83,7 +83,7 @@ export function SupportTicketThread({ ticket, perspective, onSend, onClose }: Pr
         {history.map(item => {
           const mine = item.sender === perspective;
           return <div key={item.id} className={'flex ' + (mine ? 'justify-end' : 'justify-start')}>
-            <div className={'max-w-[90%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[75%] ' + (mine ? 'rounded-br-md bg-[#302a24] text-white' : 'rounded-bl-md border border-[#e8e1d7] bg-white text-[#332d27]')}>
+            <div className={'min-w-0 max-w-[90%] [overflow-wrap:anywhere] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[75%] ' + (mine ? 'rounded-br-md bg-[#302a24] text-white' : 'rounded-bl-md border border-[#e8e1d7] bg-white text-[#332d27]')}>
               <div className={'flex items-center gap-2 text-[11px] font-semibold ' + (mine ? 'text-[#ecdbc8]' : 'text-[#866d52]')}>
                 <MessageCircle className="h-3 w-3" />{mine ? 'You' : item.sender === 'support' ? 'TreatStory support' : 'Customer'}
               </div>

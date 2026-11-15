@@ -61,6 +61,9 @@
 @layer base {
   * { @apply border-border; }
   html { scroll-behavior: smooth; }
+  /* Long contact addresses must wrap instead of widening mobile cards. */
+  a[href^="mailto:"] { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+  input, textarea, select { min-width: 0; }
   body { @apply bg-background text-foreground font-sans antialiased; }
   ::selection { background: hsl(var(--accent)); color: hsl(var(--foreground)); }
 }
