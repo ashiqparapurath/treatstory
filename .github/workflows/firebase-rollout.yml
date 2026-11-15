@@ -25,4 +25,4 @@ jobs:
           printf '%s' "$FIREBASE_DEPLOY_CREDENTIALS" > "$credential_file"
           export GOOGLE_APPLICATION_CREDENTIALS="$credential_file"
           node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS));if(c.project_id!=="treatstory-online")process.exit(1)'
-          npx --yes firebase-tools@14 deploy --only firestore:rules,firestore:indexes,storage --project treatstory-online --non-interactive
+          npx --yes firebase-tools@14 deploy --only firestore:rules,firestore:indexes --project treatstory-online --non-interactive
