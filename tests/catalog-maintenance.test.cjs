@@ -14,12 +14,12 @@ test('admin controls a single Firestore-backed maintenance setting', () => {
   }
 });
 
-test('public guard renders no catalog before knowing availability', () => {
+test('public guard waits for status but fails open when configuration cannot be read', () => {
   const gate = read('src/components/catalog-maintenance-gate.tsx');
-  for(const s of ["doc(db, 'settings', 'catalog')","const loading = !db || isLoading","data?.maintenanceEnabled !== true","Under maintenance","maintenanceMessage?.trim()","Contact support","onClick={retry}"]){
+  for(const s of ["doc(db, 'settings', 'catalog')","const loading = !db || isLoading","data?.maintenanceEnabled !== true","Under maintenance","maintenanceMessage?.trim()","Contact support"]){
     assert.ok(gate.includes(s),s);
   }
-  assert.ok(gate.includes("if (!loading && !error && data?.maintenanceEnabled !== true) return <>{children}</>"));
+  assert.ok(gate.includes("if (!loading && (error || data?.maintenanceEnabled !== true)) return <>{children}</>"));
 });
 
 test('home, Shop all, new arrivals, and seller stores use the same catalog gate', () => {
