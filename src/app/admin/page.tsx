@@ -66,7 +66,7 @@ function AdminContent() {
     products: 'Maintain the original TreatStory product collection.',
     banners: 'Manage the campaign banners visitors see on the storefront.',
     categories: 'Organize legacy storefront categories.',
-    settings: 'Manage marketplace-wide enquiry and support settings.',
+    settings: 'Manage catalog visibility, maintenance notices, and support settings.',
   };
   const { role, roleError, isRoleLoading } = useAccountRole();
 

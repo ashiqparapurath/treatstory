@@ -574,7 +574,10 @@ test('seller access confirmation opens without a write, awaits acknowledgment an
   let writes=0, resolveWrite, rejectWrite;
   const notices=[];
   class Timestamp {constructor(date){this.date=date;}toDate(){return this.date;}static fromDate(date){return new Timestamp(date);}static fromMillis(ms){return new Timestamp(new Date(ms));}}
-  const seller={id:'seller-a',businessName:'As Production',accessType:'trial',status:'active',accessEndsAt:Timestamp.fromDate(new Date('2026-11-15T23:59:59')),contactEmail:'seller@example.com'};
+  // Keep this fixture in the future; a fixed 2026 date made CI fail after expiry.
+  const accessExpiry = new Date(Date.now() + 90 * 86400000);
+  accessExpiry.setHours(23, 59, 59, 0);
+  const seller={id:'seller-a',businessName:'As Production',accessType:'trial',status:'active',accessEndsAt:Timestamp.fromDate(accessExpiry),contactEmail:'seller@example.com'};
   const db={}; const Dialog=()=>null;
   const {SellerManagement}=load('src/components/admin/seller-management.tsx',{
     '@/firebase/firestore/use-paged-collection':{usePagedCollection:()=>({data:[seller],isLoading:false,hasMore:false,loadingMore:false,loadMore:async()=>{}})},
@@ -590,7 +593,8 @@ test('seller access confirmation opens without a write, awaits acknowledgment an
   act(()=>button('Save expiry').props.onClick());
   let dialog=tree.root.findByType(Dialog);
   assert.equal(dialog.props.open,true);assert.equal(writes,0);
-  assert.match(JSON.stringify(dialog.props.children,(key,value)=>key==="_owner"?undefined:value),/15 November 2026/);
+  const formattedExpiry = accessExpiry.toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+  assert.ok(JSON.stringify(dialog.props.children,(key,value)=>key==="_owner"?undefined:value).includes(formattedExpiry));
   act(()=>dialog.props.onOpenChange(false));assert.equal(writes,0);
   act(()=>button('Save expiry').props.onClick());
   let first;

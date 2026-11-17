@@ -4,6 +4,7 @@ import { usePublicCatalog } from '@/firebase/firestore/use-public-catalog';
 import { Header } from '@/components/header';
 import { SellerStorefrontProducts } from '@/components/seller-storefront-products';
 import { ProductGridContainer } from '@/components/product-grid';
+import { CatalogMaintenanceGate } from '@/components/catalog-maintenance-gate';
 import Link from 'next/link';
 import {HeroImage}from'@/components/hero-image';
 import{BANNER_IMAGE_SIZES}from'@/lib/image-source';
@@ -138,12 +139,14 @@ export default function Home() {
 
         <section className="bg-[#f1ede6] py-9 sm:py-12">
           <div className="section-shell">
+            <CatalogMaintenanceGate>
             <div className="mb-7 flex flex-col justify-between gap-3 sm:mb-9 sm:flex-row sm:items-end">
               <div><p className="eyebrow text-[#a68a64]">Picked for you</p><h2 className="mt-2 text-3xl font-medium tracking-tight sm:text-4xl">Find your next favourite</h2><p className="mt-2 text-sm text-muted-foreground">Thoughtful finds, all in one happy place.</p></div>
               <Link href="/products" className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em]">View everything <ArrowRight className="h-4 w-4" /></Link>
             </div>
             <div className="mb-7"><SellerStorefrontProducts limitCount={8} /></div>
             <Suspense fallback={<Skeleton className="h-96 w-full rounded-2xl" />}><HomePageContent /></Suspense>
+            </CatalogMaintenanceGate>
           </div>
         </section>
 

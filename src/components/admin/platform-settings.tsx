@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorNotice } from '@/lib/user-notices';
 import { EnquirySettingsForm } from '@/components/admin/enquiry-settings-form';
+import { CatalogMaintenanceSettings } from '@/components/admin/catalog-maintenance-settings';
 import { LifeBuoy, MessageCircle, ExternalLink, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 
@@ -58,6 +59,7 @@ export function PlatformSettings() {
   }
 
   return <section className="space-y-5">
+    <CatalogMaintenanceSettings />
     <div className="rounded-2xl border border-[#e6dfd5] bg-white p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a68a64]">Customer communications</p><h2 className="mt-1 text-lg font-semibold text-[#29251f]">Support experience</h2><p className="mt-2 max-w-xl text-xs leading-5 text-[#817568]">Configure the contact information and guidance customers see on the TreatStory support page. Support tickets and replies stay in Customer support.</p></div>

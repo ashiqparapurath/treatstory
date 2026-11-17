@@ -18,7 +18,7 @@ test('configured support contact and notice appear on the customer support page'
 });
 test('support settings remain public-read and admin-write with constrained fields', () => {
  const rules=read('firestore.rules');
- for(const name of ["settingId in ['enquiry', 'support'] || isAdmin()", "request.resource.data.contactEmail.size() <= 254","request.resource.data.publicNotice.size() <= 300","request.resource.data.updatedAt == request.time"]) assert.ok(rules.includes(name),name);
+ for(const name of ["settingId in ['enquiry', 'support', 'catalog'] || isAdmin()", "request.resource.data.contactEmail.size() <= 254","request.resource.data.publicNotice.size() <= 300","request.resource.data.updatedAt == request.time"]) assert.ok(rules.includes(name),name);
  assert.match(rules,/allow create, update: if isAdmin\(\)/);
 });
 test('platform settings route uses one source of truth and no legacy top-level duplication', () => {
