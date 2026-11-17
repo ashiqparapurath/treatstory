@@ -1,6 +1,7 @@
 import { permanentRedirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import SellerStoreClient from '@/components/seller-store-client';
+import { CatalogMaintenanceGate } from '@/components/catalog-maintenance-gate';
 import { getPublicStore } from '@/lib/server/public-store';
 import { siteOrigin } from '@/lib/social-metadata';
 
@@ -47,6 +48,6 @@ export default async function SellerStorePage({ params }: Params) {
   } : null;
   return <>
     {schema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g,'\\u003c') }}/>}
-    <SellerStoreClient initialSeller={data?.seller ?? null} initialProducts={data?.products ?? null}/>
+    <CatalogMaintenanceGate standalone><SellerStoreClient initialSeller={data?.seller ?? null} initialProducts={data?.products ?? null}/></CatalogMaintenanceGate>
   </>;
 }

@@ -11,6 +11,7 @@ import type { Product } from '@/lib/products';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Suspense } from 'react';
 import { Sparkles } from 'lucide-react';
+import { CatalogMaintenanceGate } from '@/components/catalog-maintenance-gate';
 
 function NewArrivalsContent() {
   const firestore = useFirestore();
@@ -28,6 +29,7 @@ export default function NewArrivalsPage() {
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
       <main className="section-shell flex-1 pb-16 pt-10 sm:pb-24 sm:pt-14">
+        <CatalogMaintenanceGate>
         <div className="mb-10 rounded-[26px] bg-[#eee8de] px-6 py-10 sm:mb-14 sm:px-12 sm:py-16">
           <p className="eyebrow flex items-center gap-2 text-[#967a55]"><Sparkles className="h-3.5 w-3.5" /> Just landed</p>
           <h1 className="mt-4 max-w-2xl text-4xl font-medium leading-[1.05] tracking-[-0.055em] sm:text-6xl">Fresh finds.<br /><span className="font-serif italic font-normal text-[#a68a64]">New little stories.</span></h1>
@@ -35,6 +37,7 @@ export default function NewArrivalsPage() {
         </div>
         <div className="mb-12"><SellerStorefrontProducts limitCount={4} /></div>
         <Suspense fallback={<Skeleton className="h-96 w-full rounded-2xl" />}><NewArrivalsContent /></Suspense>
+        </CatalogMaintenanceGate>
       </main>
       <footer className="border-t border-[#e8e0d5] py-7">
         <div className="section-shell flex flex-col items-center justify-between gap-3 text-center sm:flex-row sm:text-left">

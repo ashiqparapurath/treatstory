@@ -105,7 +105,7 @@ service cloud.firestore {
      * @deny (write) A non-admin attempts to change a setting.
      */
     match /settings/{settingId} {
-        allow read: if settingId in ['enquiry', 'support'] || isAdmin();
+        allow read: if settingId in ['enquiry', 'support', 'catalog'] || isAdmin();
         // The support document is public but only administrators may edit it.
         allow create, update: if isAdmin() && (
           settingId != 'support' ||
@@ -117,6 +117,14 @@ service cloud.firestore {
             request.resource.data.contactEmail.matches('^[^ @]+@[^ @]+[.][^ @]+$')) &&
            request.resource.data.publicNotice is string &&
            request.resource.data.publicNotice.size() <= 300 &&
+           request.resource.data.updatedAt == request.time)
+        ) && (
+          settingId != 'catalog' ||
+          (request.resource.data.keys().hasOnly(['maintenanceEnabled','maintenanceMessage','updatedAt']) &&
+           request.resource.data.keys().hasAll(['maintenanceEnabled','maintenanceMessage','updatedAt']) &&
+           request.resource.data.maintenanceEnabled is bool &&
+           request.resource.data.maintenanceMessage is string &&
+           request.resource.data.maintenanceMessage.size() <= 240 &&
            request.resource.data.updatedAt == request.time)
         );
         allow delete: if isAdmin();

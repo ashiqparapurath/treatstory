@@ -14,6 +14,7 @@ import { useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Product } from '@/lib/products';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CatalogMaintenanceGate } from '@/components/catalog-maintenance-gate';
 
 function ProductsPageContent({ searchTerm }: { searchTerm: string }) {
   const {data:products,isLoading,error,retry,hasMore,loadingMore,loadMore}=usePagedPublicCatalog<Product>('products',undefined,searchTerm);
@@ -30,6 +31,7 @@ export default function ProductsPage() {
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
       <main className="section-shell flex-1 pb-16 pt-10 sm:pb-24 sm:pt-14">
+        <CatalogMaintenanceGate>
         <div className="mb-9 border-b border-[#e8e0d5] pb-8 sm:mb-12 sm:pb-10">
           <p className="eyebrow text-[#a68a64]">The whole collection</p>
           <div className="mt-3 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
@@ -48,6 +50,7 @@ export default function ProductsPage() {
           <div className="mb-12"><SellerStorefrontProducts searchTerm={searchTerm} /></div>
           <Suspense fallback={<Skeleton className="h-96 w-full rounded-2xl" />}><ProductsPageContent searchTerm={searchTerm} /></Suspense>
         </>}
+        </CatalogMaintenanceGate>
       </main>
       <footer className="border-t border-[#e8e0d5] py-7">
         <div className="section-shell flex flex-col items-center justify-between gap-3 text-center sm:flex-row sm:text-left">
