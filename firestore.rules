@@ -215,8 +215,8 @@ service cloud.firestore {
         resource.data.accessEndsAt > request.time &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'description', 'logoUrl', 'contactPhone', 'whatsappNumber', 'isOpen', 'updatedAt',
-          'deliveryMethods', 'deliveryPincodes', 'deliveryFee', 'pickupAddress',
-          'deliverySlots', 'dailyOrderCapacity', 'acceptanceHours'
+          'deliveryMethods', 'deliveryPincodes', 'deliveryCoverage', 'deliveryFee', 'pickupAddress',
+          'deliverySlots', 'dailyOrderCapacity', 'acceptanceHours', 'businessCity', 'businessState'
         ]) &&
         (!('logoUrl' in request.resource.data) ||
           (request.resource.data.logoUrl is string &&
@@ -227,6 +227,10 @@ service cloud.firestore {
         request.resource.data.description.size() <= 2000 &&
         request.resource.data.contactPhone is string &&
         request.resource.data.contactPhone.size() <= 40 &&
+        (!('businessCity' in request.resource.data) ||
+          (request.resource.data.businessCity is string && request.resource.data.businessCity.size() <= 80)) &&
+        (!('businessState' in request.resource.data) ||
+          (request.resource.data.businessState is string && request.resource.data.businessState.size() <= 80)) &&
         (!('whatsappNumber' in request.resource.data) ||
           (request.resource.data.whatsappNumber is string &&
             (request.resource.data.whatsappNumber == '' ||
@@ -238,6 +242,10 @@ service cloud.firestore {
            request.resource.data.deliveryMethods.size() <= 2 &&
            request.resource.data.deliveryMethods.hasOnly(['delivery','pickup']))) &&
         (!('deliveryPincodes' in request.resource.data) || validDeliveryPincodes(request.resource.data.deliveryPincodes)) &&
+        (!('deliveryCoverage' in request.resource.data) ||
+          (request.resource.data.deliveryCoverage in ['confirm','selected-pincodes','india-wide'] &&
+           (request.resource.data.deliveryCoverage != 'selected-pincodes' ||
+             ('deliveryPincodes' in request.resource.data && request.resource.data.deliveryPincodes.size() > 0)))) &&
         (!('deliverySlots' in request.resource.data) || validDeliverySlots(request.resource.data.deliverySlots)) &&
         (!('deliveryFee' in request.resource.data) ||
           (request.resource.data.deliveryFee is number && request.resource.data.deliveryFee >= 0 && request.resource.data.deliveryFee <= 5000)) &&
