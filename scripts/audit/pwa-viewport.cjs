@@ -71,6 +71,24 @@ const mocks={
       assert.equal(metrics.mobileTabs,5,name+' '+width+' mobile tabs');
       assert.ok(metrics.cartTargets.every(v=>v>=43),name+' '+width+' cart buttons >=44 CSS px');
       assert.ok(metrics.unavailable >= 1,name+' '+width+' disabled unavailable action is visible');
+      const categoryAlignment=await page.evaluate(()=>{
+       const section=document.querySelector('section[aria-labelledby="mobile-categories-heading"]');
+       const heading=section?.querySelector('#mobile-categories-heading');
+       const rail=section?.querySelector('div.snap-x');
+       const firstCircle=rail?.querySelector('a > span');
+       if(!heading||!rail||!firstCircle)return null;
+       const h=heading.getBoundingClientRect(),c=firstCircle.getBoundingClientRect(),r=rail.getBoundingClientRect();
+       return {headingLeft:h.left,circleLeft:c.left,railLeft:r.left,railRight:r.right,
+        clientWidth:rail.clientWidth,scrollWidth:rail.scrollWidth,viewport:document.documentElement.clientWidth};
+      });
+      assert.ok(categoryAlignment,name+' '+width+' category rail or first icon missing');
+      assert.ok(Math.abs(categoryAlignment.circleLeft-categoryAlignment.headingLeft)<=3,
+       name+' '+width+' first category circle must align with heading gutter: '+JSON.stringify(categoryAlignment));
+      assert.ok(categoryAlignment.railLeft>=categoryAlignment.headingLeft-1 &&
+       categoryAlignment.railRight<=categoryAlignment.viewport+1,
+       name+' '+width+' category scroll area must stay inside page gutters: '+JSON.stringify(categoryAlignment));
+      assert.ok(categoryAlignment.scrollWidth>categoryAlignment.clientWidth,
+       name+' '+width+' category carousel must remain horizontally scrollable');
      }
      if(width<768){
        await page.goto('http://127.0.0.1:'+srv.address().port+'/product/synthetic', {waitUntil:'domcontentloaded'});
