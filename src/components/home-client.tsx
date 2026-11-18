@@ -110,7 +110,7 @@ export default function Home() {
                 Little finds.<br /><span className="font-serif italic font-normal text-[#a68a64]">Lovely stories.</span>
               </h1>
               <p className="mt-5 max-w-[34ch] text-[15px] leading-7 text-muted-foreground sm:mt-4 sm:max-w-md sm:text-base">
-                Discover homemade bakes, handmade gifts and creative finds from independent makers across India. Delivery depends on each seller.
+                Discover homemade bakes, handmade gifts and creative finds from independent makers across India.
               </p>
               <div className="hero-cta-container mt-7 w-full sm:mt-5">
                 <div className="flex flex-nowrap items-center gap-2 sm:gap-3">
