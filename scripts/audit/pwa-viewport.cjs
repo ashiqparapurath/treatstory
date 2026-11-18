@@ -97,7 +97,7 @@ const mocks={
        await page.goto('http://127.0.0.1:'+srv.address().port+'/product/synthetic', {waitUntil:'domcontentloaded'});
        await page.getByRole('heading',{name:'Blush Meadow Bouquet'}).waitFor();
        await page.getByRole('group',{name:'Select weight or size'}).waitFor();
-       await page.locator('a[href="/shop/sample-creator"]').waitFor();
+       await page.locator('a[href="/shop/sample-creator"]').first().waitFor();
        const quick=page.getByRole('complementary',{name:'Quick purchase'});
        await quick.waitFor();
        const detailLayout=await page.evaluate(()=>{
