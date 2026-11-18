@@ -32,8 +32,18 @@ export function SupportChatWorkspace({tickets,title,backHref,backLabel,isLoading
     const previous=document.body.style.overflow;
     document.body.style.overflow='hidden';
     const update=()=>document.documentElement.style.setProperty('--support-visible-height', `${window.visualViewport?.height??window.innerHeight}px`);
-    update();window.visualViewport?.addEventListener('resize',update);
-    return ()=>{document.body.style.overflow=previous;window.visualViewport?.removeEventListener('resize',update);document.documentElement.style.removeProperty('--support-visible-height');};
+    update();
+    // Desktop viewport resizing and compact mobile landscape both need to
+    // resize the chat immediately; visualViewport is useful for the mobile
+    // keyboard but not every browser emits its resize event for window changes.
+    window.addEventListener('resize',update);
+    window.visualViewport?.addEventListener('resize',update);
+    return ()=>{
+      document.body.style.overflow=previous;
+      window.removeEventListener('resize',update);
+      window.visualViewport?.removeEventListener('resize',update);
+      document.documentElement.style.removeProperty('--support-visible-height');
+    };
   },[]);
   const sorted=[...tickets].sort((a,b)=>stamp(b)-stamp(a));
   const visible=sorted.filter(t=>(statusFilter==='all'||(statusFilter==='open'?t.status!=='closed':t.status===statusFilter))&&[t.subject,t.category,t.orderId,t.ownerUid,t.lastPreview].some(value=>value?.toLowerCase().includes(filter.toLowerCase())));
