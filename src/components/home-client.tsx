@@ -98,7 +98,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col overflow-hidden bg-background">
       <Header />
-      <main className="flex-1"><h1 className="sr-only md:hidden">TreatStory — discover home bakes and handmade creations in Kerala</h1>
+      <main className="flex-1"><h1 className="sr-only md:hidden">TreatStory — discover home bakes and handmade creations across India</h1>
         <section className="section-shell hidden pb-10 pt-9 md:block sm:pb-10 sm:pt-8 lg:pb-12 lg:pt-10">
           <div className="grid items-center gap-7 md:grid-cols-[0.95fr_1.05fr] md:gap-8 lg:gap-10">
             <div className="relative z-10 order-1 min-w-0 max-w-xl pb-0 md:pb-0">
@@ -110,7 +110,7 @@ export default function Home() {
                 Little finds.<br /><span className="font-serif italic font-normal text-[#a68a64]">Lovely stories.</span>
               </h1>
               <p className="mt-5 max-w-[34ch] text-[15px] leading-7 text-muted-foreground sm:mt-4 sm:max-w-md sm:text-base">
-                Discover homemade bakes, handmade gifts and creative finds from independent makers across Kerala.
+                Discover homemade bakes, handmade gifts and creative finds from independent makers across India. Delivery depends on each seller.
               </p>
               <div className="hero-cta-container mt-7 w-full sm:mt-5">
                 <div className="flex flex-nowrap items-center gap-2 sm:gap-3">
