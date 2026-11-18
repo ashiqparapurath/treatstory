@@ -145,19 +145,19 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="section-shell pb-6 pt-5 md:pb-11 md:pt-0">
-          <div className="mb-5 flex items-end justify-between gap-4">
+        <section className="section-shell pb-7 pt-6 md:pb-11 md:pt-0">
+          <div className="mb-4 flex items-center justify-between gap-4 md:mb-5 md:items-end">
             <div><p className="eyebrow hidden text-[#a68a64] md:block">A little inspiration</p><h2 className="text-[19px] font-semibold tracking-tight text-[#30251c] md:mt-2 md:text-3xl md:font-medium"> <span className="md:hidden">Special offers</span><span className="hidden md:inline">The latest from TreatStory</span></h2></div><Link href="/products" className="inline-flex min-h-10 items-center gap-1 text-xs font-medium text-[#874a28] md:hidden">See all <ArrowRight className="h-3.5 w-3.5"/></Link>
             <Link href="/products" className="hidden items-center gap-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.15em] sm:flex">Shop all <ArrowRight className="h-4 w-4" /></Link>
           </div>
           <BannerCarousel />
         </section>
 
-        <section className="bg-white py-5 md:bg-[#f1ede6] md:py-12">
+        <section className="bg-[#fffcf8] py-6 md:bg-[#f1ede6] md:py-12">
           <div className="section-shell">
             <CatalogMaintenanceGate>
-            <div className="mb-8 md:hidden"><MobileCategoryRail /></div>
-            <div className="mb-5 flex flex-col justify-between gap-3 sm:mb-9 sm:flex-row sm:items-end">
+            <div className="mb-9 border-b border-[#eee5dd] pb-7 md:hidden"><MobileCategoryRail /></div>
+            <div className="mb-5 flex items-center justify-between gap-3 sm:mb-9 sm:items-end">
               <div><p className="eyebrow hidden text-[#a68a64] md:block">Picked for you</p><h2 className="text-[19px] font-semibold tracking-tight text-[#30251c] md:mt-2 md:text-4xl md:font-medium"><span className="md:hidden">Featured products</span><span className="hidden md:inline">Find your next favourite</span></h2><p className="mt-2 hidden text-sm text-muted-foreground md:block">Thoughtful finds, all in one happy place.</p></div>
               <Link href="/products" className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em]">View everything <ArrowRight className="h-4 w-4" /></Link>
             </div>

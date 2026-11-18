@@ -38,21 +38,22 @@ export function Header() {
   return (
     <>
 
-      {!isProductDetail && <header className={`sticky top-0 z-40 md:hidden ${isHome ? 'rounded-b-[26px] bg-[#874a28] text-white shadow-[0_8px_24px_rgba(69,37,21,0.16)]' : 'border-b border-[#eee5dc] bg-[#fffcf8]/95 text-[#30251c] backdrop-blur-xl'}`}>
-        {isHome ? <div className="section-shell pb-5 pt-3">
-          <div className="flex min-h-[54px] items-center justify-between gap-3">
+      {!isProductDetail && <header className={`${isHome ? 'relative z-30 overflow-hidden rounded-b-[28px] bg-[#754328] text-white shadow-[0_12px_28px_rgba(69,37,21,0.16)]' : 'sticky top-0 z-40 border-b border-[#eee5dc] bg-[#fffcf8]/95 text-[#30251c] backdrop-blur-xl'} md:hidden`}>
+        {isHome ? <div className="section-shell relative pb-6 pt-4">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-56 w-56 rounded-full border-[32px] border-white/[0.045]" />
+          <div className="relative flex min-h-[60px] items-center justify-between gap-3">
             <div className="min-w-0">
-              <span className="block text-[11px] text-white/70">Discover in</span>
-              <span className="mt-1 flex items-center gap-1.5 text-[13px] font-semibold tracking-wide"><MapPin aria-hidden="true" className="h-4 w-4 shrink-0 fill-white/20" />Kerala, India</span>
+              <Link href="/" aria-label="TreatStory home" onClick={clearMoreJourney} className="brand-wordmark block w-fit max-w-full truncate text-[30px] leading-none text-white">TreatStory</Link>
+              <span className="mt-2 flex items-center gap-1.5 text-[11px] font-medium tracking-[0.035em] text-white/80"><MapPin aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />Made with care in Kerala</span>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <Link href="/cart" aria-label={`Shopping bag, ${cartCount} items`} className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><ShoppingBag className="h-5 w-5"/>{cartCount>0&&<span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#faf7f1] px-1 text-[10px] font-bold text-[#784225]">{cartCount}</span>}</Link>
-              <Link href={user ? '/notifications' : '/login'} aria-label="Notifications" className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><Bell className="h-5 w-5"/>{actionPending&&<span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white"/>}</Link>
+              <Link href="/cart" aria-label={`Shopping bag, ${cartCount} items`} className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><ShoppingBag className="h-5 w-5"/>{cartCount>0&&<span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#faf7f1] px-1 text-[10px] font-bold text-[#784225]">{cartCount}</span>}</Link>
+              <Link href={user ? '/notifications' : '/login'} aria-label="Notifications" className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><Bell className="h-5 w-5"/>{actionPending&&<span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white"/>}</Link>
             </div>
           </div>
-          <form action="/products" method="get" role="search" className="mt-4 flex items-center gap-2.5">
-            <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#9d816b]"/><input type="search" name="q" aria-label="Search TreatStory products" placeholder="Search cakes, gifts, crafts..." className="h-12 w-full rounded-xl border-0 bg-[#fffefa] pl-11 pr-3 text-base text-[#30251c] outline-none placeholder:text-[#9a8b7d] focus-visible:ring-2 focus-visible:ring-[#f2c49e]"/></div>
-            <button type="submit" aria-label="Search products" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#fffefa] text-[#874a28] focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><SlidersHorizontal className="h-5 w-5"/></button>
+          <form action="/products" method="get" role="search" className="relative mt-5 flex items-center gap-2.5">
+            <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#9d816b]"/><input type="search" name="q" aria-label="Search TreatStory products" placeholder="Search cakes, gifts, crafts..." className="h-[52px] w-full rounded-2xl border border-white/70 bg-[#fffefa] pl-11 pr-3 text-[16px] text-[#30251c] shadow-[0_4px_14px_rgba(36,23,15,0.1)] outline-none placeholder:text-[#99887a] focus-visible:ring-2 focus-visible:ring-[#ecc9ae]"/></div>
+            <button type="submit" className="sr-only">Search products</button><Link href="/products" aria-label="Browse products and category filters" className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl border border-white/65 bg-[#fffefa] text-[#754328] shadow-[0_4px_14px_rgba(36,23,15,0.1)] transition-colors hover:bg-[#f3e8dc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><SlidersHorizontal className="h-5 w-5"/></Link>
           </form>
         </div> : <div className="section-shell flex h-[64px] items-center justify-between gap-2">
           <Link href="/" onClick={clearMoreJourney} aria-label="TreatStory home" className="brand-wordmark min-w-0 truncate text-[29px] leading-none">TreatStory</Link>
@@ -101,7 +102,7 @@ export function Header() {
         </div>
       </header>
       <MoreNavigationTrail />
-      {!isProductDetail && <nav aria-label="Mobile navigation" className="pwa-bottom-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-[#eee8e1] bg-[#fffefa]/95 px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-6px_22px_rgba(43,31,23,0.07)] backdrop-blur-xl md:hidden">
+      {!isProductDetail && <nav aria-label="Mobile navigation" className="pwa-bottom-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 rounded-t-[22px] border-t border-[#eee8e1] bg-[#fffefa]/95 px-1 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_28px_rgba(43,31,23,0.09)] backdrop-blur-xl md:hidden">
         {[
           { href: '/', label: 'Home', icon: Home, active: pathname === '/' },
           { href: '/products', label: 'Explore', icon: Search, active: mobileNavIsActive(pathname, 'shop') },
@@ -114,8 +115,8 @@ export function Header() {
             aria-label={item.label}
             aria-current={item.active ? 'page' : undefined}
             aria-busy={item.label === 'Profile' && pendingRole ? true : undefined}
-            className={`relative flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[10px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#9b7a51] ${item.active ? 'font-semibold text-[#874a28]' : 'text-[#89817c] hover:bg-[#f8f2ec]'}`}>
-            <span className={`relative flex h-7 w-9 items-center justify-center rounded-lg ${item.active?'bg-[#f6e8da]':''}`}>
+            className={`relative flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[10px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#9b7a51] ${item.active ? 'font-semibold text-[#754328]' : 'text-[#89817c] hover:bg-[#f8f2ec]'}`}>
+            <span className={`relative flex h-7 w-9 items-center justify-center rounded-lg ${item.active?'bg-[#f3e4d8]':''}`}>
               {item.label === 'Profile' && pendingRole ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <item.icon className={`h-[19px] w-[19px] ${item.active?'stroke-[2.25]':''}`} />}
               {(item.label === 'More' || item.label === 'Profile') && actionPending && <span aria-label="Pending activity" className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-[#fcfaf6] bg-[#aa6447]"/>}
             </span>

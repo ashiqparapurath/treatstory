@@ -36,7 +36,7 @@ function ProductGrid({ products, categories, initialCategory, hasMore, loadingMo
 
   return (
     <div>
-      <div className={`mb-7 flex-col gap-4 border-b border-[#e9e2d8] pb-6 lg:mb-9 lg:flex-row lg:items-center lg:justify-between ${mobileCompact ? "hidden md:flex" : "flex"}`}>
+      <div className={`mb-6 flex-col gap-4 border-b border-[#e9e2d8] pb-5 lg:mb-9 lg:flex-row lg:items-center lg:justify-between ${mobileCompact ? "hidden md:flex" : "flex"}`}>
         {externalSearchTerm === undefined && <div className="relative w-full lg:max-w-[340px]">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -56,7 +56,7 @@ function ProductGrid({ products, categories, initialCategory, hasMore, loadingMo
               variant="outline"
               aria-pressed={selectedCategory === category}
               onClick={() => setSelectedCategory(category)}
-              className={`h-9 shrink-0 rounded-full px-4 text-[11px] font-semibold capitalize tracking-wide transition-all ${selectedCategory === category ? 'border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background' : 'border-[#e6ded2] bg-transparent text-muted-foreground hover:border-foreground hover:bg-transparent hover:text-foreground'}`}
+              className={`min-h-10 shrink-0 rounded-full px-4 text-[11px] font-semibold capitalize tracking-wide transition-all ${selectedCategory === category ? 'border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background' : 'border-[#e6ded2] bg-transparent text-muted-foreground hover:border-foreground hover:bg-transparent hover:text-foreground'}`}
             >
               {category}
             </Button>
