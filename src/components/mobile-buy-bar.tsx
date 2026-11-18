@@ -11,17 +11,24 @@ export function MobileBuyBar({ target, enabled, resetKey, children }: {
     setVisible(false);
     const element = target.current;
     if (!enabled || !element) return;
-    if (typeof IntersectionObserver === 'undefined') {
-      const update = () => setVisible(element.getBoundingClientRect().top >= window.innerHeight - 148);
-      update(); window.addEventListener('scroll', update, {passive:true}); window.addEventListener('resize', update);
-      return () => { window.removeEventListener('scroll', update); window.removeEventListener('resize', update); };
-    }
-    const observer = new IntersectionObserver(([entry]) => {
-      setVisible(!entry.isIntersecting && entry.boundingClientRect.top >= (entry.rootBounds?.bottom ?? window.innerHeight - 148));
-    }, {rootMargin:'0px 0px -148px 0px', threshold:0});
-    observer.observe(element);
-    return () => observer.disconnect();
+    // Measure immediately: an already-below-the-fold target might never
+    // trigger a useful initial intersection callback on mobile WebKit.
+    const update = () => {
+      const rect = element.getBoundingClientRect();
+      setVisible(rect.top > window.innerHeight - 170 && rect.bottom > 0);
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    const observer = typeof IntersectionObserver === 'undefined' ? null :
+      new IntersectionObserver(update, { rootMargin:'0px 0px -170px 0px', threshold:0 });
+    observer?.observe(element);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
   }, [target, enabled, resetKey]);
   if (!visible) return null;
-  return <aside aria-label="Quick purchase" className="fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-30 flex items-center justify-between gap-3 rounded-2xl border border-[#e1d7c8] bg-[#fcfaf6]/95 p-3 shadow-[0_8px_32px_rgba(35,29,23,0.18)] backdrop-blur-xl md:hidden">{children}</aside>;
+  return <aside aria-label="Quick purchase" className="fixed inset-x-3 bottom-[calc(82px+env(safe-area-inset-bottom))] z-30 flex items-center justify-between gap-3 rounded-[23px] border border-[#e8ddd1] bg-[#fffdfa]/95 px-3.5 py-3 shadow-[0_14px_38px_rgba(44,27,16,0.20)] backdrop-blur-xl md:hidden">{children}</aside>;
 }

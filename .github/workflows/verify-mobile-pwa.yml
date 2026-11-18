@@ -1,0 +1,48 @@
+name: Verify mobile PWA redesign
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/header.tsx'
+      - 'src/components/home-client.tsx'
+      - 'src/components/mobile-category-rail.tsx'
+      - 'src/components/product-detail-client.tsx'
+      - 'src/components/mobile-buy-bar.tsx'
+      - 'src/components/product-card.tsx'
+      - 'src/components/seller-product-card.tsx'
+      - 'src/components/seller-storefront-products.tsx'
+      - 'src/components/product-grid.tsx'
+      - 'src/app/products/page.tsx'
+      - 'src/app/globals.css'
+      - 'src/app/layout.tsx'
+      - 'tests/mobile-pwa-design.test.cjs'
+      - 'scripts/audit/pwa-viewport*'
+      - '.github/workflows/verify-mobile-pwa.yml'
+
+concurrency:
+  group: treatstory-pwa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pwa-ui:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: PWA & existing marketplace regression tests
+        run: npm test
+      - name: Validate TypeScript
+        run: npm run typecheck
+      - name: Verify production compilation
+        run: npm run build
+# The repository-wide verify-build.yml runs the Chromium/WebKit viewport fixture
+# in its existing browser-ready encrypted-support job and enforces npm audit.

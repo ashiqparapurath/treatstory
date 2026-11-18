@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { ShoppingBag, ArrowUpRight, UserRound, Bell, Home, Search, Menu, LoaderCircle } from 'lucide-react';
+import { ShoppingBag, ArrowUpRight, UserRound, Bell, Home, Search, Menu, LoaderCircle, SlidersHorizontal, Heart } from 'lucide-react';
+import { MobileLocationIndicator } from '@/components/mobile-location-indicator';
 import { mobileProfileHref, isMobileProfilePath, mobileNavIsActive } from '@/lib/mobile-navigation';
 import { useMobileAttention } from '@/hooks/use-mobile-attention';
 import { MoreNavigationTrail } from '@/components/more-navigation-trail';
@@ -32,11 +33,42 @@ export function Header() {
   const pendingRole = !!user && isRoleLoading && !roleError;
   const attention = useMobileAttention(user?.uid ?? null, role, !isRoleLoading && !roleError);
   const actionPending = attention.orders || attention.applications;
+  const isProductDetail = pathname.startsWith('/product/');
+  const isHome = pathname === '/';
 
   return (
     <>
 
-      <header className="sticky top-0 z-40 border-b border-[#e9e2d8] bg-[#fcfaf6]/95 shadow-[0_3px_18px_rgba(48,36,22,0.035)] backdrop-blur-xl">
+      {!isProductDetail && <header className={`${isHome ? 'relative z-30 overflow-hidden rounded-b-[28px] bg-[#754328] text-white shadow-[0_12px_28px_rgba(69,37,21,0.16)]' : 'sticky top-0 z-40 border-b border-[#eee5dc] bg-[#fffcf8]/95 text-[#30251c] backdrop-blur-xl'} md:hidden`}>
+        {isHome ? <div className="section-shell relative pb-6 pt-4">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-56 w-56 rounded-full border-[32px] border-white/[0.045]" />
+          <div className="relative flex min-h-[60px] items-center justify-between gap-3">
+            <div className="min-w-0">
+              <Link href="/" aria-label="TreatStory home" onClick={clearMoreJourney} className="inline-flex w-fit max-w-full items-baseline whitespace-nowrap font-sans text-[27px] leading-none tracking-[-0.07em] text-white drop-shadow-[0_1px_1px_rgba(40,25,15,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+                <span className="font-semibold">Treat</span><span className="font-normal">Story</span>
+              </Link>
+              <MobileLocationIndicator />
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Link href="/cart" aria-label={`Shopping bag, ${cartCount} items`} className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><ShoppingBag className="h-5 w-5"/>{cartCount>0&&<span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#faf7f1] px-1 text-[10px] font-bold text-[#784225]">{cartCount}</span>}</Link>
+              <Link href={user ? '/notifications' : '/login'} aria-label="Notifications" className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><Bell className="h-5 w-5"/>{actionPending&&<span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white"/>}</Link>
+            </div>
+          </div>
+          <form action="/products" method="get" role="search" className="relative mt-5 flex items-center gap-2.5">
+            <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#9d816b]"/><input type="search" name="q" aria-label="Search TreatStory products" placeholder="Search cakes, gifts, crafts..." className="h-[52px] w-full rounded-2xl border border-white/70 bg-[#fffefa] pl-11 pr-3 text-[16px] text-[#30251c] shadow-[0_4px_14px_rgba(36,23,15,0.1)] outline-none placeholder:text-[#99887a] focus-visible:ring-2 focus-visible:ring-[#ecc9ae]"/></div>
+            <button type="submit" className="sr-only">Search products</button><Link href="/products" aria-label="Browse products and category filters" className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl border border-white/65 bg-[#fffefa] text-[#754328] shadow-[0_4px_14px_rgba(36,23,15,0.1)] transition-colors hover:bg-[#f3e8dc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><SlidersHorizontal className="h-5 w-5"/></Link>
+          </form>
+        </div> : <div className="section-shell flex h-[64px] items-center justify-between gap-2">
+          <Link href="/" onClick={clearMoreJourney} aria-label="TreatStory home" className="brand-wordmark min-w-0 truncate text-[29px] leading-none">TreatStory</Link>
+          <div className="flex shrink-0 items-center gap-1">
+            <Link href="/products" aria-label="Search products" className="flex h-11 w-11 items-center justify-center rounded-xl"><Search className="h-5 w-5"/></Link>
+            <Link href="/cart" aria-label={`Shopping bag, ${cartCount} items`} className="relative flex h-11 w-11 items-center justify-center rounded-xl"><ShoppingBag className="h-5 w-5"/>{cartCount>0&&<span className="absolute right-0 top-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#874a28] px-1 text-[10px] text-white">{cartCount}</span>}</Link>
+            <Link href={user ? '/notifications' : '/login'} aria-label="Notifications" className="flex h-11 w-11 items-center justify-center rounded-xl"><Bell className="h-5 w-5"/></Link>
+          </div>
+        </div>}
+      </header>}
+
+      <header className="hidden md:block sticky top-0 z-40 border-b border-[#e9e2d8] bg-[#fcfaf6]/95 shadow-[0_3px_18px_rgba(48,36,22,0.035)] backdrop-blur-xl">
         <div className="section-shell">
           <div className="grid h-[64px] grid-cols-[1fr_auto_1fr] items-center md:h-[72px]">
             <div className="flex items-center justify-start">
@@ -73,26 +105,25 @@ export function Header() {
         </div>
       </header>
       <MoreNavigationTrail />
-      <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 rounded-t-3xl border border-white/70 bg-[#fcfaf6]/95 px-1 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_4px_30px_rgba(35,29,23,0.18)] backdrop-blur-xl md:hidden">
+      <nav aria-label="Mobile navigation" className="pwa-bottom-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 rounded-t-[22px] border-t border-[#eee8e1] bg-[#fffefa] px-1 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_28px_rgba(43,31,23,0.09)] backdrop-blur-xl md:hidden">
         {[
           { href: '/', label: 'Home', icon: Home, active: pathname === '/' },
-          { href: '/products', label: 'Shop', icon: Search, active: mobileNavIsActive(pathname, 'shop') },
-          { href: '/cart', label: 'Cart', icon: ShoppingBag, active: pathname === '/cart' },
+          { href: '/products', label: 'Explore', icon: Search, active: mobileNavIsActive(pathname, 'shop') },
+          { href: '/favorites', label: 'Wishlist', icon: Heart, active: pathname === '/favorites' },
           { href: profileHref, label: 'Profile', icon: UserRound, active: isMobileProfilePath(pathname, role) },
           { href: '/more', label: 'More', icon: Menu, active: mobileNavIsActive(pathname, 'more') },
         ].map(item => (
           <Link key={item.label} href={item.href}
             onClick={() => { if (item.label !== 'More') clearMoreJourney(); }}
-            aria-label={item.label === 'Cart' && cartCount ? `Cart, ${cartCount} items` : item.label}
+            aria-label={item.label}
             aria-current={item.active ? 'page' : undefined}
             aria-busy={item.label === 'Profile' && pendingRole ? true : undefined}
-            className={`relative flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#9b7a51] ${item.active ? 'bg-[#ece3d6] font-semibold text-[#59452b]' : 'text-[#756b60] hover:bg-[#f3eee6]'}`}>
-            <span className="relative inline-flex h-5 w-6 items-center justify-center">
-              {item.label === 'Profile' && pendingRole ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <item.icon className="h-5 w-5" />}
+            className={`relative flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[10px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#9b7a51] ${item.active ? 'font-semibold text-[#754328]' : 'text-[#89817c] hover:bg-[#f8f2ec]'}`}>
+            <span className={`relative flex h-7 w-9 items-center justify-center rounded-lg ${item.active?'bg-[#f3e4d8]':''}`}>
+              {item.label === 'Profile' && pendingRole ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <item.icon className={`h-[19px] w-[19px] ${item.active?'stroke-[2.25]':''}`} />}
               {(item.label === 'More' || item.label === 'Profile') && actionPending && <span aria-label="Pending activity" className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-[#fcfaf6] bg-[#aa6447]"/>}
-
             </span>
-            <span className="truncate">{item.label === 'Cart' && cartCount ? `Cart (${cartCount})` : item.label}</span>
+            <span className="truncate">{item.label}</span>
           </Link>
         ))}
       </nav>

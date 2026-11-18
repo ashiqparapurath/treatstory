@@ -1,6 +1,7 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
+/* Keep the existing class-based dark theme when moving to Tailwind v4. */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
   :root {
@@ -166,4 +167,12 @@ select option { background-color: #fffdfa; color: #352c23; }
 @container hero-cta (min-width: 24rem) {
   .hero-cta-short { display: none; }
   .hero-cta-full { display: inline; }
+}
+
+/* Mobile-first PWA storefront: no side scrolling, native-feeling bottom tabs. */
+@media (max-width: 767px) {
+  html, body { max-width: 100%; overflow-x: clip; }
+  .pwa-bottom-nav a[aria-current="page"] { text-decoration: none; color: #874a28; }
+  .pwa-bottom-nav { -webkit-tap-highlight-color: transparent; }
+  input[type="search"] { -webkit-appearance: none; appearance: none; }
 }

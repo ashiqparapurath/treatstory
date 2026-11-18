@@ -115,6 +115,17 @@ export function AppInstallNotice() {
       mode.removeEventListener("change", modeChanged);
     };
   }, []);
+  // Show the original install card briefly, then hide it for this tab session.
+  // Do not interrupt a user who is already interacting with the native prompt.
+  useEffect(() => {
+    if (!visible || busy) return;
+    const timeout = window.setTimeout(() => {
+      storage("sessionStorage", dismissedKey, "1");
+      setVisible(false);
+    }, 7000);
+    return () => window.clearTimeout(timeout);
+  }, [visible, busy]);
+
   function dismiss() {
     storage("sessionStorage", dismissedKey, "1");
     setVisible(false);

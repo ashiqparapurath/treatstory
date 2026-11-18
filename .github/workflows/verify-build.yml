@@ -80,6 +80,16 @@ jobs:
         run: npm run build
       - name: Check responsive contact, dialogs and support layouts
         run: node scripts/audit/responsive.cjs
+      - name: Check TreatStory mobile PWA in Chromium and WebKit
+        run: node scripts/audit/pwa-viewport.cjs
+      - name: Upload synthetic mobile PWA layout screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: treatstory-pwa-viewport-screenshots
+          path: work/pwa-viewport/*.png
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Verify encrypted support and simulated Chromium, Firefox and WebKit browsers
         env:
           SUPPORT_MATRIX_TEST_CONFIG: work/support-matrix-server/test-config.json

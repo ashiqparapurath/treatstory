@@ -5,8 +5,8 @@ import branding from '@/lib/pwa-branding.json';
 import { pwaIcons } from '@/lib/pwa-icons';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { AppInstallNotice } from '@/components/app-install-notice';
 import { Toaster } from "@/components/ui/toaster"
+import { AppInstallNotice } from '@/components/app-install-notice';
 import { cn } from '@/lib/utils';
 import { CartProvider } from '@/context/cart-context';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
 };
 
 // Keep browser-managed system-bar insets rather than requesting edge-to-edge at page load.
-export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'auto', themeColor: branding.background };
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: branding.background };
 
 export default function RootLayout({
   children,
@@ -59,8 +59,8 @@ export default function RootLayout({
             {children}
           </CartProvider>
         </FirebaseClientProvider>
-        <AppInstallNotice />
         <Toaster />
+        <AppInstallNotice />
       </body>
     </html>
   );
