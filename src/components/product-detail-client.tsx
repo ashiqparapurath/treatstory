@@ -228,6 +228,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
         </div>
       {creator?.availability === 'available' && !hasStock && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">This size does not have enough stock for the minimum order quantity ({minQty}). Choose another size or contact the seller.</p>}
       {creator && (creator.customizationOptions?.length || 0) > 0 && <div className="space-y-4 rounded-2xl border border-[#e8e0d5] bg-white p-5"><div><h2 className="font-medium">Make it yours</h2><p className="mt-1 text-xs text-muted-foreground">Optional personalization requests. The creator will confirm feasibility; prices are not automatically changed.</p></div>{creator.customizationOptions?.map((field,i) => <label key={i} className="block space-y-1.5 text-xs font-medium">{field}<Input maxLength={120} value={answers[field] || ''} placeholder="Your preference" onChange={e => setAnswers(v => ({...v,[field]:e.target.value}))} /></label>)}</div>}
+      <div data-testid="product-order-controls" className="flex flex-col gap-4">
       {creator && <>
         <details className="group rounded-[18px] border border-[#ece3d9] bg-[#fbf8f4] px-4 py-3 md:hidden">
           <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-[13px] font-semibold text-[#49382c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328] [&::-webkit-details-marker]:hidden">
@@ -240,7 +241,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
         </details>
         <label className="hidden space-y-2 text-sm font-medium md:block">Notes for the creator (optional)<Textarea maxLength={500} rows={3} placeholder="Special requests, colours, gifting instructions…" value={requestNote} onChange={e=>setRequestNote(e.target.value)} className="bg-white"/></label>
       </>}
-      <div ref={purchaseControls} id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-3 py-0 md:grid-cols-[auto_1fr] md:gap-3">
+      <div ref={purchaseControls} id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-4 py-0 md:grid-cols-[auto_1fr] md:gap-4">
         <Button type="button" disabled={!available} onClick={() => void addCurrent()} variant="outline" className="h-12 min-w-0 rounded-full border-[#d9c9bc] bg-white px-2 text-[12px] font-medium text-[#49382c] md:border-[#29251f] md:px-5 md:text-sm" aria-label={`Add ${product.name} to bag`}><ShoppingBag className="mr-1.5 h-4 w-4 shrink-0 md:mr-2" />Add to bag</Button>
         <Button type="button" disabled={!available} onClick={buyNow} className="h-12 min-w-0 rounded-full bg-[#754328] px-2 text-[12px] font-semibold text-white hover:bg-[#653820] md:bg-[#29251f] md:text-sm md:hover:bg-[#51463a]">{available ? creator ? 'Buy now' : 'View bag' : 'Unavailable'}</Button>
       </div>
@@ -254,6 +255,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
       {creator && whatsappNumber && <a href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hello! I'm interested in ${product.name} on TreatStory.${selectedWeight ? ` Preferred size: ${selectedWeight.value} ${selectedWeight.unit}.` : ''}`)}`} target="_blank" rel="noopener noreferrer" className="hidden min-h-12 md:flex items-center justify-center gap-2 rounded-full border border-[#17834a] bg-[#e9f8f0] px-5 text-sm font-semibold text-[#17683b] transition hover:bg-[#d8f0e5]"><MessageCircle className="h-5 w-5"/>Order via WhatsApp</a>}
       {creator && whatsappNumber && <p className="hidden text-xs text-muted-foreground md:block">WhatsApp requests are handled directly by the seller and won't appear in your website order history unless a website order is also placed.</p>}
       {creator && <p className="hidden text-xs leading-5 text-muted-foreground md:block">Your preferences are kept with your selected size and shared with the seller. Delivery and booking details are checked before confirming your order.</p>}
+      </div>
     </div>{creator && <div className="px-4 pt-2 md:col-span-2 md:px-0 md:pt-0"><ProductReviews productId={creator.id} /></div>}</div>}
   </main><MobileBuyBar target={purchaseControls} enabled={!!product && !loading && !error} resetKey={productId}>
     <div className="min-w-0"><p className="text-[10px] font-medium text-[#9b8b7e]">Total price{minQty > 1 ? ' · ' + minQty + ' units' : ''}</p><p className="mt-0.5 truncate text-[17px] font-bold text-[#31251c]">{product?.showPrice ? formatPrice(selectedPrice * minQty) : 'Price on request'}</p></div>
