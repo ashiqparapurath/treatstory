@@ -46,3 +46,55 @@ test('image links can be added individually with validation and gallery actions'
  assert.match(editor,/type="button" variant="outline" className="h-11 shrink-0 rounded-xl/);
  assert.doesNotMatch(editor,/Or paste image URLs manually/);
 });
+
+test('become a seller has an editorial storefront preview, trial terms and clear creator benefits', () => {
+ const page=read('src/app/become-a-seller/page.tsx');
+ assert.match(page,/function StorefrontPreview\(\)/);
+ assert.match(page,/aria-label="Illustrative preview of a TreatStory seller storefront"/);
+ assert.match(page,/Illustrative storefront preview · Not actual products or seller results/);
+ assert.match(page,/A storefront that feels like yours/);
+ assert.match(page,/Orders in one place/);
+ assert.match(page,/Your work, thoughtfully presented/);
+ assert.match(page,/What you create deserves/);
+ assert.match(page,/\{SELLER_TRIAL_MESSAGE\}/);
+ assert.match(page,/function SellerFaq\(\)/);
+ assert.match(page,/Home bakers must provide current FSSAI registration/);
+ assert.match(page,/sellerCoverageLabel|Sellers choose their own pickup and delivery coverage/);
+});
+
+test('three-step seller application preserves existing fields, submission and back navigation', () => {
+ const page=read('src/app/become-a-seller/page.tsx');
+ for(const label of ['Your business','Contact details','Your story','Step {step} of 3','Application progress','Continue','Back','Send seller application']) assert.ok(page.includes(label),label);
+ for(const id of ['businessName','businessCategory','businessCity','businessState','contactEmail','contactPhone','description']) assert.ok(page.includes('id="' + id + '"'),id);
+ assert.match(page,/\{step === 1 && <>/);
+ assert.match(page,/\{step === 2 && <>/);
+ assert.match(page,/\{step === 3 && <>/);
+ assert.match(page,/onSubmit=\{submit\}/);
+ assert.match(page,/if \(step !== 3\) \{/);
+ assert.match(page,/setStep\(current => \(current \+ 1\) as ApplicationStep\)/);
+ assert.match(page,/setStep\(current=>\(current-1\) as ApplicationStep\)/);
+ assert.match(page,/name="website" tabIndex=\{-1\} autoComplete="off"/);
+ assert.match(page,/fetch\('\/api\/seller-applications'/);
+ assert.match(page,/Authorization: 'Bearer ' \+ await user.getIdToken\(\)/);
+ assert.match(page,/businessCity: businessCity.trim\(\)/);
+ assert.match(page,/description: description.trim\(\)/);
+ assert.match(page,/if \(!response.ok\) throw new Error/);
+ assert.match(page,/setSubmitted\(true\)/);
+ assert.match(page,/type="email" required/);
+ assert.match(page,/type="tel" required minLength=\{5\}/);
+ assert.match(page,/id="description" required maxLength=\{2000\}/);
+ assert.match(page,/register\?next=%2Fbecome-a-seller/);
+ assert.match(page,/disabled=\{submitting\}/);
+});
+
+test('seller mobile CTA respects fixed navigation and hides while the application is visible',()=>{
+ const page=read('src/app/become-a-seller/page.tsx');
+ assert.match(page,/IntersectionObserver\(\(\[entry\]\) => setApplicationVisible\(entry.isIntersecting\)/);
+ assert.match(page,/observer.disconnect\(\)/);
+ assert.match(page,/!submitted && !seller && !roleError && !applicationVisible && !isUserLoading/);
+ assert.match(page,/style=\{\{ bottom: 'calc\(90px \+ env\(safe-area-inset-bottom\)\)' \}\}/);
+ assert.match(page,/aria-label="Apply to sell on TreatStory"/);
+ assert.match(page,/md:hidden/);
+ assert.match(page,/id="seller-application"/);
+ assert.match(page,/scroll-mt-28/);
+});
