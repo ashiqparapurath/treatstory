@@ -119,7 +119,13 @@ nav a[aria-current="page"] { color: hsl(var(--foreground)); text-decoration: und
 }
 /* Avoid a 1–2px horizontal shift when dashboard tabs have different heights. */
 @media (min-width: 768px) {
-  html { scrollbar-gutter: stable; }
+  /* Keep a permanent viewport gutter when Radix Select locks body scrolling.
+     react-remove-scroll otherwise adds a second, artificial right margin. */
+  html { scrollbar-gutter: stable; overflow-y: scroll; }
+  body[data-scroll-locked] {
+    margin-right: 0 !important;
+    padding-right: 0 !important;
+  }
 }
 .seller-workspace { overflow-x: clip; }
 
