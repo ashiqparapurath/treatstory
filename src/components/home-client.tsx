@@ -65,7 +65,7 @@ function BannerCarousel() {
                   <Link href={banner.buttonLink} className="mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[#874a28] px-3.5 text-[11px] font-semibold text-white">{banner.buttonText}<ArrowRight aria-hidden="true" className="h-3.5 w-3.5"/></Link>
                 </div>
               </CardContent>
-              <CardContent className="relative hidden h-[clamp(200px,54vw,236px)] items-center justify-center p-0 md:flex md:h-72 lg:h-[340px]">
+              <CardContent className="relative hidden h-[clamp(200px,54vw,236px)] items-center justify-center p-0 md:flex sm:h-64 md:h-72 lg:h-[340px]">
                 <div className="absolute inset-0 bg-[#e8dfd2]"/>{(requested.has(index)||index===active)&&<OptimizedImage src={banner.imageUrl} alt={banner.title} fill sizes={BANNER_IMAGE_SIZES} quality={75} loading="lazy" fetchPriority={index===active?'auto':'low'} onLoad={()=>{if(index===active)setFirstLoaded(true);}} className="object-cover"/>}
                 <div className="absolute inset-0 bg-black/40" />
                 <div className="relative max-w-2xl px-5 py-3 text-center text-white sm:px-10 sm:py-6">
