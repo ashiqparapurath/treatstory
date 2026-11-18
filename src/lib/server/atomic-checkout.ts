@@ -14,6 +14,7 @@ import {
 } from "firebase-admin/firestore";
 import type { CheckoutPayload, CheckoutLine } from "@/lib/checkout-schema";
 import { ApiError } from "@/lib/server/firebase-admin";
+import { acceptsDeliveryRequest, type DeliveryCoverage } from '@/lib/delivery-coverage';
 
 type SellerRecord = {
   ownerUid?: string;
@@ -25,6 +26,7 @@ type SellerRecord = {
   accessEndsAt?: Timestamp;
   deliveryMethods?: string[];
   deliveryPincodes?: string[];
+  deliveryCoverage?: DeliveryCoverage;
   deliveryFee?: number;
   deliverySlots?: string[];
   pickupAddress?: string;
@@ -278,8 +280,7 @@ export async function placeAtomicCheckout(
               }
               if (
                 input.deliveryMode === "delivery" &&
-                s.deliveryPincodes?.length &&
-                !s.deliveryPincodes.includes(input.pincode || "")
+                !acceptsDeliveryRequest(s, input.pincode || "")
               ) {
                 throw new ApiError(
                   409,
