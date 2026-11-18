@@ -51,7 +51,7 @@ test('Google sign-in uses Firebase popup and never changes authenticated roles l
   assert.equal(calls.find(x=>x[0]==='params')[1].prompt,'select_account');
   rejectCode='auth/popup-closed-by-user';
   await act(async()=>{await button().props.onClick();});
-  assert.equal(notices.length,0,'closing Google account chooser is not an error');
+  assert.equal(notices.length,1,'closing Google account chooser adds no error after the mail warning');
   rejectCode='auth/popup-blocked';
   await act(async()=>{await button().props.onClick();});
   assert.equal(notices.at(-1).title,'Google sign-in was blocked');
