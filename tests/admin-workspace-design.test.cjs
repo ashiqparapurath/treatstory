@@ -33,7 +33,12 @@ test('moderation catalog retains controls and paged loading with product preview
 test('seller approvals and management retain mutation and confirmation workflows', () => {
  const applications=read('src/components/admin/seller-applications.tsx');
  const sellers=read('src/components/admin/seller-management.tsx');
- for(const marker of ['/api/seller-applications',"method:'PATCH'",'review(application, true)','review(application, false)','LoadMoreRecords','requestSellerMail']) assert.ok(applications.includes(marker),marker);
+ for(const marker of ['/api/seller-applications',"method:'PATCH'",'review(application, true)','review(application, false)','LoadMoreRecords']) assert.ok(applications.includes(marker),marker);
+ assert.doesNotMatch(applications,/requestSellerMail\\(user,'application'/,'No duplicate browser-driven review email');
+ const route=read('src/app/api/seller-applications/route.ts');
+ assert.match(route,/queueNewSellerApplicationMails/);
+ assert.match(route,/queueRejectedSellerApplicationMail/);
+ assert.match(route,/template: 'seller_application_approved'/);
  for(const marker of ['ConfirmActionDialog','/api/admin/seller-access','manage(seller)','extend(seller)','saveExact(seller)','setStatusFilter','LoadMoreRecords']) assert.ok(sellers.includes(marker),marker);
 });
 
