@@ -5,7 +5,6 @@ import branding from '@/lib/pwa-branding.json';
 import { pwaIcons } from '@/lib/pwa-icons';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { AppInstallNotice } from '@/components/app-install-notice';
 import { Toaster } from "@/components/ui/toaster"
 import { cn } from '@/lib/utils';
 import { CartProvider } from '@/context/cart-context';
@@ -59,7 +58,6 @@ export default function RootLayout({
             {children}
           </CartProvider>
         </FirebaseClientProvider>
-        <AppInstallNotice />
         <Toaster />
       </body>
     </html>
