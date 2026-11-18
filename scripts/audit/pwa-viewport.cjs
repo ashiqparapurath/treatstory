@@ -79,11 +79,14 @@ const mocks={
        if(!heading||!rail||!firstCircle)return null;
        const h=heading.getBoundingClientRect(),c=firstCircle.getBoundingClientRect(),r=rail.getBoundingClientRect();
        return {headingLeft:h.left,circleLeft:c.left,railLeft:r.left,railRight:r.right,
+        circleTop:c.top,railTop:r.top,topClearance:c.top-r.top,
         clientWidth:rail.clientWidth,scrollWidth:rail.scrollWidth,viewport:document.documentElement.clientWidth};
       });
       assert.ok(categoryAlignment,name+' '+width+' category rail or first icon missing');
       assert.ok(Math.abs(categoryAlignment.circleLeft-categoryAlignment.headingLeft)<=3,
        name+' '+width+' first category circle must align with heading gutter: '+JSON.stringify(categoryAlignment));
+      assert.ok(categoryAlignment.topClearance>=7,
+       name+' '+width+' category icon top ring/shadow needs 8px breathing room: '+JSON.stringify(categoryAlignment));
       assert.ok(categoryAlignment.railLeft>=categoryAlignment.headingLeft-1 &&
        categoryAlignment.railRight<=categoryAlignment.viewport+1,
        name+' '+width+' category scroll area must stay inside page gutters: '+JSON.stringify(categoryAlignment));
