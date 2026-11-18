@@ -30,12 +30,12 @@ export function SellerProductCard({ product: p, addToBag, buyNow }: {
     : (p.stockQuantity ?? 0) >= minOrder;
   const available = p.availability !== 'unavailable' && p.showPrice &&
     (p.availability === 'made-to-order' || enoughStock);
-  return <article className="group relative min-w-0 overflow-hidden rounded-[21px] border-0 bg-[#2b211d] shadow-[0_10px_24px_rgba(35,29,23,0.16)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(35,29,23,0.12)] sm:rounded-[22px] sm:border sm:border-white/70 sm:bg-[#f1eee9] sm:shadow-[0_5px_18px_rgba(35,29,23,0.065)]">
-    <div className="relative aspect-[3/4] touch-pan-y overflow-hidden bg-[#efe7dd] sm:aspect-[3/4]" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
+  return <article className="group relative min-w-0 overflow-hidden rounded-[26px] border border-white/35 bg-[#2b211d] shadow-[0_12px_24px_rgba(35,29,23,0.17)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(35,29,23,0.12)] sm:rounded-[22px] sm:border sm:border-white/70 sm:bg-[#f1eee9] sm:shadow-[0_5px_18px_rgba(35,29,23,0.065)]">
+    <div className="relative aspect-[3/4] touch-pan-y overflow-hidden rounded-[26px] bg-[#efe7dd] sm:aspect-[3/4] sm:rounded-none" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
       <div key={gallery.index} className={`absolute inset-0 ${gallery.direction === 'next' ? 'treatstory-photo-next' : 'treatstory-photo-previous'}`}>
         <ProductImage src={photos[gallery.index]} alt={`${p.name} — photo ${gallery.index + 1}`} />
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-[#17120f]/88 via-[#221b17]/45 to-transparent sm:h-3/4 sm:from-black/85 sm:via-black/20"/>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[72%] rounded-b-[26px] bg-gradient-to-t from-[#16110f]/95 via-[#251c17]/55 to-transparent sm:h-3/4 sm:rounded-none sm:from-black/85 sm:via-black/20"/>
       <Link href={`/product/seller:${encodeURIComponent(p.id)}`} aria-label={`View details and photos for ${p.name}`} className="absolute inset-0 z-10 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#c9ae85]"/>
       
       <div className="absolute right-2 top-2 z-20 drop-shadow-sm"><FavoriteToggle compact productId={'seller:' + p.id} title={p.name} imageUrl={photos[0]} /></div>
@@ -53,14 +53,14 @@ export function SellerProductCard({ product: p, addToBag, buyNow }: {
           <button type="button" disabled={!available} onClick={() => buyNow(p)} className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-full border border-white/70 bg-white/15 px-2 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/25 disabled:opacity-60">{available ? 'Buy now' : 'Unavailable'}</button>
         </div>
       </div>
-      <div className="mobile-card-glass pointer-events-none absolute inset-x-2 bottom-2 z-20 flex flex-col gap-1.5 rounded-[19px] border border-white/25 bg-[#1d1714]/55 px-2.5 py-2.5 text-white shadow-[0_7px_20px_rgba(17,12,10,0.24)] backdrop-blur-[8px] sm:hidden">
+      <div className="pointer-events-none absolute inset-x-2.5 bottom-3 z-20 flex flex-col gap-1.5 text-white sm:hidden">
         <h3 className="line-clamp-2 text-[12px] font-semibold leading-[16px] tracking-[-0.025em] drop-shadow-sm">{p.name}</h3>
         <p className="truncate text-[16px] font-bold leading-[21px] tracking-tight drop-shadow-sm">{p.showPrice ? (hasDifferentPrices ? 'From ' : '') + money(lowestPrice) : 'Price on request'}</p>
-        <div className="pointer-events-auto mt-0.5 grid grid-cols-[44px_minmax(0,1fr)] items-center gap-2">
+        <div className="pointer-events-auto mt-1 grid grid-cols-[44px_minmax(0,1fr)] items-center gap-1.5">
           <button type="button" disabled={!available} onClick={() => addToBag(p)} aria-label={'Add ' + p.name + ' to bag'} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/30 bg-[#faf8f4]/90 text-[#352a22] shadow-sm backdrop-blur-sm transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-75">
             <ShoppingBag aria-hidden="true" className="h-[17px] w-[17px]" />
           </button>
-          <button type="button" disabled={!available} onClick={() => buyNow(p)} aria-label={available ? 'Buy ' + p.name + ' now' : p.name + ' unavailable'} className="min-h-11 min-w-0 truncate rounded-[16px] border border-white/60 bg-white/15 px-1 text-[9px] font-semibold text-white shadow-inner backdrop-blur-md min-[375px]:text-[10px] transition-colors enabled:hover:bg-white/25 enabled:active:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:text-white/70">{available ? 'Buy now' : 'Unavailable'}</button>
+          <button type="button" disabled={!available} onClick={() => buyNow(p)} aria-label={available ? 'Buy ' + p.name + ' now' : p.name + ' unavailable'} className="min-h-11 min-w-0 truncate rounded-full border border-white/65 bg-white/15 px-1 text-[9px] font-semibold text-white shadow-[0_3px_12px_rgba(0,0,0,0.14)] backdrop-blur-md min-[375px]:text-[10px] transition-colors enabled:hover:bg-white/25 enabled:active:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:text-white/70">{available ? 'Buy now' : 'Unavailable'}</button>
         </div>
       </div>
     </div>
