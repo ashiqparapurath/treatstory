@@ -64,7 +64,7 @@ test('mobile product cards show real prices with rounded image bottoms and 44px 
  const seller=read('src/components/seller-product-card.tsx');
  for(const card of [legacy,seller]){
    assert.match(card,/aspect-\[3\/4\]/);
-   assert.match(card,/rounded-\[22px\] border border-white\/70/);
+   assert.match(card,/rounded-\[22px\] border-2 border-white bg-\[#2b211d\]/);
    assert.match(card,/rounded-b-\[22px\] bg-gradient-to-t/);
    assert.match(card,/pointer-events-none absolute inset-x-2\.5 bottom-3 z-20 flex flex-col gap-1\.5 text-white sm:hidden/);
    assert.match(card,/grid-cols-\[44px_minmax\(0,1fr\)\]/);
@@ -226,4 +226,14 @@ test('reorganized mobile detail retains price/stock, allergy disclosure, customi
  assert.match(detail,/hidden md:block"><ProductSkuCopy/);
  assert.match(header,/<nav aria-label="Mobile navigation"/);
  assert.match(bar,/rounded-\[23px\]/);
+});
+
+
+test('mobile product cards have a solid visible white border without changing desktop border',()=>{
+ for (const file of ['src/components/product-card.tsx','src/components/seller-product-card.tsx']) {
+  const card=read(file);
+  assert.match(card,/rounded-\[22px\] border-2 border-white bg-\[#2b211d\]/);
+  assert.match(card,/sm:rounded-\[22px\] sm:border sm:border-white\/70/);
+  assert.match(card,/rounded-b-\[22px\] bg-gradient-to-t/);
+ }
 });

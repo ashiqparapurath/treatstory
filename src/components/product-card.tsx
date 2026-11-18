@@ -32,7 +32,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
 
   return (
-    <Card className="group relative h-full overflow-hidden rounded-[22px] border border-white/70 bg-[#2b211d] shadow-[0_5px_18px_rgba(35,29,23,0.065)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(35,29,23,0.12)] sm:rounded-[22px] sm:border sm:border-white/70 sm:bg-[#f1eee9] sm:shadow-[0_5px_18px_rgba(35,29,23,0.065)]">
+    <Card className="group relative h-full overflow-hidden rounded-[22px] border-2 border-white bg-[#2b211d] shadow-[0_5px_18px_rgba(35,29,23,0.065)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(35,29,23,0.12)] sm:rounded-[22px] sm:border sm:border-white/70 sm:bg-[#f1eee9] sm:shadow-[0_5px_18px_rgba(35,29,23,0.065)]">
       <CardHeader className="relative overflow-hidden rounded-[22px] bg-[#f1eee9] p-0 sm:rounded-none">
         <div className="relative aspect-[3/4] w-full touch-pan-y overflow-hidden rounded-[22px] bg-[#efe7dd] sm:aspect-[3/4] sm:rounded-none" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
           <div key={gallery.index} className={`absolute inset-0 ${gallery.direction === 'next' ? 'treatstory-photo-next' : 'treatstory-photo-previous'}`}><ProductImage src={images[gallery.index]} alt={product.name} sizes={LEGACY_CARD_IMAGE_SIZES}/></div>
