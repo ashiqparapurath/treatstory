@@ -15,12 +15,12 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (result.kind === 'missing')
     return { title: 'Store unavailable', robots: { index: false, follow: false } };
   if (result.kind === 'unavailable')
-    return { title: 'Discover Kerala makers', description: 'Explore independent creators and handmade finds on TreatStory.' };
+    return { title: 'Discover Indian makers', description: 'Explore independent creators and handmade finds on TreatStory.' };
   const { seller } = result.data;
   const description = (seller.description || ('Explore creations from ' + seller.businessName + ' on TreatStory.'))
     .replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,160);
   return {
-    title: seller.businessName + ' — Handmade Creations in Kerala',
+    title: seller.businessName + ' — Handmade Creations in ' + ([seller.businessCity, seller.businessState].filter(Boolean).join(', ') || 'India'),
     description,
     alternates: { canonical },
     openGraph: {
