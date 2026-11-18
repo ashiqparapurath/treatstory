@@ -1,6 +1,7 @@
 import { Header } from '@/components/header';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { FooterInstagramLink } from '@/components/footer-instagram-link';
 
 export default function AboutPage() {
   return (
@@ -48,7 +49,7 @@ export default function AboutPage() {
       <footer className="border-t border-[#e8e0d5] py-7">
         <div className="section-shell flex flex-col items-center justify-between gap-3 text-center sm:flex-row sm:text-left">
           <Link href="/" className="brand-wordmark text-2xl">TreatStory</Link>
-          <div className="flex gap-5 text-[10px] uppercase tracking-[0.13em] text-muted-foreground"><Link href="/terms-of-service">Terms</Link><Link href="/privacy-policy">Privacy</Link></div>
+          <div className="flex flex-wrap items-center justify-center gap-5 text-[10px] uppercase tracking-[0.13em] text-muted-foreground"><Link href="/terms-of-service">Terms</Link><Link href="/privacy-policy">Privacy</Link><FooterInstagramLink /></div>
           <p className="text-[10px] text-muted-foreground">© {new Date().getFullYear()} TreatStory</p>
         </div>
       </footer>
