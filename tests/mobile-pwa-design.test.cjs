@@ -419,3 +419,22 @@ test('Firestore retains a single resilient forced-long-polling initialization',(
   assert.match(source,/experimentalLongPollingOptions: \{ timeoutSeconds: 25 \}/);
   assert.doesNotMatch(source,/getFirestore\(app\)/);
 });
+
+test('Explore mobile filters open on demand without crowding product search',()=>{
+  const page=read('src/app/products/page.tsx');
+  assert.match(page,/function MobileExploreFilters\(/);
+  assert.match(page,/aria-label="Mobile Explore filters" className="mb-7 md:hidden"/);
+  assert.match(page,/aria-controls="explore-mobile-filter-panel" aria-expanded=\{expanded\}/);
+  assert.match(page,/setExpanded\(value=>!value\)/);
+  assert.match(page,/aria-label="Active filters"/);
+  assert.match(page,/aria-label=\{`Remove \$\{chip.label\} filter`\}/);
+  assert.match(page,/onClick=\{\(\)=>clearOne\(chip.key\)\}/);
+  assert.match(page,/onClick=\{\(\)=>setExpanded\(false\)\}/);
+  assert.match(page,/ExploreFilterControl id="explore-sort-mobile" label="Sort by" compact/);
+  assert.match(page,/id="explore-mobile-filter-panel" className=\{expanded \?/);
+  assert.match(page,/options=\{priceOptions\}/);
+  assert.match(page,/options=\{availabilityOptions\}/);
+  assert.match(page,/onUpdate=\{change=>setFilters\(current=>\(\{\.\.\.current,\.\.\.change\}\)\)\}/);
+  assert.match(page,/aria-label="Refine Explore products" className="mb-8 hidden/);
+  assert.match(page,/md:block md:p-5/);
+});
