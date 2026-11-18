@@ -59,16 +59,16 @@ function BannerCarousel() {
         {banners.map((banner,index) => (
           <CarouselItem key={banner.id}>
             <Card className="overflow-hidden rounded-[22px] border-0 bg-[#f7f0e8] shadow-none">
-              <CardContent className="relative isolate min-h-[244px] overflow-hidden bg-[#f9f3eb] p-0 md:hidden">
+              <CardContent className="relative isolate min-h-[210px] overflow-hidden bg-[#f9f3eb] p-0 md:hidden">
                 <div className="absolute inset-y-0 right-0 w-[56%] bg-[#e9d9c6]">{(requested.has(index)||index===active)&&<OptimizedImage src={banner.imageUrl} alt={banner.title} fill sizes="(max-width: 767px) 60vw, 0px" quality={75} loading="lazy" onLoad={()=>{if(index===active)setFirstLoaded(true);}} className="object-cover object-center"/>}</div>
                 <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,#f9f3eb_0%,#f9f3eb_45%,rgba(249,243,235,0.98)_65%,rgba(249,243,235,0.58)_83%,rgba(249,243,235,0.06)_100%)]"/>
-                <div className="relative z-10 flex min-h-[244px] flex-col items-start justify-between gap-3 px-4 py-4 text-left">
+                <div className="relative z-10 flex min-h-[210px] flex-col items-start justify-start gap-3 px-4 py-4 text-left">
                   <div className="w-[71%] min-w-0">
                     <span className="inline-flex rounded-full border border-[#e9d8ca] bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-[#78502f]">Made for you</span>
                     <h2 className="mt-2 line-clamp-4 text-[16px] font-semibold leading-[1.26] tracking-[-0.025em] text-[#33251c]">{banner.title}</h2>
                     <p className="mt-2 line-clamp-2 text-[12px] font-medium leading-[1.45] text-[#685548]">{banner.subtitle}</p>
                   </div>
-                  <Link href={banner.buttonLink} className="inline-flex min-h-11 max-w-[76%] items-center justify-center gap-1.5 rounded-full bg-[#754328] px-3.5 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-[#5c351f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]"><span className="min-w-0 truncate">{banner.buttonText}</span><ArrowRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0"/></Link>
+                  <Link href={banner.buttonLink} className="mt-1 inline-flex min-h-11 max-w-[76%] items-center justify-center gap-1.5 rounded-full bg-[#754328] px-3.5 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-[#5c351f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]"><span className="min-w-0 truncate">{banner.buttonText}</span><ArrowRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0"/></Link>
                 </div>
               </CardContent>
               <CardContent className="relative hidden h-[clamp(200px,54vw,236px)] items-center justify-center p-0 md:flex sm:h-64 md:h-72 lg:h-[340px]">

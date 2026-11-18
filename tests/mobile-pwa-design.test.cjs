@@ -127,9 +127,9 @@ test('mobile home uses requested location permission, shows readable active bann
   assert.match(location,/Math\.round\(position\.coords\.latitude \* 100\) \/ 100/);
   assert.match(area,/publicCount/);
   assert.match(area,/zoom: '10'/);
-  assert.match(home,/min-h-\[244px\]/);
+  assert.match(home,/min-h-\[210px\]/);
   assert.match(home,/line-clamp-4 text-\[16px\]/);
-  assert.match(home,/min-h-11 max-w-\[76%\]/);
+  assert.match(home,/mt-1 inline-flex min-h-11 max-w-\[76%\]/);
   assert.match(home,/bg-\[linear-gradient\(90deg/);
   assert.doesNotMatch(legacy,/<ProductSkuCopy|SKU:|product\.sku/);
   assert.doesNotMatch(seller,/<ProductSkuCopy|SKU:|p\.sku/);
@@ -236,4 +236,17 @@ test('mobile product cards have a solid visible white border without changing de
   assert.match(card,/sm:rounded-\[22px\] sm:border sm:border-white\/70/);
   assert.match(card,/rounded-b-\[22px\] bg-gradient-to-t/);
  }
+});
+
+
+test('mobile promotional banner is compact and keeps the CTA close to its copy',()=>{
+ const home=read('src/components/home-client.tsx');
+ const mobile=home.slice(home.indexOf('<CardContent className="relative isolate'),home.indexOf('<CardContent className="relative hidden'));
+ assert.match(mobile,/min-h-\[210px\]/);
+ assert.match(mobile,/flex-col items-start justify-start gap-3/);
+ assert.match(mobile,/mt-1 inline-flex min-h-11 max-w-\[76%\]/);
+ assert.match(mobile,/line-clamp-4 text-\[16px\]/);
+ assert.match(mobile,/line-clamp-2 text-\[12px\]/);
+ assert.doesNotMatch(mobile,/justify-between/);
+ assert.match(home,/md:flex sm:h-64 md:h-72 lg:h-\[340px\]/);
 });
