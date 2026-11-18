@@ -34,6 +34,9 @@ test('mobile category rail uses the refreshed category pictograms without changi
   assert.match(category, /function CookiesIcon\(props: SVGProps<SVGSVGElement>\)/);
   assert.match(category, /href=\{`\/products\?q=\$\{encodeURIComponent\(query\)\}`\}/);
   assert.doesNotMatch(category,/CakeSlice|Croissant|Icon: Gift|Icon: Palette|Icon: Cookie,/);
+  // The scroll rail starts at the same content gutter as the Categories heading.
+  assert.match(category,/className="flex w-full snap-x snap-mandatory gap-3\.5 overflow-x-auto pb-3/);
+  assert.doesNotMatch(category,/className="-mx-4 flex|overflow-x-auto px-4/);
 });
 
 test('mobile PWA keeps buyer routes and role-aware More/Profile navigation',()=>{
