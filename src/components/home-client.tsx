@@ -181,7 +181,7 @@ export default function Home() {
       <footer className="border-t border-[#e8e0d5] bg-[#faf8f3] py-8">
         <div className="section-shell flex flex-col items-center justify-between gap-5 text-center sm:flex-row sm:text-left">
           <div><Link href="/" className="brand-wordmark text-3xl">TreatStory</Link><p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Little finds. Lovely stories.</p></div>
-          <div className="flex flex-wrap justify-center gap-5 text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground"><Link href="/about" className="hover:text-foreground">Our story</Link><Link href="/terms-of-service" className="hover:text-foreground">Terms</Link><Link href="/privacy-policy" className="hover:text-foreground">Privacy</Link><FooterInstagramLink /></div>
+          <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground sm:gap-5"><Link href="/about" className="hover:text-foreground">Our story</Link><Link href="/terms-of-service" className="hover:text-foreground">Terms</Link><Link href="/privacy-policy" className="hover:text-foreground">Privacy</Link><FooterInstagramLink /></div>
           <p className="text-[10px] text-muted-foreground">© {new Date().getFullYear()} TreatStory. All rights reserved.</p>
         </div>
       </footer>
