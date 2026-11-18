@@ -16,6 +16,7 @@ on:
       - 'src/app/globals.css'
       - 'src/app/layout.tsx'
       - 'tests/mobile-pwa-design.test.cjs'
+      - 'scripts/audit/pwa-viewport*'
       - '.github/workflows/verify-mobile-pwa.yml'
 
 concurrency:
@@ -43,4 +44,16 @@ jobs:
         run: npm run typecheck
       - name: Verify production compilation
         run: npm run build
+      - name: Install Chromium and WebKit test browsers
+        run: npx --no-install playwright install --with-deps chromium webkit
+      - name: Check 320–768px mobile PWA layouts in Chromium and WebKit
+        run: node scripts/audit/pwa-viewport.cjs
+      - name: Upload synthetic UI screenshots for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: treatstory-pwa-viewport-screenshots
+          path: work/pwa-viewport/*.png
+          if-no-files-found: ignore
+          retention-days: 7
 # The repository-wide verify-build.yml continues to enforce npm audit --audit-level=high.
