@@ -101,3 +101,21 @@ test('all storefront and dashboard screens avoid unstyled native selection menus
   visit('src/app');
   visit('src/components');
 });
+
+test('opening desktop Radix dropdowns does not shift the scrollbar or fixed sidebar',()=>{
+  const css=read('src/app/globals.css');
+  const fixture=read('scripts/audit/responsive-fixture.tsx');
+  const audit=read('scripts/audit/responsive.cjs');
+  assert.match(css,/html \{ scrollbar-gutter: stable; overflow-y: scroll; \}/);
+  // Radix inserts its important margin rule after the app stylesheet.
+  // Our selector MUST outrank that late rule, not merely match its specificity.
+  assert.match(css,/html body\[data-scroll-locked\] \{/);
+  assert.doesNotMatch(css, /^\s*body\[data-scroll-locked\] \{/m);
+  assert.match(css,/margin-right: 0 !important;/);
+  assert.match(css,/padding-right: 0 !important;/);
+  assert.match(fixture,/data-testid="fixed-sidebar"/);
+  assert.match(fixture,/data-testid="dropdown-layout"/);
+  assert.match(audit,/dropdown shifted centered page/);
+  assert.match(audit,/dropdown shifted fixed sidebar/);
+  assert.match(audit,/await desktop.getByRole\('listbox'\).waitFor\(\)/);
+});

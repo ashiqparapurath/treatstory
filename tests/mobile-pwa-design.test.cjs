@@ -34,6 +34,9 @@ test('mobile category rail uses the refreshed category pictograms without changi
   assert.match(category, /function CookiesIcon\(props: SVGProps<SVGSVGElement>\)/);
   assert.match(category, /href=\{`\/products\?q=\$\{encodeURIComponent\(query\)\}`\}/);
   assert.doesNotMatch(category,/CakeSlice|Croissant|Icon: Gift|Icon: Palette|Icon: Cookie,/);
+  // The scroll rail starts at the same content gutter as the Categories heading.
+  assert.match(category,/className="flex w-full snap-x snap-mandatory gap-3\.5 overflow-x-auto pt-2 pb-3/);
+  assert.doesNotMatch(category,/className="-mx-4 flex|overflow-x-auto px-4/);
 });
 
 test('mobile PWA keeps buyer routes and role-aware More/Profile navigation',()=>{
@@ -268,7 +271,7 @@ test('mobile promotional banner is compact and keeps the CTA close to its copy',
 });
 
 
-test('install TreatStory reminder briefly appears then auto-dismisses, with manual close retained',()=>{
+test('install TreatStory preserves user-initiated prompt after guidance timeout',()=>{
  const layout=read('src/app/layout.tsx');
  const notice=read('src/components/app-install-notice.tsx');
  assert.match(layout,/<AppInstallNotice \/>/);
@@ -276,7 +279,12 @@ test('install TreatStory reminder briefly appears then auto-dismisses, with manu
  assert.match(notice,/aria-label="Install TreatStory"/);
  assert.match(notice,/7000/);
  assert.match(notice,/window\.clearTimeout\(timeout\)/);
- assert.match(notice,/if \(!visible \|\| busy\) return/);
+ assert.match(notice,/if \(!visible \|\| busy \|\| installEvent\) return/);
+ assert.match(notice,/\[visible, busy, installEvent\]/);
+ assert.match(notice,/reminderShownKey/);
+ assert.match(notice,/await installEvent\.prompt\(\)/);
+ assert.match(notice,/const choice = await installEvent\.userChoice/);
+ assert.match(notice,/event\.preventDefault\(\)/);
  assert.match(notice,/sessionStorage", dismissedKey, "1"/);
  assert.match(notice,/aria-label="Dismiss install notification"/);
  assert.match(notice,/beforeinstallprompt/);
@@ -355,4 +363,83 @@ test('mobile seller header offers one WhatsApp message action and reviews are in
   // Note, primary purchase row, quote and WhatsApp all share a 16px vertical rhythm.
   assert.match(detail,/space-y-4 pb-7 pt-6 md:py-0/);
   assert.match(detail,/id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-4 py-0/);
+});
+
+
+test('Explore offers working Category, Price, Availability and Sort controls for both product sources',()=>{
+  const page=read('src/app/products/page.tsx');
+  const legacy=read('src/components/product-grid.tsx');
+  const sellers=read('src/components/seller-storefront-products.tsx');
+  for (const name of ['Filter by category','Filter by price','Filter by availability','Sort Explore products']) {
+    assert.ok(page.includes('ariaLabel="' + name + '"'),name);
+  }
+  assert.match(page,/<SelectTrigger id=\{id\} aria-label=\{ariaLabel\}/);
+  assert.match(page,/<SelectContent position="popper" sideOffset=\{6\}/);
+  assert.match(page,/<SelectItem key=\{option.value\} value=\{option.value\}>/);
+  assert.doesNotMatch(page,/<select\b|<datalist\b|<option\b/);
+  assert.match(page,/setFilters\(\{ \.\.\.defaultCatalogFilters \}\)/);
+  assert.match(page,/<SellerStorefrontProducts searchTerm=\{searchTerm\} filters=\{filters\}/);
+  assert.match(page,/<ProductsPageContent searchTerm=\{searchTerm\} filters=\{filters\}/);
+  assert.match(page,/<ProductGridContainer products=\{products\|\|\[\]\} externalSearchTerm=\{searchTerm\} filters=\{filters\}/);
+  assert.match(page,/publicCategories/);
+  assert.match(legacy,/applyCatalogFilters\(matches, filters\)/);
+  assert.match(sellers,/applyCatalogFilters\(matches, filters\)/);
+});
+
+test('Explore category, size-aware price, availability, and price-order predicates work together',()=>{
+  const ts=require('typescript'),vm=require('node:vm');
+  const source=read('src/lib/catalog-search.ts');
+  const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+  const module={exports:{}};
+  vm.runInNewContext(output,{exports:module.exports});
+  const {defaultCatalogFilters,applyCatalogFilters,catalogDisplayPrice,catalogIsOrderable,matchesCatalogCategory}=module.exports;
+  const rows=[
+    {name:'Birthday Cake',category:'Cakes',price:1800,showPrice:true,availability:'made-to-order',weightOptions:[{price:950},{price:1800}]},
+    {name:'Biscuit pack',category:'Cookies',price:450,showPrice:true,availability:'available',stockQuantity:12},
+    {name:'Empty cookie tin',category:'Cookies',price:800,showPrice:true,availability:'available',stockQuantity:0},
+    {name:'Custom flower art',category:'Art',price:3500,showPrice:true,availability:'unavailable',stockQuantity:0},
+    {name:'Special gift',category:'Handmade gifts',price:0,showPrice:false,availability:'made-to-order'},
+    {name:'Legacy bread',category:'Breads',price:300,showPrice:true},
+  ];
+  const choose=part=>({ ...defaultCatalogFilters, ...part });
+  const names=part=>applyCatalogFilters(rows,choose(part)).map(row=>row.name).join('|');
+  assert.equal(catalogDisplayPrice(rows[0]),950,'lowest size price is used');
+  assert.equal(catalogIsOrderable(rows[0]),true,'made-to-order can be ordered');
+  assert.equal(catalogIsOrderable(rows[2]),false,'sold out should not be shown as available');
+  assert.equal(catalogIsOrderable(rows[5]),true,'legacy items have no inventory metadata');
+  assert.equal(matchesCatalogCategory('Birthday Cakes','Cake'),true);
+  assert.equal(matchesCatalogCategory('Party decorations','Art'),false,'Art must not match Party');
+  assert.equal(names({category:'Cookies',availability:'orderable'}),'Biscuit pack');
+  assert.equal(names({category:'Cakes',price:'500-1000',availability:'made-to-order'}),'Birthday Cake');
+  assert.equal(names({price:'under-500',sort:'price-asc'}),'Legacy bread|Biscuit pack');
+  assert.equal(names({sort:'price-desc'}),'Custom flower art|Birthday Cake|Empty cookie tin|Biscuit pack|Legacy bread|Special gift');
+  assert.equal(names({availability:'unavailable'}),'Empty cookie tin|Custom flower art|Special gift');
+  assert.equal(names({category:'Handmade'}),'Special gift');
+});
+
+test('Firestore retains a single resilient forced-long-polling initialization',()=>{
+  const source=read('src/firebase/client-provider.tsx');
+  assert.match(source,/initializeFirestore\(app, \{/);
+  assert.match(source,/experimentalForceLongPolling: true/);
+  assert.match(source,/experimentalLongPollingOptions: \{ timeoutSeconds: 25 \}/);
+  assert.doesNotMatch(source,/getFirestore\(app\)/);
+});
+
+test('Explore mobile filters open on demand without crowding product search',()=>{
+  const page=read('src/app/products/page.tsx');
+  assert.match(page,/function MobileExploreFilters\(/);
+  assert.match(page,/aria-label="Mobile Explore filters" className="mb-7 md:hidden"/);
+  assert.match(page,/aria-controls="explore-mobile-filter-panel" aria-expanded=\{expanded\}/);
+  assert.match(page,/setExpanded\(value=>!value\)/);
+  assert.match(page,/aria-label="Active filters"/);
+  assert.match(page,/aria-label=\{`Remove \$\{chip.label\} filter`\}/);
+  assert.match(page,/onClick=\{\(\)=>clearOne\(chip.key\)\}/);
+  assert.match(page,/onClick=\{\(\)=>setExpanded\(false\)\}/);
+  assert.match(page,/ExploreFilterControl id="explore-sort-mobile" label="Sort by" compact/);
+  assert.match(page,/id="explore-mobile-filter-panel" className=\{expanded \?/);
+  assert.match(page,/options=\{priceOptions\}/);
+  assert.match(page,/options=\{availabilityOptions\}/);
+  assert.match(page,/onUpdate=\{change=>setFilters\(current=>\(\{\.\.\.current,\.\.\.change\}\)\)\}/);
+  assert.match(page,/aria-label="Refine Explore products" className="mb-8 hidden/);
+  assert.match(page,/md:block md:p-5/);
 });

@@ -78,10 +78,12 @@ jobs:
           rm -rf infra/support-matrix/private infra/support-matrix/.env
       - name: Build application and test stylesheet
         run: npm run build
-      - name: Check responsive contact, dialogs and support layouts
-        run: node scripts/audit/responsive.cjs
+      - name: Verify Shop All dropdown does not shift desktop page
+        run: TREATSTORY_DROPDOWN_ONLY=1 node scripts/audit/responsive.cjs
       - name: Check TreatStory mobile PWA in Chromium and WebKit
         run: node scripts/audit/pwa-viewport.cjs
+      - name: Check responsive contact, dialogs and support layouts
+        run: node scripts/audit/responsive.cjs
       - name: Upload synthetic mobile PWA layout screenshots
         if: always()
         uses: actions/upload-artifact@v4

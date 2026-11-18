@@ -1,5 +1,5 @@
 'use client';
-import {matchesProductSearch} from '@/lib/catalog-search';
+import { matchesProductSearch, applyCatalogFilters, type CatalogFilters } from '@/lib/catalog-search';
 import { normalizeProductSku } from '@/lib/product-sku';
 import { SkuSearchResult } from '@/components/sku-search-result';
 import { usePagedPublicCatalog } from '@/firebase/firestore/use-paged-public-catalog';
@@ -22,7 +22,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
-export function SellerStorefrontProducts({ limitCount, searchTerm }: { limitCount?: number; searchTerm?: string }) {
+export function SellerStorefrontProducts({ limitCount, searchTerm, filters }: { limitCount?: number; searchTerm?: string; filters?: CatalogFilters }) {
   const db = useFirestore();
   const router = useRouter();
   const { addToCart, startDirectCheckout } = useCart();
@@ -34,11 +34,12 @@ export function SellerStorefrontProducts({ limitCount, searchTerm }: { limitCoun
   const {data,isLoading,error,retry,hasMore,loadingMore,loadMore}=usePagedPublicCatalog<MarketplaceProduct>('marketplace_products',limitCount,limitCount?'':deferredSearch);
   const sku = limitCount || searchTerm !== undefined ? null : normalizeProductSku(deferredSearch);
   const [visibleCount, setVisibleCount] = useState(24);
-  useEffect(() => setVisibleCount(24), [deferredSearch]);
+  useEffect(() => setVisibleCount(24), [deferredSearch, filters?.category, filters?.price, filters?.availability, filters?.sort]);
   const visible = useMemo(() => {
     const matches = (data ?? []).filter(p => matchesProductSearch(p, deferredSearch));
-    return limitCount === undefined ? matches : matches.slice(0, limitCount);
-  }, [data, deferredSearch, limitCount]);
+    const refined = filters ? applyCatalogFilters(matches, filters) : matches;
+    return limitCount === undefined ? refined : refined.slice(0, limitCount);
+  }, [data, deferredSearch, limitCount, filters]);
 
   const completePurchase = (p: MarketplaceProduct, intent: 'cart' | 'direct', option?: SellerCardWeightOption): string | null => {
     if (!canBuySellerSize(p, option)) {

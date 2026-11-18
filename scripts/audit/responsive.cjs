@@ -17,6 +17,43 @@ const { chromium, firefox, webkit } = require('playwright');
     for(const [engine,type] of Object.entries({chromium,firefox,webkit})) {
       const browser=await type.launch({headless:true});
       try {
+        // Radix Select locks body scroll. Opening it must not shift centered
+        // content or remove the desktop scrollbar gutter / fixed sidebar.
+        const desktop=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});
+        try {
+          await desktop.goto(`http://127.0.0.1:${server.address().port}/?mode=dropdown`);
+          const measure=()=>desktop.evaluate(()=>{
+            const main=document.querySelector('[data-testid="dropdown-layout"]').getBoundingClientRect();
+            const sidebar=document.querySelector('[data-testid="fixed-sidebar"]').getBoundingClientRect();
+            return {mainLeft:main.left,mainRight:main.right,sideRight:sidebar.right,
+              viewport:document.documentElement.clientWidth,
+              bodyMargin:parseFloat(getComputedStyle(document.body).marginRight),
+              bodyPadding:parseFloat(getComputedStyle(document.body).paddingRight),
+              locked:document.body.hasAttribute('data-scroll-locked'),
+              gutter:getComputedStyle(document.documentElement).scrollbarGutter,
+              scrollHeight:document.documentElement.scrollHeight};
+          });
+          const before=await measure();
+          assert.ok(before.scrollHeight>900,engine+' desktop fixture must overflow vertically');
+          await desktop.getByRole('combobox',{name:'Delivery location'}).click();
+          await desktop.getByRole('listbox').waitFor();
+          await desktop.waitForFunction(()=>document.body.hasAttribute('data-scroll-locked'));
+          const after=await measure();
+          assert.ok(after.locked,engine+' fixture did not exercise Radix scroll-lock');
+          assert.equal(after.gutter,'stable',engine+' keep desktop scrollbar gutter');
+          assert.ok(Math.abs(before.mainLeft-after.mainLeft)<1,engine+' dropdown shifted centered page: '+JSON.stringify({before,after}));
+          assert.ok(Math.abs(before.sideRight-after.sideRight)<1,engine+' dropdown shifted fixed sidebar: '+JSON.stringify({before,after}));
+          assert.ok(Math.abs(before.bodyMargin-after.bodyMargin)<0.5,engine+' scroll lock added right body margin: '+JSON.stringify({before,after}));
+          assert.ok(Math.abs(before.bodyPadding-after.bodyPadding)<0.5,engine+' scroll lock added right body padding: '+JSON.stringify({before,after}));
+          await desktop.keyboard.press('Escape');
+          await desktop.getByRole('listbox').waitFor({state:'hidden'});
+          const restored=await measure();
+          assert.ok(Math.abs(before.mainLeft-restored.mainLeft)<1,engine+' page moved after closing dropdown: '+JSON.stringify({before,restored}));
+        } finally {await desktop.close();}
+        if(process.env.TREATSTORY_DROPDOWN_ONLY === '1') {
+          console.log(`PASS ${engine}: Shop All dropdown did not shift centered content or sidebar`);
+          continue;
+        }
         for(const [width,height] of [[320,568],[360,640],[390,844],[568,320],[768,1024],[1440,900]]) {
           const page=await browser.newPage({viewport:{width,height},reducedMotion:'reduce'});
           for(const mode of ['contact','dialog','alert','support']) {
@@ -26,7 +63,7 @@ const { chromium, firefox, webkit } = require('playwright');
             const check=async()=>{
               const result=await page.evaluate(()=>{
                 const width=document.documentElement.clientWidth;
-                const bad=[...document.querySelectorAll('a[href^="mailto:"],[role="dialog"],[role="alertdialog"],[role="combobox"],[role="listbox"]')].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&(r.left < -1 || r.right>width+1)}).map(el=>el.outerHTML.slice(0,180));
+                const bad=[...document.querySelectorAll('a[href^="mailto:"],[role="dialog"],[role="alertdialog"],[role="combobox"],[role="listbox"]')].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&(r.left < -1 || r.right>width+1)}).map(el=>{const r=el.getBoundingClientRect();return {role:el.getAttribute('role')||el.tagName, left:Math.round(r.left), right:Math.round(r.right), width:Math.round(r.width), viewport:width, element:el.outerHTML.slice(0,145)};});
                 return {overflow:document.documentElement.scrollWidth>width+1,bad};
               });
               assert.equal(result.overflow,false,`${engine} ${width}x${height} ${mode}: page overflow`);

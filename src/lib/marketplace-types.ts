@@ -7,6 +7,8 @@ export interface SellerApplication {
   ownerUid: string;
   businessName: string;
   businessCategory: SellerCategory;
+  businessCity?: string;
+  businessState?: string;
   contactEmail: string;
   contactPhone: string;
   description: string;
@@ -22,6 +24,8 @@ export interface Seller {
   slug: string;
   businessName: string;
   businessCategory: SellerCategory;
+  businessCity?: string;
+  businessState?: string;
   description: string;
   contactEmail: string;
   contactPhone: string;
@@ -33,6 +37,7 @@ export interface Seller {
   isOpen: boolean;
   deliveryMethods?: Array<'delivery' | 'pickup'>;
   deliveryPincodes?: string[];
+  deliveryCoverage?: 'confirm' | 'selected-pincodes' | 'india-wide';
   deliveryFee?: number;
   pickupAddress?: string;
   deliverySlots?: string[];

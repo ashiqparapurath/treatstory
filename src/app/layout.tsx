@@ -17,9 +17,9 @@ const searchIdentity = {
   '@context': 'https://schema.org',
   '@graph': [
     { '@type': 'WebSite', '@id': origin + '/#website', url: origin + '/', name: 'TreatStory', inLanguage: 'en-IN',
-      description: 'Marketplace for home bakes, handmade gifts, art and crafts from independent creators in Kerala.' },
+      description: 'Marketplace for home bakes, handmade gifts, art and crafts from independent creators across India. Delivery depends on each seller.' },
     { '@type': 'Organization', '@id': origin + '/#organization', name: 'TreatStory', url: origin + '/',
-      description: 'Discover and support home bakers and handmade creators across Kerala.' },
+      description: 'Discover and support home bakers, artists and handmade creators across India.' },
   ],
 };
 

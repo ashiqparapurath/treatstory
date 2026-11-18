@@ -46,3 +46,46 @@ test('image links can be added individually with validation and gallery actions'
  assert.match(editor,/type="button" variant="outline" className="h-11 shrink-0 rounded-xl/);
  assert.doesNotMatch(editor,/Or paste image URLs manually/);
 });
+
+test('seller page has distinctive product imagery, accurate trial terms and benefits',()=>{
+ const page=read('src/app/become-a-seller/page.tsx');
+ for(const marker of ['function CreatorHero()','function SellerBenefits()','function HowItWorks()','function SellerFaq()','Made by you.','Loved by many.','A space of your own','Stay close to every order','SELLER_TRIAL_MESSAGE'])assert.ok(page.includes(marker),marker);
+ assert.match(page,/our-story-creators\.svg/);
+ assert.match(page,/alt="Illustration of cakes/);
+ assert.match(page,/Home bakers must provide FSSAI registration or licence details/);
+ assert.match(page,/Sellers across India can apply/);
+});
+
+test('seller application preserves data, auth, error and review behavior across three steps',()=>{
+ const page=read('src/app/become-a-seller/page.tsx');
+ for(const name of ['Your business','Contact details','Your story','Step {step} of 3','Application progress','Continue','Back','Send application'])assert.ok(page.includes(name),name);
+ for(const id of ['businessName','businessCategory','businessCity','businessState','contactEmail','contactPhone','description'])assert.ok(page.includes('id="'+id+'"'),id);
+ assert.match(page,/onSubmit=\{submit\}/);
+ assert.match(page,/if\(step !== 3\)/);
+ assert.match(page,/setStep\(current => \(current \+ 1\) as ApplicationStep\)/);
+ assert.match(page,/setStep\(current=>\(current-1\) as ApplicationStep\)/);
+ assert.match(page,/name="website" tabIndex=\{-1\} autoComplete="off"/);
+ assert.match(page,/fetch\('\/api\/seller-applications'/);
+ assert.match(page,/user\.getIdToken\(\)/);
+ assert.match(page,/businessCity:businessCity\.trim\(\)/);
+ assert.match(page,/description:description\.trim\(\)/);
+ assert.match(page,/if\(!response\.ok\)throw new Error/);
+ assert.match(page,/setSubmitted\(true\)/);
+ assert.match(page,/type="email" required/);
+ assert.match(page,/type="tel" required minLength=\{5\}/);
+ assert.match(page,/id="description" required minLength=\{1\} maxLength=\{2000\}/);
+ assert.match(page,/register\?next=%2Fbecome-a-seller/);
+ assert.match(page,/disabled=\{submitting\}/);
+});
+
+test('mobile application CTA stays above fixed nav and hides while form is visible',()=>{
+ const page=read('src/app/become-a-seller/page.tsx');
+ assert.match(page,/new IntersectionObserver\(\(\[entry\]\) => setApplicationVisible\(entry.isIntersecting\)/);
+ assert.match(page,/observer.disconnect\(\)/);
+ assert.match(page,/!submitted&&!seller&&!roleError&&!applicationVisible&&!isUserLoading/);
+ assert.match(page,/style=\{\{bottom:'calc\(90px \+ env\(safe-area-inset-bottom\)\)'\}\}/);
+ assert.match(page,/aria-label="Apply to sell on TreatStory"/);
+ assert.match(page,/md:hidden/);
+ assert.match(page,/id="seller-application"/);
+ assert.match(page,/scroll-mt-28/);
+});

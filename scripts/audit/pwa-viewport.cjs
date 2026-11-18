@@ -71,12 +71,33 @@ const mocks={
       assert.equal(metrics.mobileTabs,5,name+' '+width+' mobile tabs');
       assert.ok(metrics.cartTargets.every(v=>v>=43),name+' '+width+' cart buttons >=44 CSS px');
       assert.ok(metrics.unavailable >= 1,name+' '+width+' disabled unavailable action is visible');
+      const categoryAlignment=await page.evaluate(()=>{
+       const section=document.querySelector('section[aria-labelledby="mobile-categories-heading"]');
+       const heading=section?.querySelector('#mobile-categories-heading');
+       const rail=section?.querySelector('div.snap-x');
+       const firstCircle=rail?.querySelector('a > span');
+       if(!heading||!rail||!firstCircle)return null;
+       const h=heading.getBoundingClientRect(),c=firstCircle.getBoundingClientRect(),r=rail.getBoundingClientRect();
+       return {headingLeft:h.left,circleLeft:c.left,railLeft:r.left,railRight:r.right,
+        circleTop:c.top,railTop:r.top,topClearance:c.top-r.top,
+        clientWidth:rail.clientWidth,scrollWidth:rail.scrollWidth,viewport:document.documentElement.clientWidth};
+      });
+      assert.ok(categoryAlignment,name+' '+width+' category rail or first icon missing');
+      assert.ok(Math.abs(categoryAlignment.circleLeft-categoryAlignment.headingLeft)<=3,
+       name+' '+width+' first category circle must align with heading gutter: '+JSON.stringify(categoryAlignment));
+      assert.ok(categoryAlignment.topClearance>=7,
+       name+' '+width+' category icon top ring/shadow needs 8px breathing room: '+JSON.stringify(categoryAlignment));
+      assert.ok(categoryAlignment.railLeft>=categoryAlignment.headingLeft-1 &&
+       categoryAlignment.railRight<=categoryAlignment.viewport+1,
+       name+' '+width+' category scroll area must stay inside page gutters: '+JSON.stringify(categoryAlignment));
+      assert.ok(categoryAlignment.scrollWidth>categoryAlignment.clientWidth,
+       name+' '+width+' category carousel must remain horizontally scrollable');
      }
      if(width<768){
        await page.goto('http://127.0.0.1:'+srv.address().port+'/product/synthetic', {waitUntil:'domcontentloaded'});
        await page.getByRole('heading',{name:'Blush Meadow Bouquet'}).waitFor();
        await page.getByRole('group',{name:'Select weight or size'}).waitFor();
-       await page.getByRole('link',{name:/Test Creator/}).waitFor();
+       await page.locator('a[href="/shop/sample-creator"]').first().waitFor();
        const quick=page.getByRole('complementary',{name:'Quick purchase'});
        await quick.waitFor();
        const detailLayout=await page.evaluate(()=>{

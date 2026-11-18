@@ -7,6 +7,7 @@ import {
 } from 'firebase-admin/firestore';
 import type { QuoteFulfillment } from '../quote-checkout-schema';
 import { ApiError } from './firebase-admin';
+import { acceptsDeliveryRequest } from '@/lib/delivery-coverage';
 import { orderReference } from './order-email';
 import { queueNotification } from './mail';
 /** Called inside the quote transaction, before any writes. One quote reserves one order. */
@@ -65,8 +66,7 @@ export async function convertQuote(
     throw new ApiError(409, 'Choose a supported delivery method.');
   if (
     input.deliveryMode === 'delivery' &&
-    seller.deliveryPincodes?.length &&
-    !seller.deliveryPincodes.includes(input.pincode)
+    !acceptsDeliveryRequest(seller, input.pincode || '')
   )
     throw new ApiError(409, 'This seller does not deliver to that PIN code.');
   if (

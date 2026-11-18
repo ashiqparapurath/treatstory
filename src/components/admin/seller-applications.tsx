@@ -3,7 +3,7 @@ import { SellerCompliance } from '@/components/seller-compliance';
 import {usePagedCollection} from '@/firebase/firestore/use-paged-collection';
 import {LoadMoreRecords} from '@/components/load-more-records';
 import { requestSellerMail } from '@/lib/account-mail';
-import { errorToast } from '@/lib/user-notices';
+import { ActionError, errorToast } from '@/lib/user-notices';
 import { LoadError } from '@/components/loading-states';
 
 import { useState } from 'react';
@@ -21,14 +21,34 @@ export function SellerApplications() {
   const { data: applications, isLoading, error: loadError, retry: retryLoad, hasMore, loadingMore, loadMore } = usePagedCollection<SellerApplication>(applicationsQuery);
 
   const [working, setWorking] = useState<string | null>(null);
+  const [reviewIssues, setReviewIssues] = useState<Record<string,string>>({});
 
   async function review(application: SellerApplication, approved: boolean) {
     if (!firestore || !user || working) return;
     setWorking(application.id);
+    setReviewIssues(current => {const next={...current};delete next[application.id];return next;});
     try {
       const response = await fetch('/api/seller-applications', {method:'PATCH',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await user.getIdToken()}`},body:JSON.stringify({id:application.id,approved})});
       const result = await response.json();
-      if(!response.ok)throw new Error(result.error || 'Review failed.');
+      if(!response.ok) {
+        const message = typeof result?.error === 'string' && result.error.trim() ? result.error : 'Review failed.';
+        if(response.status === 409) {
+          // These are valid server-side safety checks (unverified email, an already
+          // reviewed application, existing seller access, or a changed record).
+          // Never retry the mutation automatically.
+          setReviewIssues(current => ({...current,[application.id]:message}));
+          retryLoad();
+          const needsVerification = /verif|register/i.test(message);
+          toast({
+            variant:'destructive',
+            title:needsVerification ? 'Applicant needs a verified account' : 'Application needs attention',
+            description:message,
+          });
+          return;
+        }
+        throw new ActionError(message,response.status);
+      }
+      retryLoad();
       toast({ title: approved ? 'Seller approved' : 'Application rejected' });
       try{await requestSellerMail(user,'application',application.id);}catch{toast({title:'Review saved; email update delayed',description:'The application status is saved. The email update could not be queued.'});}
     } catch(error) {
@@ -56,9 +76,11 @@ export function SellerApplications() {
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold">{application.businessName}</h3>
                   <p className="text-xs uppercase tracking-widest text-muted-foreground">{application.businessCategory}</p>
+                  {(application.businessCity || application.businessState) && <p className="text-xs text-muted-foreground">Based in {[application.businessCity,application.businessState].filter(Boolean).join(', ')}</p>}
                   <p className="text-sm text-muted-foreground">{application.description}</p>
                   <p className="text-sm">{application.contactEmail} · {application.contactPhone}</p>
                   {!application.ownerUid && <p className="text-xs font-medium text-amber-800">Guest application · Applicant must register and verify this email before approval</p>}
+                  {reviewIssues[application.id] && <p role="alert" className="max-w-xl break-words rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950">{reviewIssues[application.id]}</p>}
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Button variant="outline" className="h-10 rounded-xl" disabled={working !== null} onClick={() => review(application, false)}>Reject</Button>

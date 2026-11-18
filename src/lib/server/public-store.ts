@@ -11,7 +11,7 @@ export type PublicStoreResult =
 
 const sellerFields = [
   'businessName','businessCategory','description','logoUrl','coverUrl','isOpen',
-  'deliveryMethods','deliveryPincodes','status','slug','foodLicenseNumber',
+  'deliveryMethods','deliveryPincodes','deliveryCoverage','businessCity','businessState','status','slug','foodLicenseNumber',
 ] as const;
 const productFields = [
   'name','description','price','category','imageUrls','showPrice','sellerId',

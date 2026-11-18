@@ -14,8 +14,8 @@ export function LegalContact() {
       {address && <p>Address: {address}</p>}
       {officer && <p>Grievance officer: {officer}</p>}
       {email && (
-        <p>
-          <a href={'mailto:' + email} className="underline">
+        <p className="min-w-0 max-w-full [overflow-wrap:anywhere]">
+          <a href={'mailto:' + email} className="inline-block max-w-full break-all underline">
             {email}
           </a>
         </p>

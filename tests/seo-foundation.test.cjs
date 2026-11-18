@@ -57,3 +57,16 @@ test('product and store pages render public data, schemas, and preserve client s
  assert.match(read('src/components/product-detail-client.tsx'),/startDirectCheckout/);
  assert.match(read('src/components/seller-store-client.tsx'),/StoreShareButton/);
 });
+
+test('Instagram footer links are accessible, secure, and present across public pages',()=>{
+  const social=read('src/components/footer-instagram-link.tsx');
+  const home=read('src/components/home-client.tsx');
+  const about=read('src/app/about/page.tsx');
+  assert.match(social,/href="https:\/\/www\.instagram\.com\/treatstory\.in\/"/);
+  assert.match(social,/target="_blank"/);
+  assert.match(social,/rel="noopener noreferrer"/);
+  assert.match(social,/aria-label="TreatStory on Instagram/);
+  assert.match(social,/<Instagram aria-hidden="true"/);
+  for(const page of [home,about])assert.match(page,/<FooterInstagramLink\s*\/>/);
+  assert.doesNotMatch(home,/<footer className="hidden/);
+});

@@ -10,6 +10,7 @@ import {HeroImage}from'@/components/hero-image';
 import{BANNER_IMAGE_SIZES}from'@/lib/image-source';
 import { OptimizedImage } from '@/components/optimized-image';
 import { ArrowRight, Sparkles } from 'lucide-react';
+import { FooterInstagramLink } from '@/components/footer-instagram-link';
 import { MobileCategoryRail } from '@/components/mobile-category-rail';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
 import { Card, CardContent } from "@/components/ui/card";
@@ -98,7 +99,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col overflow-hidden bg-background">
       <Header />
-      <main className="flex-1"><h1 className="sr-only md:hidden">TreatStory — discover home bakes and handmade creations in Kerala</h1>
+      <main className="flex-1"><h1 className="sr-only md:hidden">TreatStory — discover home bakes and handmade creations across India</h1>
         <section className="section-shell hidden pb-10 pt-9 md:block sm:pb-10 sm:pt-8 lg:pb-12 lg:pt-10">
           <div className="grid items-center gap-7 md:grid-cols-[0.95fr_1.05fr] md:gap-8 lg:gap-10">
             <div className="relative z-10 order-1 min-w-0 max-w-xl pb-0 md:pb-0">
@@ -110,7 +111,7 @@ export default function Home() {
                 Little finds.<br /><span className="font-serif italic font-normal text-[#a68a64]">Lovely stories.</span>
               </h1>
               <p className="mt-5 max-w-[34ch] text-[15px] leading-7 text-muted-foreground sm:mt-4 sm:max-w-md sm:text-base">
-                Discover homemade bakes, handmade gifts and creative finds from independent makers across Kerala.
+                Discover homemade bakes, handmade gifts and creative finds from independent makers across India.
               </p>
               <div className="hero-cta-container mt-7 w-full sm:mt-5">
                 <div className="flex flex-nowrap items-center gap-2 sm:gap-3">
@@ -177,10 +178,10 @@ export default function Home() {
           </div>
         </section>
       </main>
-      <footer className="hidden border-t border-[#e8e0d5] bg-[#faf8f3] py-8 md:block">
+      <footer className="border-t border-[#e8e0d5] bg-[#faf8f3] py-8">
         <div className="section-shell flex flex-col items-center justify-between gap-5 text-center sm:flex-row sm:text-left">
           <div><Link href="/" className="brand-wordmark text-3xl">TreatStory</Link><p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Little finds. Lovely stories.</p></div>
-          <div className="flex flex-wrap justify-center gap-5 text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground"><Link href="/about" className="hover:text-foreground">Our story</Link><Link href="/terms-of-service" className="hover:text-foreground">Terms</Link><Link href="/privacy-policy" className="hover:text-foreground">Privacy</Link></div>
+          <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground sm:gap-5"><Link href="/about" className="hover:text-foreground">Our story</Link><Link href="/terms-of-service" className="hover:text-foreground">Terms</Link><Link href="/privacy-policy" className="hover:text-foreground">Privacy</Link><FooterInstagramLink /></div>
           <p className="text-[10px] text-muted-foreground">© {new Date().getFullYear()} TreatStory. All rights reserved.</p>
         </div>
       </footer>

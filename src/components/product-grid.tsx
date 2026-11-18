@@ -1,5 +1,5 @@
 "use client";
-import {matchesProductSearch} from '@/lib/catalog-search';
+import { matchesProductSearch, applyCatalogFilters, type CatalogFilters } from '@/lib/catalog-search';
 import { normalizeProductSku } from '@/lib/product-sku';
 import { SkuSearchResult } from '@/components/sku-search-result';
 
@@ -11,10 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
-interface ProductGridContainerProps { products: Product[]; hasMore?: boolean; loadingMore?: boolean; loadMore?: () => Promise<void>; externalSearchTerm?: string; mobileCompact?: boolean; }
+interface ProductGridContainerProps { products: Product[]; hasMore?: boolean; loadingMore?: boolean; loadMore?: () => Promise<void>; externalSearchTerm?: string; mobileCompact?: boolean; filters?: CatalogFilters; }
 interface ProductGridProps extends ProductGridContainerProps { categories: string[]; initialCategory: string | null; }
 
-function ProductGrid({ products, categories, initialCategory, hasMore, loadingMore, loadMore, externalSearchTerm, mobileCompact }: ProductGridProps) {
+function ProductGrid({ products, categories, initialCategory, hasMore, loadingMore, loadMore, externalSearchTerm, mobileCompact, filters }: ProductGridProps) {
   const [ownSearchTerm, setOwnSearchTerm] = useState('');
   const searchTerm = externalSearchTerm ?? ownSearchTerm;
   const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'All');
@@ -23,20 +23,21 @@ function ProductGrid({ products, categories, initialCategory, hasMore, loadingMo
   const sku = externalSearchTerm === undefined ? normalizeProductSku(deferredSearch) : null;
   const [visibleCount, setVisibleCount] = useState(24);
   useEffect(() => setSelectedCategory(initialCategory || 'All'), [initialCategory]);
-  useEffect(() => setVisibleCount(24), [deferredSearch, selectedCategory]);
+  useEffect(() => setVisibleCount(24), [deferredSearch, selectedCategory, filters?.category, filters?.price, filters?.availability, filters?.sort]);
 
   const filteredProducts = useMemo(() => {
     if (!products) return [];
-    return products
-      .filter((product) => selectedCategory === 'All' || product.category === selectedCategory)
+    const matches = products
+      .filter((product) => filters || selectedCategory === 'All' || product.category === selectedCategory)
       .filter((product) => matchesProductSearch(product,deferredSearch,true));
-  }, [products, selectedCategory, deferredSearch]);
+    return filters ? applyCatalogFilters(matches, filters) : matches;
+  }, [products, selectedCategory, deferredSearch, filters]);
 
 
 
   return (
     <div>
-      <div className={`mb-6 flex-col gap-4 border-b border-[#e9e2d8] pb-5 lg:mb-9 lg:flex-row lg:items-center lg:justify-between ${mobileCompact ? "hidden md:flex" : "flex"}`}>
+      {!filters && <div className={`mb-6 flex-col gap-4 border-b border-[#e9e2d8] pb-5 lg:mb-9 lg:flex-row lg:items-center lg:justify-between ${mobileCompact ? "hidden md:flex" : "flex"}`}>
         {externalSearchTerm === undefined && <div className="relative w-full lg:max-w-[340px]">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -62,7 +63,7 @@ function ProductGrid({ products, categories, initialCategory, hasMore, loadingMo
             </Button>
           ))}
         </div>
-      </div>
+      </div>}
 
       <div className={`mb-5 items-center justify-between ${mobileCompact ? "hidden md:flex" : "flex"}`}>
         <p className="text-xs text-muted-foreground">{sku ? 'Matching product code ' + sku : <><span className="font-semibold text-foreground">{filteredProducts.length}</span> pieces to explore</>}</p>

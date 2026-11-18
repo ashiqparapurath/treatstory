@@ -1,6 +1,7 @@
 import { Header } from '@/components/header';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { FooterInstagramLink } from '@/components/footer-instagram-link';
 
 export default function AboutPage() {
   return (
@@ -20,7 +21,7 @@ export default function AboutPage() {
             <div className="sm:hidden">
               <div
                 role="img"
-                aria-label="Handmade cake, flowers, a wrapped gift and a crocheted bag by Kerala creators"
+                aria-label="Handmade cake, flowers, a wrapped gift and a crocheted bag by TreatStory creators"
                 className="aspect-[5/4] w-full bg-no-repeat bg-right bg-[length:200%_auto]"
                 style={{ backgroundImage: "url('/img/our-story-banner.webp'), url('/img/our-story-creators.svg')" }}
               />
@@ -30,7 +31,7 @@ export default function AboutPage() {
                   The Story Behind <em>TreatStory</em>
                 </h1>
                 <p className="text-[15px] leading-7">
-                  A Kerala-born marketplace that brings together talented home bakers, crafters, and handmade creators, giving their creations a bigger, brighter audience.
+                  Born in Kerala and growing across India, TreatStory brings home bakers, artists, crafters and handmade creators together. Each independent seller sets their own delivery and pickup coverage.
                 </p>
               </div>
             </div>
@@ -48,7 +49,7 @@ export default function AboutPage() {
       <footer className="border-t border-[#e8e0d5] py-7">
         <div className="section-shell flex flex-col items-center justify-between gap-3 text-center sm:flex-row sm:text-left">
           <Link href="/" className="brand-wordmark text-2xl">TreatStory</Link>
-          <div className="flex gap-5 text-[10px] uppercase tracking-[0.13em] text-muted-foreground"><Link href="/terms-of-service">Terms</Link><Link href="/privacy-policy">Privacy</Link></div>
+          <div className="flex flex-wrap items-center justify-center gap-5 text-[10px] uppercase tracking-[0.13em] text-muted-foreground"><Link href="/terms-of-service">Terms</Link><Link href="/privacy-policy">Privacy</Link><FooterInstagramLink /></div>
           <p className="text-[10px] text-muted-foreground">© {new Date().getFullYear()} TreatStory</p>
         </div>
       </footer>
