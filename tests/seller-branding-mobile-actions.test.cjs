@@ -13,13 +13,15 @@ test('seller logo is edited from the profile avatar without a large file chooser
   assert.match(page, /aria-label="Edit store logo"[\s\S]*?disabled=\{!active \|\| busy \|\| uploading\}/);
 });
 
-test('mobile product image shows wishlist below share without duplicate mobile controls', () => {
-  const page = fs.readFileSync('src/components/product-detail-client.tsx', 'utf8');
-  const start = page.indexOf('absolute right-3 top-3 z-10 flex flex-col items-center gap-2 sm:hidden');
-  assert.ok(start >= 0, 'mobile image overlay exists');
-  const overlay = page.slice(start, page.indexOf('</div>', start));
-  assert.ok(overlay.indexOf('<ProductShareButton') >= 0);
-  assert.ok(overlay.indexOf('<FavoriteToggle compact') > overlay.indexOf('<ProductShareButton'));
+test('mobile product hero has left back action, horizontal wishlist and share actions, and a single desktop wishlist', () => {
+  const page = fs.readFileSync('src/components/product-detail-client.tsx','utf8');
+  const start = page.indexOf('absolute inset-x-4 top-[calc(1rem+env(safe-area-inset-top))] z-20');
+  assert.ok(start >= 0, 'reference-style safe-area mobile hero overlay exists');
+  const overlay = page.slice(start, page.indexOf('</div>\n          </div>',start));
+  assert.match(overlay, /href="\/products" aria-label="Back to products"/);
+  assert.match(overlay, /<FavoriteToggle compact/);
+  assert.match(overlay, /<ProductShareButton/);
+  assert.ok(overlay.indexOf('<FavoriteToggle compact') < overlay.indexOf('<ProductShareButton'));
   assert.match(overlay, /onTouchStart=\{event=>event\.stopPropagation\(\)\}/);
   assert.match(page, /className="hidden justify-start sm:flex"><FavoriteToggle/);
 });

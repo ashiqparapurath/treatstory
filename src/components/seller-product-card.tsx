@@ -54,7 +54,7 @@ export function SellerProductCard({ product: p, addToBag, buyNow }: {
       </div>
     </div>
     <div className="flex min-h-[99px] flex-col justify-between gap-2 px-3 pb-3 pt-2.5 sm:hidden">
-      <Link href={`/product/seller:${encodeURIComponent(p.id)}`} className="line-clamp-2 text-[13px] font-semibold leading-5 text-[#30251c]">{p.name}</Link>
+      <h3 className="line-clamp-2 text-[13px] font-semibold leading-5 text-[#30251c]">{p.name}</h3>
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 truncate text-sm font-bold text-[#874a28]">{p.showPrice ? `${hasDifferentPrices ? 'From ' : ''}${money(lowestPrice)}` : 'Price on request'}</span>
         <button type="button" disabled={!available} onClick={() => addToBag(p)} aria-label={`Add ${p.name} to bag`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#874a28] text-white disabled:opacity-50"><ShoppingBag className="h-4 w-4"/></button>

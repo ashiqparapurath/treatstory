@@ -17,9 +17,9 @@ test('native-style mobile header retains the original desktop header styling', (
   assert.doesNotMatch(header,/border-b-0 bg-background shadow-none/);
 });
 
-test('mobile homepage keeps both hero buttons in one row on compact screens', () => {
+test('desktop editorial hero buttons remain together and mobile features cards instead', () => {
  const page=fs.readFileSync('src/components/home-client.tsx','utf8');
- assert.match(page,/pb-10 pt-9 sm:pb-10 sm:pt-8/);
+ assert.match(page,/section-shell hidden pb-10 pt-9 md:block sm:pb-10 sm:pt-8/);
  assert.match(page,/leading-\[1\.08\]/);
  assert.match(page,/hero-cta-container mt-7 w-full sm:mt-5/);
  assert.match(page,/flex flex-nowrap items-center gap-2/);
