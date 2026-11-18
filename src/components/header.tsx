@@ -110,8 +110,8 @@ export function Header() {
           { href: '/', label: 'Home', icon: Home, active: pathname === '/' },
           { href: '/products', label: 'Explore', icon: Search, active: mobileNavIsActive(pathname, 'shop') },
           { href: '/favorites', label: 'Wishlist', icon: Heart, active: pathname === '/favorites' },
-          { href: '/more', label: 'More', icon: Menu, active: mobileNavIsActive(pathname, 'more') },
           { href: profileHref, label: 'Profile', icon: UserRound, active: isMobileProfilePath(pathname, role) },
+          { href: '/more', label: 'More', icon: Menu, active: mobileNavIsActive(pathname, 'more') },
         ].map(item => (
           <Link key={item.label} href={item.href}
             onClick={() => { if (item.label !== 'More') clearMoreJourney(); }}
