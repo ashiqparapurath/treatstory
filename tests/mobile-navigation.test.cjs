@@ -102,6 +102,10 @@ test('mobile bottom nav has five balanced destinations, role shortcut, More and 
   assert.match(header, /href=\"\/cart\" aria-label=\{`Shopping bag, \$\{cartCount\} items`\}/);
   assert.match(header, /label: 'More', icon: Menu, active: mobileNavIsActive\(pathname, 'more'\)/);
   assert.match(header, /label: 'Profile', icon: UserRound, active: isMobileProfilePath/);
+  const mobileTabs = header.slice(header.indexOf('<nav aria-label="Mobile navigation"'));
+  const positions = ['Home', 'Explore', 'Wishlist', 'Profile', 'More'].map(label => mobileTabs.indexOf(`label: '${label}'`));
+  assert.ok(positions.every(position => position >= 0), 'Every mobile tab must be present');
+  assert.ok(positions.every((position, index) => index === 0 || position > positions[index - 1]), 'Mobile tab order must be Home, Explore, Wishlist, Profile, More');
   assert.match(header, /href: profileHref/);
   assert.doesNotMatch(header, /label:'Sell'|label: 'Sell'/);
   assert.match(header, /className="absolute -right-1 -top-1 h-2\.5 w-2\.5 rounded-full/);
