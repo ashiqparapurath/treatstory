@@ -2,7 +2,6 @@
 import { SellerCompliance } from '@/components/seller-compliance';
 import {usePagedCollection} from '@/firebase/firestore/use-paged-collection';
 import {LoadMoreRecords} from '@/components/load-more-records';
-import { requestSellerMail } from '@/lib/account-mail';
 import { ActionError, errorToast } from '@/lib/user-notices';
 import { LoadError } from '@/components/loading-states';
 
@@ -50,7 +49,8 @@ export function SellerApplications() {
       }
       retryLoad();
       toast({ title: approved ? 'Seller approved' : 'Application rejected' });
-      try{await requestSellerMail(user,'application',application.id);}catch{toast({title:'Review saved; email update delayed',description:'The application status is saved. The email update could not be queued.'});}
+      // The review API writes its email to the outbox in the same transaction;
+      // do not issue a second browser-triggered request or send duplicates.
     } catch(error) {
       toast(errorToast(error,'seller-application'));
     } finally {

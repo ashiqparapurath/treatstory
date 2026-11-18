@@ -15,17 +15,20 @@ function load(file, mocks) {
 }
 
 test('Google sign-in uses Firebase popup and never changes authenticated roles locally', async () => {
-  const calls=[];const notices=[];
+  const calls=[];const notices=[];const emails=[];
+  let isNewUser=false;let mailFailure=false;
   const auth={testAuth:true};
-  let popupResult={user:{uid:'firebase-user'}};
+  let popupResult={user:{uid:'firebase-user',email:'creator@example.com'}};
   let rejectCode=null;
   class Provider {setCustomParameters(args){calls.push(['params',args]);}}
   const {GoogleSignInButton}=load('src/components/google-sign-in-button.tsx',{
     'firebase/auth': {
       GoogleAuthProvider:Provider,
+      getAdditionalUserInfo:()=>({isNewUser}),
       signInWithPopup:async (instance,provider) => {calls.push(['popup',instance,provider]);if(rejectCode)throw {code:rejectCode};return popupResult;},
     },
     '@/hooks/use-toast':{useToast:()=>({toast:x=>notices.push(x)})},
+    '@/lib/account-mail':{requestAccountMail:async (action,options)=>{emails.push([action,options.user.uid]);if(mailFailure)throw Error('offline');}}, 
   });
   let done=0;
   let tree;await act(async()=>{tree=create(React.createElement(GoogleSignInButton,{auth,onSuccess:()=>done++}));});
@@ -34,10 +37,21 @@ test('Google sign-in uses Firebase popup and never changes authenticated roles l
   assert.equal(button().props['aria-busy'],false);
   await act(async()=>{await button().props.onClick();});
   assert.equal(done,1);assert.equal(calls.find(x=>x[0]==='popup')[1],auth);
+  assert.equal(emails.length,0,'returning Google sign-in never sends a new welcome email');
+  isNewUser=true;
+  await act(async()=>{await button().props.onClick();});
+  assert.equal(emails.length,1);
+  assert.deepEqual(emails[0],['welcome','firebase-user']);
+  assert.equal(done,2);
+  mailFailure=true;
+  await act(async()=>{await button().props.onClick();});
+  assert.equal(done,3,'Google sign-in remains successful even if welcome email service is down');
+  assert.match(notices.at(-1).title,/welcome email delayed/);
+  isNewUser=false;mailFailure=false;
   assert.equal(calls.find(x=>x[0]==='params')[1].prompt,'select_account');
   rejectCode='auth/popup-closed-by-user';
   await act(async()=>{await button().props.onClick();});
-  assert.equal(notices.length,0,'closing Google account chooser is not an error');
+  assert.equal(notices.length,1,'closing Google account chooser adds no error after the mail warning');
   rejectCode='auth/popup-blocked';
   await act(async()=>{await button().props.onClick();});
   assert.equal(notices.at(-1).title,'Google sign-in was blocked');

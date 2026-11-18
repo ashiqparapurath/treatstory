@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import type { Auth } from 'firebase/auth';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, getAdditionalUserInfo, signInWithPopup } from 'firebase/auth';
+import { requestAccountMail } from '@/lib/account-mail';
 import { useToast } from '@/hooks/use-toast';
 
 /** A single Google sign-in action for returning and newly registering users.
@@ -31,7 +32,18 @@ export function GoogleSignInButton({
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      await signInWithPopup(auth, provider);
+      const credential = await signInWithPopup(auth, provider);
+      // Email/password sign-ups already request this. Google accounts need
+      // the same one-time welcome, but returning sign-ins must not re-send it.
+      if(getAdditionalUserInfo(credential)?.isNewUser && credential.user.email) {
+        try {
+          await requestAccountMail('welcome', {user:credential.user});
+        } catch {
+          // A mail relay outage must never turn successful Google authentication
+          // into a sign-in failure; the new account remains usable.
+          toast({title:'Signed in; welcome email delayed',description:'Your account is ready, but its welcome email could not be queued.'});
+        }
+      }
       onSuccess?.();
     } catch (error) {
       const code = (error as { code?: string } | null)?.code;

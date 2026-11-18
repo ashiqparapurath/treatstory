@@ -35,10 +35,10 @@ test('account client sends only actions/email and bearer tokens to its own serve
   status=429;await assert.rejects(()=>requestAccountMail('reset-password',{email:'buyer@example.com'}),e=>e.status===429);
 });
 function accountFixture(){
-  let queued=0,existing=false,authenticated=true,known=true,limited=false,disabled=false;const jobs=[];
+  let queued=0,existing=false,authenticated=true,known=true,limited=false,disabled=false,verified=false;const jobs=[];
   class ApiError extends Error{constructor(status,message){super(message);this.status=status;}}
   const db={collection:name=>({doc:id=>({path:`${name}/${id}`})}),runTransaction:async fn=>fn({get:async ref=>ref.path.startsWith('mail_limits/')?{data:()=>({count:limited?3:0})}:{exists:existing},set(){}})};
-  const user=()=>({uid:'buyer',email:'buyer@example.com',disabled,emailVerified:false});
+  const user=()=>({uid:'buyer',email:'buyer@example.com',disabled,emailVerified:verified});
   const auth={getUser:async()=>user(),getUserByEmail:async()=>{if(!known)throw {code:'auth/user-not-found'};return user();},generatePasswordResetLink:async()=> 'https://fixture.firebaseapp.com/__/auth/action?oobCode=reset',generateEmailVerificationLink:async()=> 'https://fixture.firebaseapp.com/__/auth/action?oobCode=verify'};
   const firebaseMock={ApiError,verifiedUser:async()=>{if(!authenticated)throw new ApiError(401,'Sign in');return {uid:'buyer',db,auth};},getServerFirebase:()=>({db,auth}),safeResponse:e=>Response.json({error:e.message},{status:e.status||503})};
   const mailMock={mailConfig:()=>({origin:'https://treatstory.vercel.app'}),mailId:s=>s,queueMail:(...args)=>{jobs.push(args);queued++;return 'job-id';},deliverMailJob(){}};
@@ -47,7 +47,7 @@ function accountFixture(){
     'next/server':{after(){}},'@/lib/server/firebase-admin':firebaseMock,'@/lib/server/mail':mailMock,'@/lib/server/account-email':queue,
   });
   const request=(body,origin='https://treatstory.vercel.app')=>POST(new Request('https://treatstory.vercel.app/api/email/account',{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify(body)}));
-  return {request,health:GET,jobs,get queued(){return queued;},set existing(v){existing=v;},set authenticated(v){authenticated=v;},set known(v){known=v;},set limited(v){limited=v;},set disabled(v){disabled=v;}};
+  return {request,health:GET,jobs,get queued(){return queued;},set existing(v){existing=v;},set authenticated(v){authenticated=v;},set known(v){known=v;},set limited(v){limited=v;},set disabled(v){disabled=v;},set verified(v){verified=v;}};
 }
 test('welcome and verification require a session and queue private intents before account lookup',async()=>{
   const f=accountFixture();f.authenticated=false;assert.equal((await f.request({action:'welcome'})).status,401);
@@ -55,6 +55,8 @@ test('welcome and verification require a session and queue private intents befor
   assert.equal((await f.request({action:'welcome'})).status,200);assert.equal(f.queued,1);assert.equal(f.jobs[0][3].template,'welcome');
   f.existing=true;await f.request({action:'welcome'});assert.equal(f.queued,1);f.existing=false;
   await f.request({action:'verify-email'});assert.equal(f.jobs.at(-1)[2],'buyer');assert.equal(f.jobs.at(-1)[3].template,'verify_email');assert.equal(f.jobs.at(-1)[3].href,'');assert.equal(f.jobs.at(-1)[5],true);assert.equal(f.jobs.at(-1)[6],undefined);
+  f.verified=true;const queuedBefore=f.queued;const already=await f.request({action:'verify-email'});
+  assert.deepEqual(await already.json(),{ok:true,alreadyVerified:true});assert.equal(f.queued,queuedBefore,'Google-verified or previously verified accounts must not get duplicate verification mail');
 });
 test('password reset preserves account privacy and reports throttling instead of false success',async()=>{
   const f=accountFixture();const body=await (await f.request({action:'reset-password',email:'buyer@example.com'})).json();assert.equal(f.jobs[0][3].template,'password_reset');assert.equal(f.jobs[0][5],true);

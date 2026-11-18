@@ -5,6 +5,7 @@ import {getFirestore,Timestamp} from 'firebase-admin/firestore';
 import type {Auth} from 'firebase-admin/auth';
 import {queueMail,deliverMailJob,mailId} from '@/lib/server/mail';
 import {enqueueAccountEmail} from '@/lib/server/account-email';
+import {queueNewSellerApplicationMails,queueRejectedSellerApplicationMail,sellerAdminMailRecipient} from '@/lib/server/seller-application-email';
 async function run(){
   if(!/^(127\.0\.0\.1|localhost):\d+$/.test(process.env.FIRESTORE_EMULATOR_HOST||''))throw Error('Refusing mail tests outside loopback emulator');
   const db=getFirestore(initializeApp({projectId:'demo-treatstory'},'mail-tests'));
@@ -58,6 +59,34 @@ async function run(){
     await db.collection('mail_limits').doc(`${mailId(migratedEmail)}_${Math.floor(Date.now()/3600_000)}`).set({count:3});
     await db.collection('mail_limits').doc(`account_global_${Math.floor(Date.now()/3600_000)}`).set({count:100});
     const migratedJob=await enqueueAccountEmail(db,'reset-password','',migratedEmail);assert.equal((await db.collection('mail_outbox').doc(migratedJob).get()).exists,true,'old pre-queue failures must not block the fixed flow');
+    // An applicant need not have a Firebase user yet. The same signed mail
+    // outbox delivers to guest, email/password and Google application addresses.
+    const noUserAuth={...auth,getUser:async()=>{throw Error('Direct-recipient seller email must not look up a Firebase UID');}} as unknown as Auth;
+    const previousAdmin=process.env.MAIL_ADMIN_EMAIL;
+    process.env.MAIL_ADMIN_EMAIL='admin@example.com';
+    assert.equal(sellerAdminMailRecipient(),'admin@example.com');
+    const addresses=['guest@example.com','email-password@example.com','google@example.com'];
+    for(const [index,contactEmail] of addresses.entries()) {
+      const app={id:'test-app-'+randomUUID(),businessName:'Bakery '+index,businessCategory:'home-bakery',businessCity:'Pune',businessState:'Maharashtra',contactEmail,submittedAt:Timestamp.now()};
+      const key=mailId(`application/${app.id}/pending/${app.submittedAt.toMillis()}`);
+      await db.runTransaction(async tx=>queueNewSellerApplicationMails(tx,db,app,sellerAdminMailRecipient()));
+      assert.equal((await db.collection('mail_outbox').doc(key).get()).data()?.recipient,contactEmail);
+      assert.equal((await db.collection('mail_outbox').doc(key+'-team').get()).data()?.recipient,'admin@example.com');
+      assert.equal(await deliverMailJob(db,noUserAuth,key),'accepted');
+      assert.equal(await deliverMailJob(db,noUserAuth,key+'-team'),'accepted');
+      const applicant=JSON.parse(calls.at(-2)!.payload),team=JSON.parse(calls.at(-1)!.payload);
+      assert.equal(applicant.template,'seller_application_received');
+      assert.equal(applicant.to[0],contactEmail);
+      assert.equal(team.template,'seller_application_new');
+      assert.equal(team.to[0],'admin@example.com');
+      await db.runTransaction(async tx=>queueRejectedSellerApplicationMail(tx,db,app,Timestamp.now()));
+      const decline=(await db.collection('mail_outbox').where('recipient','==',contactEmail).get()).docs.filter(doc=>doc.data().template==='seller_application_declined');
+      assert.equal(decline.length,1);
+      assert.equal(await deliverMailJob(db,noUserAuth,decline[0].id),'accepted');
+      assert.equal(JSON.parse(calls.at(-1)!.payload).template,'seller_application_declined');
+    }
+    if(previousAdmin===undefined)delete process.env.MAIL_ADMIN_EMAIL;else process.env.MAIL_ADMIN_EMAIL=previousAdmin;
+    console.log('PASS guest, password and Google seller application receipts, team alerts and declines use account-independent mail queue');
     console.log('PASS atomic account quota/job commit, rollback, explicit rate limiting and old quota migration');
     console.log('PASS reset intent persistence, permission/link failure recovery, auth-host retry, stable secure-link payload and private unknown-account cleanup');
     console.log('PASS mail outbox: concurrency leases, transient retry, frozen payload/idempotency, expiry, cleanup and permanent failure; no live email sent');
