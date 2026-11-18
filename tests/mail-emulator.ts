@@ -61,7 +61,7 @@ async function run(){
     const migratedJob=await enqueueAccountEmail(db,'reset-password','',migratedEmail);assert.equal((await db.collection('mail_outbox').doc(migratedJob).get()).exists,true,'old pre-queue failures must not block the fixed flow');
     // An applicant need not have a Firebase user yet. The same signed mail
     // outbox delivers to guest, email/password and Google application addresses.
-    const noUserAuth={...auth,getUser:async()=>{throw Error('Direct-recipient seller email must not look up a Firebase UID');}} as Auth;
+    const noUserAuth={...auth,getUser:async()=>{throw Error('Direct-recipient seller email must not look up a Firebase UID');}} as unknown as Auth;
     const previousAdmin=process.env.MAIL_ADMIN_EMAIL;
     process.env.MAIL_ADMIN_EMAIL='admin@example.com';
     assert.equal(sellerAdminMailRecipient(),'admin@example.com');
