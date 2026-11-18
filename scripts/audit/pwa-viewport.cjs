@@ -32,7 +32,7 @@ const mocks={
  const srv=http.createServer((req,res)=>{
   if(req.url==='/fixture.js'){res.setHeader('content-type','text/javascript');res.end(fs.readFileSync(path.join(out,'fixture.js')))}
   else if(req.url==='/style.css'){res.setHeader('content-type','text/css');res.end(css)}
-  else{res.setHeader('content-type','text/html');res.end('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="stylesheet" href="/style.css"></head><body><div id="app"></div><script type="module" src="/fixture.js"></script></body></html>')}
+  else{res.setHeader('content-type','text/html');res.end('<!doctype html><html style="--font-sans: Arial, Helvetica, sans-serif"><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="stylesheet" href="/style.css"></head><body style="font-family:Arial,Helvetica,sans-serif"><div id="app"></div><script type="module" src="/fixture.js"></script></body></html>')}
  });
  await new Promise(resolve=>srv.listen(0,'127.0.0.1',resolve));
  try{

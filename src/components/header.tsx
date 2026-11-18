@@ -102,7 +102,7 @@ export function Header() {
         </div>
       </header>
       <MoreNavigationTrail />
-      {!isProductDetail && <nav aria-label="Mobile navigation" className="pwa-bottom-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 rounded-t-[22px] border-t border-[#eee8e1] bg-[#fffefa]/95 px-1 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_28px_rgba(43,31,23,0.09)] backdrop-blur-xl md:hidden">
+      {!isProductDetail && <nav aria-label="Mobile navigation" className="pwa-bottom-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 rounded-t-[22px] border-t border-[#eee8e1] bg-[#fffefa] px-1 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_28px_rgba(43,31,23,0.09)] backdrop-blur-xl md:hidden">
         {[
           { href: '/', label: 'Home', icon: Home, active: pathname === '/' },
           { href: '/products', label: 'Explore', icon: Search, active: mobileNavIsActive(pathname, 'shop') },

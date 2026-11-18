@@ -32,12 +32,13 @@ export function ProductCard({ product }: ProductCardProps) {
 
 
   return (
-    <Card className="group relative h-full overflow-hidden rounded-2xl border border-[#eee5dc] bg-white shadow-[0_5px_18px_rgba(35,29,23,0.055)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(35,29,23,0.12)] sm:rounded-[22px] sm:border-white/70 sm:bg-[#f1eee9]">
+    <Card className="group relative h-full overflow-hidden rounded-[20px] border border-[#eee6de] bg-white shadow-[0_5px_18px_rgba(35,29,23,0.065)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(35,29,23,0.12)] sm:rounded-[22px] sm:border-white/70 sm:bg-[#f1eee9]">
       <CardHeader className="relative overflow-hidden rounded-none bg-[#f1eee9] p-0">
-        <div className="relative aspect-[4/4.3] w-full touch-pan-y overflow-hidden bg-[#efe7dd] sm:aspect-[3/4]" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
+        <div className="relative aspect-[1/1.06] w-full touch-pan-y overflow-hidden bg-[#efe7dd] sm:aspect-[3/4]" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
           <div key={gallery.index} className={`absolute inset-0 ${gallery.direction === 'next' ? 'treatstory-photo-next' : 'treatstory-photo-previous'}`}><ProductImage src={images[gallery.index]} alt={product.name} sizes={LEGACY_CARD_IMAGE_SIZES}/></div>
           <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-3/4 bg-gradient-to-t from-black/85 via-black/20 to-transparent sm:block" />
           <Link href={`/product/${encodeURIComponent(product.id)}`} aria-label={`View details for ${product.name}`} className="absolute inset-0 z-10" />
+          <span className="pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-4.5rem)] truncate rounded-full border border-white/80 bg-white/95 px-2.5 py-1.5 text-[10px] font-semibold text-[#754328] shadow-sm backdrop-blur-sm sm:hidden">{product.category}</span>
           {images.length > 1 && (
             <>
               <Button variant="ghost" size="icon" aria-label="Previous image" className="absolute left-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 rounded-full border border-white/50 bg-white/30 backdrop-blur-xl text-foreground shadow-sm hover:bg-white/50 sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" onClick={e => {e.preventDefault();e.stopPropagation();gallery.move(-1);}}>
@@ -46,8 +47,8 @@ export function ProductCard({ product }: ProductCardProps) {
               <Button variant="ghost" size="icon" aria-label="Next image" className="absolute right-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 rounded-full border border-white/50 bg-white/30 backdrop-blur-xl text-foreground shadow-sm hover:bg-white/50 sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" onClick={e => {e.preventDefault();e.stopPropagation();gallery.move(1);}}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              <div className="absolute top-3 left-1/2 flex -translate-x-1/2 gap-1.5">
-                {images.map((_, index) => <span key={index} className={`h-1.5 rounded-full transition-all ${index === gallery.index ? 'w-4 bg-white' : 'w-1.5 bg-white/60'}`} />)}
+              <div className="pointer-events-none absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 gap-1.5 sm:bottom-auto sm:top-3">
+                {images.map((_, index) => <span key={index} className={`h-1.5 rounded-full shadow-sm transition-all ${index === gallery.index ? 'w-4 bg-white' : 'w-1.5 bg-white/60'}`} />)}
               </div>
             </>
           )}
@@ -64,7 +65,7 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
       </CardHeader>
-      <div className="flex min-h-[124px] flex-col justify-between gap-2.5 px-3.5 pb-3.5 pt-3 sm:hidden">
+      <div className="flex min-h-[124px] flex-col justify-between gap-2.5 px-3 pb-3.5 pt-3 sm:hidden">
         <div className="space-y-1"><p className="truncate text-[10px] font-medium uppercase tracking-[0.08em] text-[#9d826c]">{product.category}</p><Link href={`/product/${encodeURIComponent(product.id)}`} className="line-clamp-2 text-[13px] font-semibold leading-[19px] text-[#30251c]">{product.name}</Link></div>
         <div className="flex items-center justify-between gap-2">
           <span className="min-w-0 truncate text-[15px] font-bold tracking-tight text-[#754328]">{product.showPrice ? formatPrice(product.price) : 'Price on request'}</span>

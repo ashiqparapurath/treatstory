@@ -30,19 +30,20 @@ export function SellerProductCard({ product: p, addToBag, buyNow }: {
     : (p.stockQuantity ?? 0) >= minOrder;
   const available = p.availability !== 'unavailable' && p.showPrice &&
     (p.availability === 'made-to-order' || enoughStock);
-  return <article className="group relative min-w-0 overflow-hidden rounded-2xl border border-[#eee5dc] bg-white shadow-[0_5px_18px_rgba(35,29,23,0.055)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(35,29,23,0.12)] sm:rounded-[22px] sm:border-white/70 sm:bg-[#f1eee9]">
-    <div className="relative aspect-[4/4.3] touch-pan-y overflow-hidden bg-[#efe7dd] sm:aspect-[3/4]" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
+  return <article className="group relative min-w-0 overflow-hidden rounded-[20px] border border-[#eee6de] bg-white shadow-[0_5px_18px_rgba(35,29,23,0.065)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(35,29,23,0.12)] sm:rounded-[22px] sm:border-white/70 sm:bg-[#f1eee9]">
+    <div className="relative aspect-[1/1.06] touch-pan-y overflow-hidden bg-[#efe7dd] sm:aspect-[3/4]" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
       <div key={gallery.index} className={`absolute inset-0 ${gallery.direction === 'next' ? 'treatstory-photo-next' : 'treatstory-photo-previous'}`}>
         <ProductImage src={photos[gallery.index]} alt={`${p.name} — photo ${gallery.index + 1}`} />
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-3/4 bg-gradient-to-t from-black/85 via-black/20 to-transparent sm:block"/>
-      {p.availability === 'made-to-order' && <span className="pointer-events-none absolute bottom-2 left-2 z-20 rounded-full border border-white/80 bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#754328] shadow-sm backdrop-blur-sm sm:hidden">Made to order</span>}
+      {p.availability === 'made-to-order' && <span className="pointer-events-none absolute bottom-2 left-2 z-20 rounded-full border border-white/80 bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-[#754328] shadow-sm backdrop-blur-sm sm:hidden">Made to order</span>}
       <Link href={`/product/seller:${encodeURIComponent(p.id)}`} aria-label={`View details and photos for ${p.name}`} className="absolute inset-0 z-10 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#c9ae85]"/>
+      <span className="pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-4.5rem)] truncate rounded-full border border-white/80 bg-white/95 px-2.5 py-1.5 text-[10px] font-semibold text-[#754328] shadow-sm backdrop-blur-sm sm:hidden">{p.category}</span>
       <div className="absolute right-2 top-2 z-20 drop-shadow-sm"><FavoriteToggle compact productId={'seller:' + p.id} title={p.name} imageUrl={photos[0]} /></div>
       {photos.length > 1 && <>
         <button type="button" onClick={() => gallery.move(-1)} aria-label={`Previous photo of ${p.name}`} className="absolute left-2 top-1/2 z-20 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-white/30 backdrop-blur-xl text-[#29251f] shadow transition-opacity sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"><ChevronLeft className="h-4 w-4"/></button>
         <button type="button" onClick={() => gallery.move(1)} aria-label={`Next photo of ${p.name}`} className="absolute right-2 top-1/2 z-20 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-white/30 backdrop-blur-xl text-[#29251f] shadow transition-opacity sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"><ChevronRight className="h-4 w-4"/></button>
-        <div aria-label={`Photo ${gallery.index + 1} of ${photos.length}`} className="pointer-events-none absolute left-1/2 top-11 z-10 flex -translate-x-1/2 gap-1">{photos.slice(0,10).map((_,n) => <span key={n} className={`h-1.5 rounded-full bg-white ${gallery.index === n ? 'w-3' : 'w-1.5 opacity-60'}`} />)}</div>
+        <div aria-label={`Photo ${gallery.index + 1} of ${photos.length}`} className="pointer-events-none absolute bottom-2 right-2 z-20 flex gap-1 sm:bottom-auto sm:right-auto sm:left-1/2 sm:top-11 sm:-translate-x-1/2">{photos.slice(0,10).map((_,n) => <span key={n} className={`h-1.5 rounded-full bg-white ${gallery.index === n ? 'w-3' : 'w-1.5 opacity-60'}`} />)}</div>
       </>}
       <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 hidden flex-col gap-2 text-white sm:inset-x-4 sm:bottom-4 sm:flex">
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug drop-shadow-sm sm:text-base">{p.name}</h3>
@@ -54,7 +55,7 @@ export function SellerProductCard({ product: p, addToBag, buyNow }: {
         </div>
       </div>
     </div>
-    <div className="flex min-h-[124px] flex-col justify-between gap-2.5 px-3.5 pb-3.5 pt-3 sm:hidden">
+    <div className="flex min-h-[124px] flex-col justify-between gap-2.5 px-3 pb-3.5 pt-3 sm:hidden">
       <div className="space-y-1"><p className="truncate text-[10px] font-medium uppercase tracking-[0.08em] text-[#9d826c]">{p.category}</p><h3 className="line-clamp-2 text-[13px] font-semibold leading-[19px] text-[#30251c]">{p.name}</h3></div>
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 truncate text-[15px] font-bold tracking-tight text-[#754328]">{p.showPrice ? `${hasDifferentPrices ? 'From ' : ''}${money(lowestPrice)}` : 'Price on request'}</span>

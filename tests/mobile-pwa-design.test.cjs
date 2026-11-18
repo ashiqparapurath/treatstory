@@ -86,3 +86,22 @@ test('mobile product page visibly shows selected price and honors requested safe
   assert.match(header,/className="sr-only">Search products<\/button>/);
   assert.match(header,/rounded-t-\[22px\]/);
 });
+
+
+test('mobile cards have reference-style image-first layout and real category badges',()=>{
+  const seller=read('src/components/seller-product-card.tsx');
+  const legacy=read('src/components/product-card.tsx');
+  for(const card of [seller,legacy]){
+    assert.match(card,/aspect-\[1\/1\.06\]/);
+    assert.match(card,/max-w-\[calc\(100%-4\.5rem\)\]/);
+    assert.match(card,/rounded-full border border-white\/80 bg-white\/95/);
+    assert.match(card,/sm:hidden/);
+    assert.match(card,/<FavoriteToggle compact/);
+    assert.match(card,/min-h-\[124px\]/);
+    assert.match(card,/h-11 w-11 shrink-0/);
+    assert.doesNotMatch(card,/>4\.8<|>4\.9<|40% off/i,'do not invent ratings or sale prices');
+  }
+  assert.match(seller,/>Made to order<\/span>/);
+  assert.match(seller,/hasDifferentPrices/);
+  assert.match(legacy,/product\.category/);
+});
