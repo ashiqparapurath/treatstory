@@ -250,3 +250,19 @@ test('mobile promotional banner is compact and keeps the CTA close to its copy',
  assert.doesNotMatch(mobile,/justify-between/);
  assert.match(home,/md:flex sm:h-64 md:h-72 lg:h-\[340px\]/);
 });
+
+
+test('install TreatStory reminder briefly appears then auto-dismisses, with manual close retained',()=>{
+ const layout=read('src/app/layout.tsx');
+ const notice=read('src/components/app-install-notice.tsx');
+ assert.match(layout,/<AppInstallNotice \/>/);
+ assert.match(layout,/rel="manifest"/);
+ assert.match(notice,/aria-label="Install TreatStory"/);
+ assert.match(notice,/7000/);
+ assert.match(notice,/window\.clearTimeout\(timeout\)/);
+ assert.match(notice,/if \(!visible \|\| busy\) return/);
+ assert.match(notice,/sessionStorage", dismissedKey, "1"/);
+ assert.match(notice,/aria-label="Dismiss install notification"/);
+ assert.match(notice,/beforeinstallprompt/);
+ assert.match(notice,/onClick=\{\(\) => void install\(\)\}/);
+});

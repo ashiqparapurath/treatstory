@@ -6,6 +6,7 @@ import { pwaIcons } from '@/lib/pwa-icons';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
+import { AppInstallNotice } from '@/components/app-install-notice';
 import { cn } from '@/lib/utils';
 import { CartProvider } from '@/context/cart-context';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
@@ -59,6 +60,7 @@ export default function RootLayout({
           </CartProvider>
         </FirebaseClientProvider>
         <Toaster />
+        <AppInstallNotice />
       </body>
     </html>
   );
