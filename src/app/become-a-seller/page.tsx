@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowDownRight, ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, Gift, Heart, MapPin, PackageCheck, ShieldCheck, Sparkles, Store, X } from 'lucide-react';
+import { ArrowDownRight, ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, Heart, PackageCheck, ShieldCheck, Sparkles, Store } from 'lucide-react';
 import { Header } from '@/components/header';
 import { useAccountRole, useUser } from '@/firebase';
 import { SELLER_TRIAL_MESSAGE } from '@/lib/seller-policy';
@@ -299,10 +299,10 @@ export default function BecomeSellerPage() {
                     <div className="space-y-2"><Label htmlFor="businessName">Business or studio name</Label>
                       <Input id="businessName" required minLength={2} maxLength={120} value={businessName} onChange={e=>setBusinessName(e.target.value)} placeholder="e.g. Little Bloom Bakery" className={fieldClass} disabled={submitting}/></div>
                     <div className="space-y-2"><Label htmlFor="businessCategory">What do you make?</Label>
-                      <Select value={businessCategory} onValueChange={v=>setBusinessCategory(v as SellerCategory)} disabled={submitting}>
+                      <Select value={businessCategory} onValueChange={value => setBusinessCategory(value as SellerCategory)} disabled={submitting}>
                         <SelectTrigger id="businessCategory" className={fieldClass}><SelectValue/></SelectTrigger>
-                        <SelectContent position="popper" sideOffset={6} className="max-w-[calc(100vw-2rem)]">
-                          {categories.map(category=><SelectItem key={category.value} value={category.value}>{category.label}</SelectItem>)}
+                        <SelectContent position="popper" sideOffset={6} className="max-h-[min(22rem,65dvh)] max-w-[calc(100vw-2rem)]">
+                          {categories.map(category => <SelectItem key={category.value} value={category.value}>{category.label}</SelectItem>)}
                         </SelectContent>
                       </Select></div>
                     <div className="grid gap-5 sm:grid-cols-2">
@@ -325,7 +325,7 @@ export default function BecomeSellerPage() {
                   {step===3 && <>
                     <div className="space-y-2"><Label htmlFor="description">A little about your work</Label>
                       <Textarea id="description" required minLength={1} maxLength={2000} rows={5} value={description} onChange={e=>setDescription(e.target.value)} placeholder="Tell us what you love to make, and what makes your creations special…" className={fieldClass+' min-h-[140px] resize-y'} disabled={submitting}/>
-                      <p className="text-xs leading-6 text-[#867c70]">Home bakers need to provide FSSAI registration or licence details for review in Store Settings before publishing food listings.</p></div>
+                      <p className="text-xs leading-6 text-[#867c70]">Home bakers must provide FSSAI registration or licence details for review in Store Settings before publishing food listings.</p></div>
                     <div className="bg-[#f1ede6] px-4 py-4">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8d6d4c]">Review your details</p>
                       <dl className="mt-3 grid gap-x-4 gap-y-3 text-[12px] sm:grid-cols-2">
