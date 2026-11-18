@@ -31,6 +31,8 @@ export default function BecomeSellerPage() {
   const [contactEmail, setContactEmail] = useState('');
   useEffect(() => { if (user?.email) setContactEmail(v => v || user.email || ''); }, [user?.email]);
   const [contactPhone, setContactPhone] = useState('');
+  const [businessCity, setBusinessCity] = useState('');
+  const [businessState, setBusinessState] = useState('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -41,7 +43,7 @@ export default function BecomeSellerPage() {
     const website = new FormData(event.currentTarget).get('website') || '';
     setSubmitting(true);
     try {
-      const response = await fetch('/api/seller-applications', {method:'POST',headers:{'Content-Type':'application/json',...(user?{Authorization:`Bearer ${await user.getIdToken()}`}:{})},body:JSON.stringify({businessName,businessCategory,contactEmail,contactPhone,description,website})});
+      const response = await fetch('/api/seller-applications', {method:'POST',headers:{'Content-Type':'application/json',...(user?{Authorization:`Bearer ${await user.getIdToken()}`}:{})},body:JSON.stringify({businessName,businessCategory,businessCity,businessState,contactEmail,contactPhone,description,website})});
       const result = await response.json();
       if(!response.ok)throw new Error(result.error || 'Application could not be submitted.');
       setSubmitted(true);
@@ -175,6 +177,10 @@ export default function BecomeSellerPage() {
                 <div className="grid gap-6 sm:grid-cols-2">
                   <div className="space-y-2"><Label htmlFor="contactEmail">Contact email</Label><Input id="contactEmail" type="email" required maxLength={254} value={contactEmail} onChange={e => setContactEmail(e.target.value)} className="min-h-12 bg-white"/></div>
                   <div className="space-y-2"><Label htmlFor="contactPhone">Contact number</Label><Input id="contactPhone" type="tel" required maxLength={40} value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="A number we can reach" className="min-h-12 bg-white"/></div>
+                </div>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="space-y-2"><Label htmlFor="businessCity">Business city / town</Label><Input id="businessCity" required minLength={2} maxLength={80} value={businessCity} onChange={e => setBusinessCity(e.target.value)} placeholder="e.g. Kochi, Jaipur or Pune" className="min-h-12 bg-white" /></div>
+                  <div className="space-y-2"><Label htmlFor="businessState">State or union territory</Label><Input id="businessState" required minLength={2} maxLength={80} value={businessState} onChange={e => setBusinessState(e.target.value)} placeholder="e.g. Kerala, Rajasthan or Maharashtra" className="min-h-12 bg-white" /></div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">A little about your work</Label>
