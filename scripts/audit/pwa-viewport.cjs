@@ -119,6 +119,10 @@ const mocks={
        assert.ok(orderSpacing.noteGap>=12,name+' '+width+' notes too close: '+JSON.stringify(orderSpacing));
        assert.ok(orderSpacing.quoteGap>=12,name+' '+width+' custom quote too close: '+JSON.stringify(orderSpacing));
        if(orderSpacing.whatsGap!==null)assert.ok(orderSpacing.whatsGap>=8,name+' '+width+' WhatsApp too close: '+JSON.stringify(orderSpacing));
+       // Note, purchase buttons, quote and WhatsApp should share the same 16px gaps.
+       assert.ok(Math.abs(orderSpacing.noteGap-16)<=2,name+' '+width+' note/purchase gap is not 16px: '+JSON.stringify(orderSpacing));
+       assert.ok(Math.abs(orderSpacing.quoteGap-16)<=2,name+' '+width+' purchase/quote gap is not 16px: '+JSON.stringify(orderSpacing));
+       if(orderSpacing.whatsGap!==null)assert.ok(Math.abs(orderSpacing.whatsGap-16)<=2,name+' '+width+' quote/WhatsApp gap is not 16px: '+JSON.stringify(orderSpacing));
        assert.ok(orderSpacing.quoteHeight>=44,name+' '+width+' quote button undersized');
        if(orderSpacing.whatsHeight!==null)assert.ok(orderSpacing.whatsHeight>=44,name+' '+width+' WhatsApp button undersized');
        assert.ok(orderSpacing.extraWidth<=orderSpacing.viewportWidth,name+' '+width+' ordering controls overflow');
