@@ -66,7 +66,10 @@ export function AppInstallNotice() {
       // Receiving this event means the browser considers this app installable again.
       storage("localStorage", installedKey, "");
       setInstallEvent(event as InstallEvent);
-      if (!isDismissed()) setVisible(true);
+      // Keep a notice dismissed for the remainder of this tab after its timer
+      // expires, even if Chromium dispatches beforeinstallprompt later.
+      if (!isDismissed() && storage("sessionStorage", reminderShownKey) !== "1")
+        setVisible(true);
     };
     const modeChanged = () => {
       if (isInstalledWindow()) installed();
@@ -117,17 +120,17 @@ export function AppInstallNotice() {
       mode.removeEventListener("change", modeChanged);
     };
   }, []);
-  // A real Chromium install action should stay available until someone chooses
-  // Install or Dismiss. Only the browser-menu guidance auto-hides after 7s.
-  // A later beforeinstallprompt event must still reveal the install action.
+  // Auto-hide both the native install action and browser-menu guidance after
+  // seven seconds, without interrupting a native installation dialog.
+  // Do not keep re-showing the reminder on subsequent page navigations in this tab.
   useEffect(() => {
-    if (!visible || busy || installEvent) return;
+    if (!visible || busy) return;
     const timeout = window.setTimeout(() => {
       storage("sessionStorage", reminderShownKey, "1");
       setVisible(false);
     }, 7000);
     return () => window.clearTimeout(timeout);
-  }, [visible, busy, installEvent]);
+  }, [visible, busy]);
 
   function dismiss() {
     storage("sessionStorage", dismissedKey, "1");
