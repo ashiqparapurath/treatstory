@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
           429,
           "Location lookup is busy. Try again in a moment, or enter your address manually.",
         );
-      tx.set(globalRef, { requestedAt: Timestamp.fromMillis(now) });
+      tx.set(globalRef, { requestedAt: Timestamp.fromMillis(now) }, { merge: true });
       tx.set(userRef, { minute, count: count + 1 });
     });
     const url = new URL(
