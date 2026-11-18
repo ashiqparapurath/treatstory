@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { ShoppingBag, ArrowUpRight, UserRound, Bell, Home, Search, Menu, LoaderCircle, MapPin, SlidersHorizontal, Heart } from 'lucide-react';
+import { ShoppingBag, ArrowUpRight, UserRound, Bell, Home, Search, Menu, LoaderCircle, SlidersHorizontal, Heart } from 'lucide-react';
+import { MobileLocationIndicator } from '@/components/mobile-location-indicator';
 import { mobileProfileHref, isMobileProfilePath, mobileNavIsActive } from '@/lib/mobile-navigation';
 import { useMobileAttention } from '@/hooks/use-mobile-attention';
 import { MoreNavigationTrail } from '@/components/more-navigation-trail';
@@ -43,8 +44,10 @@ export function Header() {
           <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-56 w-56 rounded-full border-[32px] border-white/[0.045]" />
           <div className="relative flex min-h-[60px] items-center justify-between gap-3">
             <div className="min-w-0">
-              <Link href="/" aria-label="TreatStory home" onClick={clearMoreJourney} className="brand-wordmark block w-fit max-w-full truncate text-[30px] leading-none text-white">TreatStory</Link>
-              <span className="mt-2 flex items-center gap-1.5 text-[11px] font-medium tracking-[0.035em] text-white/80"><MapPin aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />Made with care in Kerala</span>
+              <Link href="/" aria-label="TreatStory home" onClick={clearMoreJourney} className="inline-flex w-fit max-w-full items-baseline whitespace-nowrap font-sans text-[27px] leading-none tracking-[-0.07em] text-white drop-shadow-[0_1px_1px_rgba(40,25,15,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+                <span className="font-semibold">Treat</span><span className="font-normal">Story</span>
+              </Link>
+              <MobileLocationIndicator />
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <Link href="/cart" aria-label={`Shopping bag, ${cartCount} items`} className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><ShoppingBag className="h-5 w-5"/>{cartCount>0&&<span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#faf7f1] px-1 text-[10px] font-bold text-[#784225]">{cartCount}</span>}</Link>
