@@ -277,7 +277,7 @@ test('mobile product page keeps optional notes collapsed but shows custom order 
  assert.match(detail,/group-open:rotate-180/);
  assert.match(detail,/hidden space-y-2 text-sm font-medium md:block/);
  assert.match(detail,/hidden min-h-12 md:flex/);
- assert.match(detail,/ref=\{purchaseControls\} id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-3 py-1/);
+ assert.match(detail,/ref=\{purchaseControls\} id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-3 py-0/);
  assert.match(detail,/onClick=\{\(\) => void addCurrent\(\)\}/);
  assert.match(detail,/onClick=\{buyNow\}/);
  assert.match(detail,/WhatsApp orders are arranged directly/);
@@ -289,12 +289,12 @@ test('mobile product page keeps optional notes collapsed but shows custom order 
 test('mobile ordering controls have breathing room without hiding cart, WhatsApp or custom quote functionality',()=>{
  const page=read('src/components/product-detail-client.tsx');
  const reviews=read('src/components/product-reviews.tsx');
- assert.match(page,/space-y-6 pb-7 pt-6 md:space-y-4 md:py-0/);
+ assert.match(page,/space-y-4 pb-7 pt-6 md:py-0/);
  assert.match(page,/Add a note/);
  assert.match(page,/aria-label="Additional ordering options"/);
  assert.match(page,/px-4 py-3 md:hidden/);
  assert.doesNotMatch(page,/Other ways to order/);
- assert.match(page,/grid-cols-2 gap-3 py-1 md:grid-cols-\[auto_1fr\]/);
+ assert.match(page,/grid-cols-2 gap-3 py-0 md:grid-cols-\[auto_1fr\]/);
  assert.match(page,/h-12 min-w-0 rounded-full/);
  assert.doesNotMatch(page,/grid scroll-mt-48 grid-cols-2 gap-2 rounded-\[20px\]/);
  assert.match(page,/onClick=\{buyNow\}/);
@@ -331,4 +331,7 @@ test('mobile seller header offers one WhatsApp message action and reviews are in
   assert.doesNotMatch(detail,/\bPhone\b/);
   assert.match(detail,/px-4 pt-2 md:col-span-2 md:px-0 md:pt-0/);
   assert.match(detail,/aria-label="Additional ordering options" className="space-y-4 md:hidden"/);
+  // Note, primary purchase row, quote and WhatsApp all share a 16px vertical rhythm.
+  assert.match(detail,/space-y-4 pb-7 pt-6 md:py-0/);
+  assert.match(detail,/id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-3 py-0/);
 });
