@@ -14,7 +14,7 @@ import { MobileBuyBar } from '@/components/mobile-buy-bar';
 import { useScrollToTop } from '@/hooks/use-scroll-to-top';
 import { ProductImage } from '@/components/product-image';
 import { FavoriteToggle } from '@/components/favorite-toggle';
-import { ProductReviews } from '@/components/product-reviews';
+import { ProductRatingBadge, ProductReviews } from '@/components/product-reviews';
 import { ProductSkuCopy } from '@/components/product-sku-copy';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { MarketplaceProduct, Seller } from '@/lib/marketplace-types';
 import type { Product } from '@/lib/products';
-import { ArrowLeft, ChevronLeft, ChevronRight, ShoppingBag, Store, MessageCircle } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, ShoppingBag, Store, MessageCircle, Phone } from 'lucide-react';
 import { useProductGallery } from '@/hooks/use-product-gallery';
 
 const formatPrice = (v: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v);
@@ -46,6 +46,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
   const [product, setProduct] = useState<Listing | null>(initialProduct);
   const [resolvedSellerListing, setResolvedSellerListing] = useState(initialSellerListing);
   const [sellerName, setSellerName] = useState<string | null>(null);
+  const [sellerLogoUrl, setSellerLogoUrl] = useState('');
   const [loading, setLoading] = useState(!initialProduct);
   const [error, setError] = useState<string | null>(null);
   const [weightIndex, setWeightIndex] = useState(0);
@@ -57,7 +58,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
   useEffect(() => {
     if (!db || !productId) return;
     let live = true;
-    setProduct(initialProduct?.id === productId ? initialProduct : null); setSellerName(null); setWhatsappNumber(''); setWeightIndex(0); setResolvedSellerListing(initialSellerListing); setLoading(!(initialProduct?.id === productId)); setError(null); setAnswers({}); setRequestNote('');
+    setProduct(initialProduct?.id === productId ? initialProduct : null); setSellerName(null); setSellerLogoUrl(''); setWhatsappNumber(''); setWeightIndex(0); setResolvedSellerListing(initialSellerListing); setLoading(!(initialProduct?.id === productId)); setError(null); setAnswers({}); setRequestNote('');
     (async () => {
       try {
         // Older product URLs may not carry the seller prefix. Resolve both
@@ -80,6 +81,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
             if (live && store.exists()) {
               const details = store.data() as Seller;
               setSellerName(details.businessName);
+              setSellerLogoUrl(typeof details.logoUrl === 'string' ? details.logoUrl : '');
               const number = details.whatsappNumber?.replace(/[^0-9]/g, '') || '';
               setWhatsappNumber(/^\d{8,15}$/.test(number) ? number : '');
             }
@@ -130,7 +132,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
       router.push(`/checkout?buy=direct&product=${encodeURIComponent(creator.id)}`, {scroll:true});
     } else { addCurrent(); router.push('/cart', {scroll:true}); }
   }
-  return <div className="min-h-screen bg-[#f8f6f2] text-[#29251f]"><Header /><main className="section-shell px-0 pb-48 pt-0 md:px-6 md:pb-24 md:pt-12 lg:px-10">
+  return <div className="min-h-screen bg-white text-[#29251f] md:bg-[#f8f6f2]"><Header /><main className="section-shell px-0 pb-48 pt-0 md:px-6 md:pb-24 md:pt-12 lg:px-10">
     <Link href="/products" className="hidden items-center gap-2 text-sm text-[#846b49] hover:underline md:inline-flex"><ArrowLeft className="h-4 w-4" />Back to discoveries</Link>
     {loading ? <div role="status" className="mt-8 grid gap-6 md:grid-cols-2"><div className="aspect-[4/5] animate-pulse rounded-3xl bg-[#eae4dc]" /><div className="h-72 animate-pulse rounded-3xl bg-white" /></div> :
     error || !product ? <div role="alert" className="mt-9 rounded-2xl border bg-white p-8"><h1 className="text-xl font-medium">{error ?? 'Product unavailable'}</h1><Link href="/products" className="mt-4 inline-block text-sm underline">Explore products</Link></div> :
@@ -151,7 +153,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
             <span className="absolute bottom-3 right-3 hidden rounded-full bg-[#29251f]/75 px-3 py-1 text-xs text-white md:block">{gallery.index + 1} / {photos.length}</span>
           </>}
           {photos.length > 1 && <div className="absolute inset-x-3 bottom-3 z-20 flex justify-center gap-1.5 overflow-x-auto pb-1 md:hidden" role="group" aria-label="Product gallery photos" onTouchStart={event=>event.stopPropagation()} onTouchEnd={event=>event.stopPropagation()}>
-            {photos.slice(0, 8).map((url,n) => <button type="button" key={n} aria-label={'Show photo ' + (n + 1)} aria-pressed={gallery.index === n} onClick={() => gallery.select(n)} className={gallery.index === n ? 'relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border-2 border-white shadow-md ring-2 ring-[#874a28]' : 'relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border-2 border-white/80 opacity-85 shadow-sm'}>
+            {photos.slice(0, 8).map((url,n) => <button type="button" key={n} aria-label={'Show photo ' + (n + 1)} aria-pressed={gallery.index === n} onClick={() => gallery.select(n)} className={gallery.index === n ? 'relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border-2 border-white shadow-md ring-2 ring-[#754328] focus-visible:outline focus-visible:outline-2 focus-visible:outline-white' : 'relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border-2 border-white/80 opacity-85 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-white'}>
               <ProductImage src={url} alt={'Thumbnail ' + (n + 1)} sizes="48px" />
             </button>)}
           </div>}
@@ -159,16 +161,67 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
         {photos.length > 1 && <div className="hidden gap-3 overflow-x-auto pb-1 md:flex">{photos.map((url, n) => <button type="button" key={n} aria-label={`Show photo ${n + 1}`} aria-pressed={gallery.index === n} onClick={() => gallery.select(n)} className={`relative h-20 w-16 shrink-0 overflow-hidden rounded-xl border-2 ${gallery.index === n ? 'border-[#a68a64]' : 'border-transparent'}`}><ProductImage src={url} alt={`Thumbnail ${n + 1}`} sizes="64px" /></button>)}</div>}
         
       </div>
-      <div className="min-w-0 space-y-5 px-4 pt-5 md:px-0 md:pt-0"><div><div className="flex items-center justify-between gap-3"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a68a64]">{product.category}</p><div className="hidden md:block"><ProductShareButton productRoute={creator?'seller:'+product.id:product.id} title={product.name}/></div></div><h1 className="mt-2 text-[25px] font-semibold leading-tight tracking-[-0.025em] md:text-4xl">{product.name}</h1>
-        <div className="mt-3 flex flex-wrap items-center gap-2 md:hidden"><p className="text-[25px] font-bold tracking-tight text-[#754328]">{product.showPrice ? formatPrice(selectedPrice) : 'Price on request'}</p>{creator?.availability === 'made-to-order' && <span className="rounded-full bg-[#f3e6d9] px-2.5 py-1 text-[10px] font-semibold text-[#754328]">Made to order</span>}</div>
-        {creator?.sku && <div className="mt-3 hidden sm:block"><ProductSkuCopy sku={creator.sku} /></div>}{sellerName && <p className="mt-4 inline-flex min-h-14 w-full items-center gap-3 rounded-xl bg-[#f7efe6] px-3 py-2.5 text-xs text-[#6b5342] md:min-h-0 md:w-auto md:bg-transparent md:px-0 md:py-0"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8d3c0] text-[#874a28]"><Store className="h-4 w-4" /></span><Link href={`/shop/${encodeURIComponent(product.sellerId || '')}`} className="underline underline-offset-4">Made by {sellerName} · View creator shop</Link></p>}<p className="mt-5 hidden text-3xl font-semibold md:block">{product.showPrice ? formatPrice(selectedPrice) : 'Price on request'}</p></div>
-      <div className="border-t border-[#eee8e1] pt-4 md:rounded-2xl md:border md:border-[#e8e0d5] md:bg-white md:p-5"><h2 className="text-[14px] font-semibold tracking-tight text-[#382b22]">Description</h2><p className={`mt-3 whitespace-pre-wrap text-sm leading-6 text-[#675d53] ${descriptionOpen ? '' : 'line-clamp-3'}`}>{product.description}</p><button type="button" aria-expanded={descriptionOpen} onClick={() => setDescriptionOpen(v => !v)} className="mt-1 min-h-10 text-xs font-semibold text-[#874a28] underline underline-offset-2">{descriptionOpen ? 'Show less' : 'Read more'}</button>
-        {creator && <div className="mt-5 flex flex-wrap gap-2 text-xs text-[#6b604e]">{creator.weightValue && creator.weightUnit && <span className="rounded-full bg-[#f5f0e8] px-3 py-2">Weight / quantity: {creator.weightValue} {creator.weightUnit}</span>}{creator.preparationDays !== undefined && <span className="rounded-full bg-[#f5f0e8] px-3 py-2">Preparation: {creator.preparationDays} day(s)</span>}{minQty > 1 && <span className="rounded-full bg-[#f5f0e8] px-3 py-2">Minimum: {minQty} units</span>}{creator.availability === 'made-to-order' && <span className="rounded-full bg-[#f5f0e8] px-3 py-2">Made to order</span>}</div>}
+      <div className="min-w-0 space-y-0 bg-white px-4 pt-4 md:space-y-5 md:bg-transparent md:px-0 md:pt-0">
+        <div className="border-b border-[#eee9e4] pb-4 md:border-b-0 md:pb-0">
+          <div className="flex min-h-5 items-center justify-between gap-3">
+            <p className="min-w-0 truncate text-[12px] font-medium text-[#a49a91] md:text-[10px] md:font-semibold md:uppercase md:tracking-[0.2em] md:text-[#a68a64]">{product.category}</p>
+            <div className="flex shrink-0 items-center gap-2">
+              {creator && <ProductRatingBadge productId={creator.id} />}
+              <div className="hidden md:block"><ProductShareButton productRoute={creator ? 'seller:' + product.id : product.id} title={product.name}/></div>
+            </div>
+          </div>
+          <h1 className="mt-2 text-[21px] font-semibold leading-[1.24] tracking-[-0.03em] text-[#30251c] md:text-4xl">{product.name}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2 md:hidden">
+            <span className="text-[20px] font-semibold tracking-[-0.03em] text-[#754328]">{product.showPrice ? formatPrice(selectedPrice) : 'Price on request'}</span>
+            {creator?.availability === 'made-to-order' && <span className="rounded-full bg-[#f6e8dd] px-2.5 py-1 text-[10px] font-medium text-[#995b35]">Made to order</span>}
+          </div>
+          {creator?.sku && <div className="mt-3 hidden md:block"><ProductSkuCopy sku={creator.sku} /></div>}
+          {sellerName && <>
+            <div className="mt-5 md:hidden">
+              <p className="text-[12px] font-semibold text-[#3b3029]">Seller</p>
+              <div className="mt-2 flex min-w-0 items-center gap-2.5">
+                <Link href={'/shop/' + encodeURIComponent(product.sellerId || '')} className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]">
+                  <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f1e3d5] text-[#754328]">
+                    {sellerLogoUrl ? <ProductImage src={sellerLogoUrl} alt={sellerName + ' shop logo'} sizes="44px" /> : <Store aria-hidden="true" className="h-5 w-5" />}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-[13px] font-semibold text-[#352b23]">{sellerName}</span>
+                    <span className="mt-0.5 block text-[11px] text-[#a49a91]">Creator · View shop</span>
+                  </span>
+                </Link>
+                {whatsappNumber && <>
+                  <a href={'https://wa.me/' + whatsappNumber + '?text=' + encodeURIComponent('Hello! I am interested in ' + product.name + ' on TreatStory.')} target="_blank" rel="noopener noreferrer" aria-label={'Message ' + sellerName + ' on WhatsApp'} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7f1eb] text-[#8d5130] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]"><MessageCircle aria-hidden="true" className="h-5 w-5"/></a>
+                  <a href={'tel:+' + whatsappNumber} aria-label={'Call ' + sellerName} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7f1eb] text-[#8d5130] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]"><Phone aria-hidden="true" className="h-4 w-4"/></a>
+                </>}
+              </div>
+            </div>
+            <p className="mt-4 hidden min-h-14 w-full items-center gap-3 rounded-xl bg-[#f7efe6] px-3 py-2.5 text-xs text-[#6b5342] md:inline-flex md:min-h-0 md:w-auto md:bg-transparent md:px-0 md:py-0">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8d3c0] text-[#874a28]"><Store className="h-4 w-4" /></span>
+              <Link href={'/shop/' + encodeURIComponent(product.sellerId || '')} className="underline underline-offset-4">Made by {sellerName} · View creator shop</Link>
+            </p>
+          </>}
+          <p className="mt-5 hidden text-3xl font-semibold md:block">{product.showPrice ? formatPrice(selectedPrice) : 'Price on request'}</p>
+        </div>
+        <section className="border-b border-[#eee9e4] py-4 md:rounded-2xl md:border md:border-[#e8e0d5] md:bg-white md:p-5" aria-labelledby="product-description-title">
+          <h2 id="product-description-title" className="text-[13px] font-semibold text-[#342c26] md:text-[14px]">Description</h2>
+          <p className={'mt-2 whitespace-pre-wrap text-[12px] leading-[1.55] text-[#857a70] md:text-sm md:leading-6 ' + (descriptionOpen ? '' : 'line-clamp-3')}>{product.description}</p>
+          {typeof product.description === 'string' && product.description.length > 135 && <button type="button" aria-expanded={descriptionOpen} onClick={() => setDescriptionOpen(v => !v)} className="mt-1 min-h-10 text-[12px] font-medium text-[#915331] underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]">{descriptionOpen ? 'Show less' : 'Read more'}</button>}
+        </section>
+        {weightChoices.length > 0 && <section aria-labelledby="product-weights-title" className="border-b border-[#eee9e4] py-4 md:rounded-2xl md:border md:border-[#e8e0d5] md:bg-white md:p-5">
+          <h2 id="product-weights-title" className="text-[13px] font-semibold text-[#342c26] md:text-[14px]">Select Weight / Size</h2>
+          {creator && weightChoices.length > 1 && <p className="mt-1 hidden text-xs text-muted-foreground md:block">Prices and availability may differ by size.</p>}
+          <div role="group" aria-label="Select weight or size" className="mt-3 -mx-1 flex snap-x flex-nowrap gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
+            {weightChoices.map((option,n) => <button type="button" key={n} onClick={() => setWeightIndex(n)} aria-pressed={weightIndex === n}
+              className={'min-h-11 shrink-0 snap-start whitespace-nowrap rounded-lg border px-3 text-[11px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328] md:rounded-xl md:px-3.5 md:text-xs ' + (weightIndex === n ? 'border-[#754328] bg-[#754328] text-white shadow-sm' : 'border-[#ece5df] bg-white text-[#5e544d]')}>
+              {option.value} {option.unit}{option.stockQuantity === 0 ? ' · Sold out' : ''}
+            </button>)}
+          </div>
+        </section>
+        <div className="space-y-4 py-4 md:py-0">
+          {creator && <div className="mt-5 flex flex-wrap gap-2 text-xs text-[#6b604e]">{creator.weightValue && creator.weightUnit && <span className="rounded-full bg-[#f5f0e8] px-3 py-2">Weight / quantity: {creator.weightValue} {creator.weightUnit}</span>}{creator.preparationDays !== undefined && <span className="rounded-full bg-[#f5f0e8] px-3 py-2">Preparation: {creator.preparationDays} day(s)</span>}{minQty > 1 && <span className="rounded-full bg-[#f5f0e8] px-3 py-2">Minimum: {minQty} units</span>}{creator.availability === 'made-to-order' && <span className="rounded-full bg-[#f5f0e8] px-3 py-2">Made to order</span>}</div>}
         {creator && (creator.ingredients || creator.allergens?.length || creator.dietaryTags?.length || creator.shelfLifeDays != null || creator.storageInstructions) && <section className="mt-5 space-y-3 border-t pt-5"><h3 className="text-sm font-semibold">Ingredients & food information</h3><p className="text-[11px] text-amber-800">Information is provided by the seller. If you have allergies, confirm ingredients and cross-contact precautions directly with the creator before ordering.</p>{creator.ingredients && <p className="whitespace-pre-wrap text-sm"><strong>Ingredients:</strong> {creator.ingredients}</p>}{!!creator.allergens?.length && <p className="text-sm"><strong>Declared allergens:</strong> {creator.allergens.join(', ')}</p>}{!!creator.dietaryTags?.length && <p className="text-sm"><strong>Seller dietary labels:</strong> {creator.dietaryTags.join(', ')}</p>}{creator.shelfLifeDays != null && <p className="text-sm"><strong>Stated shelf life:</strong> {creator.shelfLifeDays} day(s)</p>}{creator.storageInstructions && <p className="whitespace-pre-wrap text-sm"><strong>Storage:</strong> {creator.storageInstructions}</p>}</section>}
         {creator?.careInstructions && <div className="mt-5 border-t pt-4"><h3 className="text-sm font-semibold">Care & ingredients</h3><p className="mt-2 whitespace-pre-wrap text-sm text-[#675d53]">{creator.careInstructions}</p></div>}
-      </div>
-      {creator && weightChoices.length > 1 && <p className="text-xs text-[#846b49]">Choose a size to see its exact price. Prices and stock may differ between weights.</p>}
-      {weightChoices.length > 0 && <section className="border-t border-[#eee8e1] pt-4 md:rounded-2xl md:border md:border-[#e8e0d5] md:bg-white md:p-5"><h2 className="text-[14px] font-semibold tracking-tight text-[#382b22]">Select weight / size</h2><p className="mt-1 text-xs text-muted-foreground">Different sizes may have different prices and available stock.</p><div role="group" aria-label="Select weight or size" className="mt-4 flex flex-wrap gap-2">{weightChoices.map((option,n) => <button type="button" key={n} onClick={() => setWeightIndex(n)} aria-pressed={weightIndex===n} className={`min-h-11 rounded-xl border px-3.5 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]  ${weightIndex===n ? 'border-[#754328] bg-[#754328] text-white shadow-sm' : 'border-[#e1d7c8] bg-white text-[#6d6256]'}`}>{option.value} {option.unit}{option.stockQuantity === 0 ? ' · Sold out' : ''}</button>)}</div></section>}
+        </div>
       {creator?.availability === 'available' && !hasStock && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">This size does not have enough stock for the minimum order quantity ({minQty}). Choose another size or contact the seller.</p>}
       {creator && (creator.customizationOptions?.length || 0) > 0 && <div className="space-y-4 rounded-2xl border border-[#e8e0d5] bg-white p-5"><div><h2 className="font-medium">Make it yours</h2><p className="mt-1 text-xs text-muted-foreground">Optional personalization requests. The creator will confirm feasibility; prices are not automatically changed.</p></div>{creator.customizationOptions?.map((field,i) => <label key={i} className="block space-y-1.5 text-xs font-medium">{field}<Input maxLength={120} value={answers[field] || ''} placeholder="Your preference" onChange={e => setAnswers(v => ({...v,[field]:e.target.value}))} /></label>)}</div>}
       {creator && <label className="block space-y-2 text-sm font-medium">Notes for the creator (optional)<Textarea maxLength={500} rows={3} placeholder="Special requests, colours, gifting instructions…" value={requestNote} onChange={e=>setRequestNote(e.target.value)} className="bg-white"/></label>}
