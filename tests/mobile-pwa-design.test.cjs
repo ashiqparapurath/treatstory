@@ -268,11 +268,12 @@ test('install TreatStory reminder briefly appears then auto-dismisses, with manu
 });
 
 
-test('mobile product page hides optional order forms until expanded',()=>{
+test('mobile product page keeps optional notes collapsed but shows custom order links',()=>{
  const detail=read('src/components/product-detail-client.tsx');
  const reviews=read('src/components/product-reviews.tsx');
  assert.match(detail,/Add a note <span className="font-normal/);
- assert.match(detail,/Other ways to order/);
+ assert.match(detail,/aria-label="Additional ordering options"/);
+  assert.doesNotMatch(detail,/Other ways to order/);
  assert.match(detail,/group-open:rotate-180/);
  assert.match(detail,/hidden space-y-2 text-sm font-medium md:block/);
  assert.match(detail,/hidden min-h-12 md:flex/);
@@ -290,9 +291,9 @@ test('mobile ordering controls have breathing room without hiding cart, WhatsApp
  const reviews=read('src/components/product-reviews.tsx');
  assert.match(page,/space-y-5 pb-7 pt-6 md:space-y-4 md:py-0/);
  assert.match(page,/Add a note/);
- assert.match(page,/Other ways to order/);
+ assert.match(page,/aria-label="Additional ordering options"/);
  assert.match(page,/px-4 py-3 md:hidden/);
- assert.match(page,/space-y-3 border-t border-\[#eee5dc\] pt-4/);
+ assert.doesNotMatch(page,/Other ways to order/);
  assert.match(page,/grid-cols-2 gap-3 py-1 md:grid-cols-\[auto_1fr\]/);
  assert.match(page,/h-12 min-w-0 rounded-full/);
  assert.doesNotMatch(page,/grid scroll-mt-48 grid-cols-2 gap-2 rounded-\[20px\]/);
@@ -302,4 +303,18 @@ test('mobile ordering controls have breathing room without hiding cart, WhatsApp
  assert.match(page,/Request a custom quote for this creation/);
  assert.match(page,/pt-2 md:col-span-2 md:pt-0/);
  assert.match(reviews,/p-5 shadow-\[0_4px_16px/);
+});
+
+test('mobile custom quote and WhatsApp links show without an expandable box',()=>{
+ const detail=read('src/components/product-detail-client.tsx');
+ const start=detail.indexOf('aria-label="Additional ordering options"');
+ const end=detail.indexOf('hidden min-h-12 md:flex',start);
+ assert.ok(start>0 && end>start);
+ const mobile=detail.slice(start,end);
+ assert.match(mobile,/space-y-3 md:hidden/);
+ assert.match(mobile,/Request a custom quote for this creation<\/Link>/);
+ assert.match(mobile,/Order via WhatsApp<\/a>/);
+ assert.match(mobile,/min-h-12 items-center justify-center/);
+ assert.doesNotMatch(mobile,/<details|<summary/);
+ assert.match(detail,/hidden min-h-12 md:flex/);
 });

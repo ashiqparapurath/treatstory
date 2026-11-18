@@ -96,25 +96,34 @@ const mocks={
        assert.ok(detailLayout.buyBar.top>=0 && detailLayout.buyBar.right<=width+1,name+' '+width+' purchase bar clipped');
        assert.ok(detailLayout.scrollWidth<=width+1,name+' '+width+' product overflow');
        await page.screenshot({path:path.join(out,name+'-detail-'+width+'.png'),fullPage:false});
-       // Validate spacing on the actual purchase-controls component, not just CSS strings.
-       await page.getByText('Other ways to order',{exact:true}).scrollIntoViewIfNeeded();
+       // Validate visible direct quote and WhatsApp actions, without an accordion.
+       const quoteLink=page.getByRole('link',{name:'Request a custom quote for this creation'}).first();
+       const whatsLink=page.getByRole('link',{name:'Order via WhatsApp'}).first();
+       await quoteLink.scrollIntoViewIfNeeded();
+       assert.ok(await quoteLink.isVisible(),name+' '+width+' custom quote not visible');
+       if(await whatsLink.count()) assert.ok(await whatsLink.isVisible(),name+' '+width+' WhatsApp order not visible');
        const orderSpacing=await page.evaluate(()=>{
-         const detailSections=[...document.querySelectorAll('details')];
-         const note=detailSections.find(x=>x.querySelector('summary')?.textContent?.includes('Add a note'));
-         const other=detailSections.find(x=>x.querySelector('summary')?.textContent?.includes('Other ways to order'));
+         const notes=[...document.querySelectorAll('details')].find(x=>x.querySelector('summary')?.textContent?.includes('Add a note'));
          const actions=document.getElementById('purchase-actions');
-         if(!note||!other||!actions)return null;
-         const n=note.getBoundingClientRect(),a=actions.getBoundingClientRect(),o=other.getBoundingClientRect();
-         return {notesToCart:a.top-n.bottom,cartToOther:o.top-a.bottom,
-           actionsWidth:a.width,notesOpen:note.open,otherOpen:other.open,
-           viewportWidth:document.documentElement.clientWidth};
+         const extra=document.querySelector('[aria-label="Additional ordering options"]');
+         const quote=extra?.querySelector('a[href^="/custom-orders"]');
+         const whats=extra?.querySelector('a[href^="https://wa.me/"]');
+         if(!notes||!actions||!extra||!quote)return null;
+         const n=notes.getBoundingClientRect(),act=actions.getBoundingClientRect(),q=quote.getBoundingClientRect(),w=whats?.getBoundingClientRect();
+         return {noteGap:act.top-n.bottom,quoteGap:q.top-act.bottom,whatsGap:w?w.top-q.bottom:null,
+           quoteHeight:q.height,whatsHeight:w?.height??null,
+           extraWidth:extra.getBoundingClientRect().width,viewportWidth:document.documentElement.clientWidth,
+           notesOpen:notes.open,hasOtherDetails:!!extra.querySelector('details')};
        });
-       assert.ok(orderSpacing,name+' '+width+' missing product order sections');
-       assert.ok(orderSpacing.notesToCart>=12,name+' '+width+' creator note and cart buttons too close: '+JSON.stringify(orderSpacing));
-       assert.ok(orderSpacing.cartToOther>=12,name+' '+width+' cart and other ordering controls too close: '+JSON.stringify(orderSpacing));
-       assert.ok(orderSpacing.actionsWidth<=orderSpacing.viewportWidth,name+' '+width+' order buttons overflow');
-       assert.equal(orderSpacing.notesOpen,false,name+' '+width+' optional notes collapsed by default');
-       assert.equal(orderSpacing.otherOpen,false,name+' '+width+' secondary ordering options collapsed by default');
+       assert.ok(orderSpacing,name+' '+width+' ordering controls missing');
+       assert.ok(orderSpacing.noteGap>=12,name+' '+width+' notes too close: '+JSON.stringify(orderSpacing));
+       assert.ok(orderSpacing.quoteGap>=12,name+' '+width+' custom quote too close: '+JSON.stringify(orderSpacing));
+       if(orderSpacing.whatsGap!==null)assert.ok(orderSpacing.whatsGap>=8,name+' '+width+' WhatsApp too close: '+JSON.stringify(orderSpacing));
+       assert.ok(orderSpacing.quoteHeight>=44,name+' '+width+' quote button undersized');
+       if(orderSpacing.whatsHeight!==null)assert.ok(orderSpacing.whatsHeight>=44,name+' '+width+' WhatsApp button undersized');
+       assert.ok(orderSpacing.extraWidth<=orderSpacing.viewportWidth,name+' '+width+' ordering controls overflow');
+       assert.equal(orderSpacing.notesOpen,false,name+' '+width+' note should start collapsed');
+       assert.equal(orderSpacing.hasOtherDetails,false,name+' '+width+' extra orders should not be collapsible');
        await page.screenshot({path:path.join(out,name+'-orders-'+width+'.png'),fullPage:false});
        await page.goto('http://127.0.0.1:'+srv.address().port+'/');
        await page.getByRole('heading',{name:'Featured products'}).waitFor();
