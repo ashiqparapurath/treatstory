@@ -28,7 +28,7 @@ test('mobile PWA keeps buyer routes and role-aware More/Profile navigation',()=>
   assert.match(header,/isMobileProfilePath/);
   assert.match(header,/clearMoreJourney/);
   assert.match(header,/href="\/cart"/);
-  assert.match(header,/!isProductDetail && <nav/);
+  assert.match(header,/<nav aria-label="Mobile navigation"/);
   assert.doesNotMatch(header,/expo-router|eas-cli|react-native/);
 });
 
@@ -139,4 +139,31 @@ test('mobile home uses requested location permission, shows readable active bann
   assert.doesNotMatch(legacy,/<ProductSkuCopy|SKU:|product\.sku/);
   assert.doesNotMatch(seller,/<ProductSkuCopy|SKU:|p\.sku/);
   assert.match(details,/<ProductSkuCopy sku=\{creator\.sku\}/);
+});
+
+test('product details preserve persistent bottom navigation and purchase action without overlapping',()=>{
+  const header=read('src/components/header.tsx');
+  const bar=read('src/components/mobile-buy-bar.tsx');
+  const detail=read('src/components/product-detail-client.tsx');
+  assert.match(header,/<nav aria-label="Mobile navigation"/);
+  assert.doesNotMatch(header,/!isProductDetail && <nav/);
+  assert.match(header,/mobileNavIsActive\(pathname, 'shop'\)/);
+  assert.match(bar,/bottom-\[calc\(70px\+env\(safe-area-inset-bottom\)\)\]/);
+  assert.match(bar,/rootMargin:'0px 0px -170px 0px'/);
+  assert.match(bar,/z-30/);
+  assert.match(header,/pwa-bottom-nav.*z-40/);
+  assert.match(detail,/pb-48 pt-0 md:px-6 md:pb-24/);
+  assert.match(detail,/scroll-mt-48/);
+});
+
+test('SKU remains searchable but is hidden from listing cards including exact-match results',()=>{
+  const seller=read('src/components/seller-product-card.tsx');
+  const legacy=read('src/components/product-card.tsx');
+  const match=read('src/components/sku-search-result.tsx');
+  const detail=read('src/components/product-detail-client.tsx');
+  assert.doesNotMatch(seller, /<ProductSkuCopy|>SKU:|p\.sku/);
+  assert.doesNotMatch(legacy, /<ProductSkuCopy|>SKU:|product\.sku/);
+  assert.doesNotMatch(match, /font-mono|>\{sku\}<\/span>|', SKU '/);
+  assert.match(match, /Matching product/);
+  assert.match(detail, /<ProductSkuCopy sku=\{creator\.sku\}/);
 });

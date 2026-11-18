@@ -58,9 +58,9 @@ export function SkuSearchResult({ sku }: { sku: string }) {
 
   return <Link href={'/product/seller:' + encodeURIComponent(current.product.productId)}
     className="group flex min-h-24 items-center justify-between gap-4 rounded-2xl border border-[#e6dccc] bg-white px-5 py-4 shadow-sm transition hover:border-[#b99b72] hover:shadow-md"
-    aria-label={'View ' + current.product.name + ', SKU ' + sku}>
+    aria-label={'View ' + current.product.name + ' details'}>
     <span className="min-w-0">
-      <span className="inline-flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-[#98764d]"><Search className="h-3.5 w-3.5" />{sku}</span>
+      <span className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-wide text-[#98764d]"><Search className="h-3.5 w-3.5" />Matching product</span>
       <span className="mt-1 block break-words text-base font-semibold text-[#29251f]">{current.product.name}</span>
       <span className="mt-1 block text-xs text-muted-foreground">View product details</span>
     </span>

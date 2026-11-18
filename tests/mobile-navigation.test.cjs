@@ -110,7 +110,9 @@ test('mobile bottom nav has five balanced destinations, role shortcut, More and 
   assert.match(header, /md:hidden/);
   assert.match(header, /className="hidden items-center justify-end/);
   assert.match(header, /name="q" aria-label="Search TreatStory products"/);
-  assert.match(header, /!isProductDetail && <nav/);
+  assert.match(header, /<nav aria-label="Mobile navigation"/);
+  assert.doesNotMatch(header, /!isProductDetail && <nav/);
+  assert.match(header, /mobileNavIsActive\(pathname, 'shop'\)/);
   assert.match(more, /morePageSections\(roleReady && user \? role : null, !!user, attention\)/);
   assert.match(more, /aria-label="Account actions"/);
   assert.match(hook, /const unsubscribe: Array<\(\) => void> = \[\]/);
