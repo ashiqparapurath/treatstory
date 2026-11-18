@@ -33,13 +33,15 @@ test('admin review shows the real conflict message, refreshes data and does not 
   assert.match(ui,/response\.ok/);
 });
 
-test('install prompt waits for a genuine tap and remains available when browser supports it',()=>{
+test('install prompt awaits a user tap and its notice auto-hides after seven seconds',()=>{
   const ui=read('src/components/app-install-notice.tsx');
   assert.match(ui,/event\.preventDefault\(\)/);
-  assert.match(ui,/if \(!visible \|\| busy \|\| installEvent\) return/);
+  assert.match(ui,/if \(!visible \|\| busy\) return/);
+  assert.match(ui,/if \(!isDismissed\(\) && storage\("sessionStorage", reminderShownKey\) !== "1"\)/);
   assert.match(ui,/await installEvent\.prompt\(\)/);
   assert.match(ui,/onClick=\{\(\) => void install\(\)\}/);
-  assert.match(ui,/\[visible, busy, installEvent\]/);
+  assert.match(ui,/\[visible, busy\]/);
+  assert.match(ui,/7000/);
   assert.match(ui,/reminderShownKey/);
   assert.match(ui,/aria-label="Dismiss install notification"/);
 });
