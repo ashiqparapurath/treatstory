@@ -16,6 +16,7 @@ type InstallNavigator = Navigator & {
 };
 const installedKey = "treatstory:app-installed";
 const dismissedKey = "treatstory:install-dismissed";
+const reminderShownKey = "treatstory:install-reminder-shown";
 function storage(
   kind: "localStorage" | "sessionStorage",
   key: string,
@@ -82,7 +83,8 @@ export function AppInstallNotice() {
       const showIfEligible = () => {
         if (active && !installedObserved)
           setVisible(
-            !isDismissed() && storage("localStorage", installedKey) !== "1",
+            !isDismissed() && storage("localStorage", installedKey) !== "1" &&
+              storage("sessionStorage", reminderShownKey) !== "1",
           );
       };
       if (!nav.getInstalledRelatedApps) showIfEligible();
@@ -115,16 +117,17 @@ export function AppInstallNotice() {
       mode.removeEventListener("change", modeChanged);
     };
   }, []);
-  // Show the original install card briefly, then hide it for this tab session.
-  // Do not interrupt a user who is already interacting with the native prompt.
+  // A real Chromium install action should stay available until someone chooses
+  // Install or Dismiss. Only the browser-menu guidance auto-hides after 7s.
+  // A later beforeinstallprompt event must still reveal the install action.
   useEffect(() => {
-    if (!visible || busy) return;
+    if (!visible || busy || installEvent) return;
     const timeout = window.setTimeout(() => {
-      storage("sessionStorage", dismissedKey, "1");
+      storage("sessionStorage", reminderShownKey, "1");
       setVisible(false);
     }, 7000);
     return () => window.clearTimeout(timeout);
-  }, [visible, busy]);
+  }, [visible, busy, installEvent]);
 
   function dismiss() {
     storage("sessionStorage", dismissedKey, "1");
