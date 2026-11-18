@@ -1,0 +1,35 @@
+name: Resolve Tailwind 4 lockfile (temporary migration job)
+
+on:
+  push:
+    branches:
+      - design/pwa-mobile-storefront-reference
+    paths:
+      - package.json
+      - postcss.config.mjs
+      - src/app/globals.css
+      - .github/workflows/resolve-tailwind-lock.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update-lockfile:
+    if: github.ref == 'refs/heads/design/pwa-mobile-storefront-reference'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Resolve dependency graph without running package scripts
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit the generated lockfile to this PR branch only
+        run: |
+          if ! git diff --quiet -- package-lock.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json
+            git commit -m "chore(deps): resolve Tailwind 4 package lock"
+            git push origin HEAD:design/pwa-mobile-storefront-reference
+          fi
