@@ -9,6 +9,7 @@ import { ProductImage } from '@/components/product-image';
 import type { Seller, MarketplaceProduct } from '@/lib/marketplace-types';
 import { Store, BadgeCheck, MapPin, Package } from 'lucide-react';
 import { StoreShareButton } from '@/components/store-share-button';
+import { sellerCoverageLabel } from '@/lib/delivery-coverage';
 
 const money = (price: number) => new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:0 }).format(price);
 
@@ -49,7 +50,8 @@ export default function SellerStoreClient({ initialSeller = null, initialProduct
         <p className="mt-6 max-w-2xl whitespace-pre-wrap break-words text-sm leading-7 text-[#6f655a]">{visibleSeller!.description}</p>
         <div className="mt-5 flex min-w-0 flex-wrap gap-3 text-xs text-muted-foreground">
           <span className="rounded-full bg-[#f7f4ef] px-4 py-2">{visibleSeller!.businessCategory.replaceAll('-', ' ')}</span>
-          {visibleSeller!.deliveryPincodes?.length ? <span className="flex min-w-0 items-center gap-1 break-words rounded-full bg-[#f7f4ef] px-4 py-2"><MapPin className="h-3.5 w-3.5 shrink-0"/>Delivery to {visibleSeller!.deliveryPincodes.join(', ')}</span> : null}
+          {(visibleSeller!.businessCity || visibleSeller!.businessState) && <span className="flex min-w-0 items-center gap-1 break-words rounded-full bg-[#f7f4ef] px-4 py-2"><MapPin className="h-3.5 w-3.5 shrink-0" />Based in {[visibleSeller!.businessCity,visibleSeller!.businessState].filter(Boolean).join(', ')}</span>}
+          {visibleSeller!.deliveryMethods?.includes('delivery') && <span className="flex min-w-0 items-center gap-1 break-words rounded-full bg-[#f7f4ef] px-4 py-2"><MapPin className="h-3.5 w-3.5 shrink-0"/>{sellerCoverageLabel(visibleSeller!)}</span>}
           {visibleSeller!.deliveryMethods?.includes('pickup') && <span className="rounded-full bg-[#f7f4ef] px-4 py-2">Pickup available</span>}
         </div>
       </div>
