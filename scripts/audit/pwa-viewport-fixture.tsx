@@ -31,7 +31,7 @@ function Page(){
        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
          <SellerProductCard product={seller} addToBag={()=>{}} buyNow={()=>{}}/>
          <ProductCard product={base}/>
-         <SellerProductCard product={{...seller,id:'other-sample',name:'Handcrafted ceramic gift set'}} addToBag={()=>{}} buyNow={()=>{}}/>
+         <SellerProductCard product={{...seller,id:'other-sample',name:'Blush Meadow Bouquet',category:'Flowers',price:1599,availability:'unavailable',stockQuantity:0}} addToBag={()=>{}} buyNow={()=>{}}/>
          <ProductCard product={{...base,id:'other-cake',name:'Butter cookies and bakes'}}/>
        </div>
      </section>

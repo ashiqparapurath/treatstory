@@ -53,7 +53,9 @@ const mocks={
       const tabs=nav?[...nav.querySelectorAll('a')]:[];
       return{viewport:w,scrollWidth:document.documentElement.scrollWidth,outside,
        mobileTabs:tabs.filter(a=>getComputedStyle(a).display!=='none').length,
-       cartTargets:[...document.querySelectorAll('article button[aria-label^="Add "]')].map(x=>x.getBoundingClientRect().width).filter(w=>w>0).map(Math.round)};
+       cartTargets:[...document.querySelectorAll('article button[aria-label^="Add "]')].map(x=>x.getBoundingClientRect().width).filter(w=>w>0).map(Math.round),
+       unavailable:[...document.querySelectorAll('article button[disabled]')].filter(x=>getComputedStyle(x).display!=='none'&&x.textContent?.trim()==='Unavailable').length,
+       mobileOverlay:[...document.querySelectorAll('article .sm\\:hidden')].filter(x=>x.textContent?.includes('Unavailable')).length};
      });
      assert.deepEqual(issues,[],name+' '+width+' browser errors');
      assert.ok(metrics.scrollWidth<=metrics.viewport+1,name+' '+width+' horizontal document overflow: '+JSON.stringify(metrics));
@@ -61,6 +63,7 @@ const mocks={
      if(width<768){
       assert.equal(metrics.mobileTabs,5,name+' '+width+' mobile tabs');
       assert.ok(metrics.cartTargets.every(v=>v>=43),name+' '+width+' cart buttons >=44 CSS px');
+      assert.ok(metrics.unavailable >= 1,name+' '+width+' disabled unavailable action is visible');
      }
      await page.screenshot({path:path.join(out,name+'-'+width+'.png'),fullPage:false});
      await page.close();
