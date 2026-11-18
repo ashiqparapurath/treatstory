@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Timestamp } from 'firebase-admin/firestore';
-import type { NextRequest } from 'next/server';
+import { after, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import {
   getServerFirebase,
@@ -11,7 +11,8 @@ import {
 import { readJsonBody } from '@/lib/server/request-body';
 import { sellerTrialEnd } from '@/lib/seller-policy';
 import { storeSlug } from '@/lib/server/store-slug';
-import { queueNotification } from '@/lib/server/mail';
+import { processMailQueue, queueNotification } from '@/lib/server/mail';
+import { queueNewSellerApplicationMails, queueRejectedSellerApplicationMail, sellerAdminMailRecipient } from '@/lib/server/seller-application-email';
 export const runtime = 'nodejs';
 const applicationSchema = z
   .object({
@@ -38,7 +39,8 @@ export async function POST(request: NextRequest) {
     if (!input.success)
       throw new ApiError(400, 'Review your business and contact details.');
     const { website, ...data } = input.data;
-    const { db } = getServerFirebase();
+    const { db, auth } = getServerFirebase();
+    const adminEmail=sellerAdminMailRecipient();
     const uid = request.headers.has('authorization')
       ? (await verifiedUser(request)).uid
       : '';
@@ -70,17 +72,25 @@ export async function POST(request: NextRequest) {
           429,
           'Too many applications. Please try again tomorrow.',
         );
+      const submittedAt=Timestamp.now();
       tx.create(ref, {
         ...data,
         ownerUid: uid,
         status: 'pending',
-        submittedAt: Timestamp.now(),
+        submittedAt,
       });
+      // An application, the applicant's receipt and the admin alert commit
+      // together. No browser-side request or prior Firebase account is needed.
+      queueNewSellerApplicationMails(tx,db,{id,...data,submittedAt},adminEmail);
       tx.set(rate, {
         count: (limit.data()?.count || 0) + 1,
         expiresAt: Timestamp.fromMillis(Date.now() + 2 * 86400000),
       });
     });
+    after(async()=>{try{
+      const result=await processMailQueue(db,auth,3);
+      if(!result.configured)console.error('Seller application mail queue is not configured.');
+    }catch{console.error('Seller application mail worker unavailable; queued messages remain retryable.');}});
     return Response.json(
       { submitted: true },
       { headers: { 'Cache-Control': 'no-store' } },
@@ -178,6 +188,8 @@ export async function PATCH(request: NextRequest) {
           updatedAt: now,
         });
         queueNotification(tx, db, ownerUid, {
+          template: 'seller_application_approved',
+          details: [{label:'Business',value:String(application.businessName).slice(0,120)}],
           title: 'Your six-month trial is ready',
           message:
             'Your free trial starts today. No automatic renewal or charge. Contact support if you choose to continue.',
@@ -185,6 +197,10 @@ export async function PATCH(request: NextRequest) {
           createdAt: now,
           read: false,
         });
+      }
+      if(!approved) {
+        // Rejected guest applicants still receive an email even with no account.
+        queueRejectedSellerApplicationMail(tx,db,{id,...application},now);
       }
       tx.update(ref, {
         status: approved ? 'approved' : 'rejected',
@@ -199,6 +215,10 @@ export async function PATCH(request: NextRequest) {
         createdAt: now,
       });
     });
+    after(async()=>{try{
+      const result=await processMailQueue(db,auth,3);
+      if(!result.configured)console.error('Seller review mail queue is not configured.');
+    }catch{console.error('Seller review mail worker unavailable; queued messages remain retryable.');}});
     return Response.json({ reviewed: true });
   } catch (error) {
     return safeResponse(error);
