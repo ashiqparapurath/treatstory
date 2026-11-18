@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { DeliveryCoverage } from '@/lib/delivery-coverage';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorNotice } from '@/lib/user-notices';
 import { SellerCompliance } from '@/components/seller-compliance';
@@ -20,10 +22,13 @@ type StoreDraft = {
   logoUrl: string;
   description: string;
   contactPhone: string;
+  businessCity: string;
+  businessState: string;
   whatsappNumber: string;
   isOpen: boolean;
   deliveryMethods: Array<'delivery' | 'pickup'>;
   deliveryPincodes: string;
+  deliveryCoverage: DeliveryCoverage;
   deliveryFee: string;
   pickupAddress: string;
   deliverySlots: string;
@@ -38,10 +43,13 @@ function initialDraft(seller: Seller): StoreDraft {
     logoUrl: seller.logoUrl || '',
     description: seller.description || '',
     contactPhone: seller.contactPhone || '',
+    businessCity: seller.businessCity || '',
+    businessState: seller.businessState || '',
     whatsappNumber: seller.whatsappNumber || '',
     isOpen: seller.isOpen !== false,
     deliveryMethods: seller.deliveryMethods?.length ? [...seller.deliveryMethods] : ['delivery'],
     deliveryPincodes: (seller.deliveryPincodes || []).join('\n'),
+    deliveryCoverage: seller.deliveryCoverage || (seller.deliveryPincodes?.length ? 'selected-pincodes' : 'confirm'),
     deliveryFee: String(seller.deliveryFee ?? 0),
     pickupAddress: seller.pickupAddress || '',
     deliverySlots: (seller.deliverySlots || []).join('\n'),
@@ -102,14 +110,15 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
     event.preventDefault();
     if (!active || busy || uploading || !dirty) return;
     const phone = draft.whatsappNumber.replace(/\D/g, '');
-    const codes = [...new Set(draft.deliveryPincodes.split(/[\s,]+/).map(x => x.trim()).filter(Boolean))];
+    const codes = draft.deliveryCoverage === 'selected-pincodes' ? [...new Set(draft.deliveryPincodes.split(/[\s,]+/).map(x => x.trim()).filter(Boolean))] : [];
     const slots = [...new Set(draft.deliverySlots.split(/\r?\n/).map(x => x.trim()).filter(Boolean))];
     const fee = Number(draft.deliveryFee);
     const capacity = Number(draft.dailyOrderCapacity);
     const acceptance = Number(draft.acceptanceHours);
     if (phone && (phone.length < 8 || phone.length > 15)) return setError('Enter a valid WhatsApp number with country code.');
-    if (draft.description.length > 2000 || draft.contactPhone.length > 40 || draft.pickupAddress.length > 500) return setError('One or more text fields are too long.');
+    if (draft.description.length > 2000 || draft.contactPhone.length > 40 || draft.pickupAddress.length > 500 || draft.businessCity.trim().length > 80 || draft.businessState.trim().length > 80) return setError('One or more text fields are too long.');
     if (codes.length > 10 || codes.some(x => !/^\d{6}$/.test(x))) return setError('Use up to 10 valid six-digit delivery PIN codes.');
+    if (draft.deliveryMethods.includes('delivery') && draft.deliveryCoverage === 'selected-pincodes' && !codes.length) return setError('Add at least one delivery PIN code or choose a different coverage option.');
     if (slots.length > 6 || slots.some(x => x.length < 1 || x.length > 60)) return setError('Use up to 6 delivery slots of at most 60 characters each.');
     if (!draft.deliveryMethods.length) return setError('Choose at least one fulfillment method.');
     if (!Number.isFinite(fee) || fee < 0 || fee > 5000 || !Number.isInteger(capacity) || capacity < 0 || capacity > 100 || !Number.isInteger(acceptance) || acceptance < 1 || acceptance > 72) return setError('Check the delivery fee, capacity, and reply deadline.');
@@ -126,7 +135,8 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
         tx.update(ref, {
           logoUrl: draft.logoUrl, description: draft.description, contactPhone: draft.contactPhone,
           whatsappNumber: phone, isOpen: draft.isOpen, deliveryMethods: draft.deliveryMethods,
-          deliveryPincodes: codes, deliveryFee: fee, pickupAddress: draft.pickupAddress,
+          businessCity: draft.businessCity.trim(), businessState: draft.businessState.trim(),
+          deliveryPincodes: codes, deliveryCoverage: draft.deliveryCoverage, deliveryFee: fee, pickupAddress: draft.pickupAddress,
           deliverySlots: slots, dailyOrderCapacity: capacity, acceptanceHours: acceptance,
           updatedAt: serverTimestamp(),
         });
@@ -181,7 +191,11 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
           <div><Label htmlFor="sellerBusinessName">Approved business name</Label><Input id="sellerBusinessName" value={seller.businessName} disabled className="mt-2 bg-[#faf8f4]" /></div>
           <div><Label htmlFor="sellerPhone">Contact phone</Label><Input id="sellerPhone" type="tel" maxLength={40} disabled={!active} value={draft.contactPhone} onChange={e => update('contactPhone', e.target.value)} className="mt-2" /></div>
           <div><Label htmlFor="sellerWhatsApp">WhatsApp business number</Label><Input id="sellerWhatsApp" type="tel" inputMode="tel" maxLength={20} placeholder="919876543210" disabled={!active} value={draft.whatsappNumber} onChange={e => update('whatsappNumber', e.target.value)} className="mt-2" /><p className="mt-1 text-xs text-muted-foreground">Include country code. Leave empty to hide WhatsApp.</p></div>
-          <label className="flex min-h-14 items-center justify-between gap-4 rounded-xl bg-[#f7f4ee] px-4 py-3 text-sm"><span><strong className="block font-medium">Accepting new orders</strong><span className="block text-xs text-muted-foreground">{draft.isOpen ? 'Your shop is open to buyers' : 'Your shop is temporarily paused'}</span></span><input type="checkbox" disabled={!active} checked={draft.isOpen} onChange={e => update('isOpen', e.target.checked)} className="h-5 w-5 accent-[#29251f]" /></label>
+          <div className="grid gap-3 sm:grid-cols-2">
+             <div><Label htmlFor="sellerBusinessCity">Business city / town</Label><Input id="sellerBusinessCity" maxLength={80} value={draft.businessCity} disabled={!active} onChange={e => update('businessCity',e.target.value)} placeholder="e.g. Pune" className="mt-2" /></div>
+             <div><Label htmlFor="sellerBusinessState">State / union territory</Label><Input id="sellerBusinessState" maxLength={80} value={draft.businessState} disabled={!active} onChange={e => update('businessState',e.target.value)} placeholder="e.g. Maharashtra" className="mt-2" /></div>
+           </div>
+           <label className="flex min-h-14 items-center justify-between gap-4 rounded-xl bg-[#f7f4ee] px-4 py-3 text-sm"><span><strong className="block font-medium">Accepting new orders</strong><span className="block text-xs text-muted-foreground">{draft.isOpen ? 'Your shop is open to buyers' : 'Your shop is temporarily paused'}</span></span><input type="checkbox" disabled={!active} checked={draft.isOpen} onChange={e => update('isOpen', e.target.checked)} className="h-5 w-5 accent-[#29251f]" /></label>
         </div>
       </section>
     </div>
@@ -195,8 +209,19 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
       <div className="mt-5 grid min-w-0 gap-5 lg:grid-cols-2">
         <div className="space-y-4">
           {(['delivery', 'pickup'] as const).map(method => <label key={method} className="flex min-h-12 items-center gap-3 rounded-xl border bg-[#faf8f4] px-4 py-3 text-sm"><input type="checkbox" checked={draft.deliveryMethods.includes(method)} disabled={!active} onChange={e => toggleDelivery(method, e.target.checked)} className="h-4 w-4 accent-[#29251f]" />{method === 'delivery' ? 'Seller delivery' : 'Customer pickup'}</label>)}
+          <div className="space-y-2"><Label htmlFor="sellerCoverage">Where do you accept delivery requests?</Label>
+            <Select value={draft.deliveryCoverage} disabled={!active || !draft.deliveryMethods.includes('delivery')} onValueChange={value => update('deliveryCoverage', value as DeliveryCoverage)}>
+              <SelectTrigger id="sellerCoverage" aria-label="Delivery coverage" className="min-h-12"><SelectValue /></SelectTrigger>
+              <SelectContent position="popper" sideOffset={6}>
+                <SelectItem value="confirm">Confirm location with buyer</SelectItem>
+                <SelectItem value="selected-pincodes">Only listed PIN codes</SelectItem>
+                <SelectItem value="india-wide">Across India (seller approval required)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs leading-5 text-muted-foreground">Nationwide requests are opt-in, not guaranteed shipping. Verify courier coverage, shipping charges, COD and freshness before accepting each order.</p>
+          </div>
           <div><Label htmlFor="sellerDeliveryFee">Delivery charge (₹)</Label><Input id="sellerDeliveryFee" type="number" min={0} max={5000} step="0.01" disabled={!active || !draft.deliveryMethods.includes('delivery')} value={draft.deliveryFee} onChange={e => update('deliveryFee', e.target.value)} className="mt-2" /></div>
-          <div><Label htmlFor="sellerPincodes">Delivery PIN codes (up to 10)</Label><Textarea id="sellerPincodes" rows={3} disabled={!active || !draft.deliveryMethods.includes('delivery')} value={draft.deliveryPincodes} onChange={e => update('deliveryPincodes', e.target.value)} placeholder={'673001\n673002'} className="mt-2" /><p className="mt-1 text-xs text-muted-foreground">One per line or comma-separated. Blank means unrestricted coverage.</p></div>
+          <div><Label htmlFor="sellerPincodes">Delivery PIN codes (up to 10)</Label><Textarea id="sellerPincodes" rows={3} disabled={!active || !draft.deliveryMethods.includes('delivery') || draft.deliveryCoverage !== 'selected-pincodes'} value={draft.deliveryPincodes} onChange={e => update('deliveryPincodes', e.target.value)} placeholder={'110001\n400001'} className="mt-2" /><p className="mt-1 text-xs text-muted-foreground">Used only for the “Only listed PIN codes” option. One per line or comma-separated.</p></div>
         </div>
         <div className="space-y-4">
           <div><Label htmlFor="sellerPickup">Pickup address</Label><Textarea id="sellerPickup" rows={3} maxLength={500} disabled={!active || !draft.deliveryMethods.includes('pickup')} value={draft.pickupAddress} onChange={e => update('pickupAddress', e.target.value)} placeholder="Collection location" className="mt-2" /></div>
