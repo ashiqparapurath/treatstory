@@ -24,7 +24,7 @@ const mocks={
   define:{'process.env.NODE_ENV':'"production"'},
   plugins:[{name:'fixture-mocks',setup(build){
    build.onResolve({filter:/^(next\/link|next\/navigation|@\/firebase|@\/context\/cart-context|@\/hooks\/use-mobile-attention|@\/components\/more-navigation-trail|@\/hooks\/use-toast|@\/components\/favorite-toggle|@\/components\/product-image|@\/hooks\/use-product-gallery)$/},args=>({path:args.path,namespace:'fixture'}));
-   build.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:mocks[args.path],loader:'js'}));
+   build.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:mocks[args.path],loader:'js',resolveDir:process.cwd()}));
   }}]});
  const cssDir='.next/static/css';
  const css=fs.readdirSync(cssDir).filter(f=>f.endsWith('.css')).map(f=>fs.readFileSync(path.join(cssDir,f),'utf8')).join('\n');
