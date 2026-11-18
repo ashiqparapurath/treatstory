@@ -82,9 +82,14 @@ export async function deliverMailJob(db:Firestore,auth:Auth,id:string) {
     let payload=job.payload;
     if(!payload) {
       const account=job.template==='password_reset'||job.template==='verify_email';
-      const user=job.template==='password_reset'&&!job.uid&&job.recipient
+      // Server-created event notifications may target a verified form address or
+      // configured team inbox without an associated Firebase account. Do not
+      // attempt auth.getUser('') for these jobs. Auth action links still require
+      // an actual Firebase user and are never generated for arbitrary recipients.
+      const directRecipient=!account&&!job.uid&&!!job.recipient;
+      const user=directRecipient?null:job.template==='password_reset'&&!job.uid&&job.recipient
         ?await auth.getUserByEmail(job.recipient):await auth.getUser(job.uid);
-      if(!user.email||user.disabled) {
+      if(!directRecipient&&(!user?.email||user.disabled)) {
         await ref.update({status:'skipped',nextAttemptAt:FieldValue.delete(),payload:FieldValue.delete(),href:FieldValue.delete(),recipient:FieldValue.delete()});return 'skipped';
       }
       let href=job.href;
@@ -92,13 +97,13 @@ export async function deliverMailJob(db:Firestore,auth:Auth,id:string) {
       if(account&&!href){
         stage='link-generation';
         href=job.template==='password_reset'
-          ?await auth.generatePasswordResetLink(user.email,{url:`${config.origin}/login`})
-          :await auth.generateEmailVerificationLink(user.email,{url:`${config.origin}/account`});
+          ?await auth.generatePasswordResetLink(user!.email!,{url:`${config.origin}/login`})
+          :await auth.generateEmailVerificationLink(user!.email!,{url:`${config.origin}/account`});
       }
       stage='prepare-message';
-      payload={to:[account?user.email:job.recipient||user.email],...renderMail({...job,href},config.origin),...(config.replyTo?{reply_to:config.replyTo}:{})};
+      payload={to:[account?user!.email!:job.recipient||user!.email!],...renderMail({...job,href},config.origin),...(config.replyTo?{reply_to:config.replyTo}:{})};
       // Persist before sending: retries must use exactly the same recipient, sender and content.
-      await ref.update({payload,...(account?{uid:user.uid}:{} )});
+      await ref.update({payload,...(account?{uid:user!.uid}:{} )});
     }
     stage='relay';
     const providerId=await sendAppsScript(payload,config,id);
