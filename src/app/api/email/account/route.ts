@@ -24,6 +24,10 @@ export async function POST(request:NextRequest) {
     const data=parsed.data;
     const firebase:ReturnType<typeof getServerFirebase>&{uid?:string}=data.action==='reset-password'?getServerFirebase():await verifiedUser(request);
     const {db,auth}=firebase;
+    // Google sign-in normally provides an already verified email address.
+    // Do not generate another verification link for any verified account.
+    if(data.action==='verify-email' && (await auth.getUser(firebase.uid!)).emailVerified)
+      return Response.json({ok:true,alreadyVerified:true},{headers});
     try{mailConfig();}catch{throw new ApiError(503,'Account emails are temporarily unavailable. Please contact support.');}
     const jobId=await enqueueAccountEmail(db,data.action,data.action==='reset-password'?'':firebase.uid!,data.action==='reset-password'?data.email:undefined);
     after(async()=>{try{await deliverMailJob(db,auth,jobId);}catch{console.error('Account mail worker unavailable');}});
