@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { MarketplaceProduct, Seller } from '@/lib/marketplace-types';
 import type { Product } from '@/lib/products';
-import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, ShoppingBag, Store, MessageCircle, Phone } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, ShoppingBag, Store, MessageCircle } from 'lucide-react';
 import { useProductGallery } from '@/hooks/use-product-gallery';
 
 const formatPrice = (v: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v);
@@ -191,7 +191,6 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
                 </Link>
                 {whatsappNumber && <>
                   <a href={'https://wa.me/' + whatsappNumber + '?text=' + encodeURIComponent('Hello! I am interested in ' + product.name + ' on TreatStory.')} target="_blank" rel="noopener noreferrer" aria-label={'Message ' + sellerName + ' on WhatsApp'} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7f1eb] text-[#8d5130] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]"><MessageCircle aria-hidden="true" className="h-5 w-5"/></a>
-                  <a href={'tel:+' + whatsappNumber} aria-label={'Call ' + sellerName} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7f1eb] text-[#8d5130] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]"><Phone aria-hidden="true" className="h-4 w-4"/></a>
                 </>}
               </div>
             </div>
@@ -217,7 +216,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
             </button>)}
           </div>
         </section>}
-        <div className="space-y-5 pb-7 pt-6 md:space-y-4 md:py-0">
+        <div className="space-y-6 pb-7 pt-6 md:space-y-4 md:py-0">
           {creator && <div className="flex flex-wrap gap-2 pb-0.5 text-[11px] text-[#6b604e] md:mt-5 md:text-xs">
             {creator.weightValue && creator.weightUnit && <span className="hidden rounded-full bg-[#f5f0e8] px-3 py-2 md:inline-flex">Weight / quantity: {creator.weightValue} {creator.weightUnit}</span>}
             {creator.preparationDays !== undefined && <span className={`rounded-full bg-[#f5f0e8] px-3 py-2 ${creator.preparationDays === 0 ? 'hidden md:inline-flex' : 'inline-flex'}`}>Preparation: {creator.preparationDays} day(s)</span>}
@@ -246,7 +245,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
         <Button type="button" disabled={!available} onClick={buyNow} className="h-12 min-w-0 rounded-full bg-[#754328] px-2 text-[12px] font-semibold text-white hover:bg-[#653820] md:bg-[#29251f] md:text-sm md:hover:bg-[#51463a]">{available ? creator ? 'Buy now' : 'View bag' : 'Unavailable'}</Button>
       </div>
       <div className="hidden justify-start sm:flex"><FavoriteToggle productId={creator ? 'seller:' + product.id : product.id} title={product.name} imageUrl={photos[0]}/></div>
-      {creator && <div aria-label="Additional ordering options" className="space-y-3 md:hidden">
+      {creator && <div aria-label="Additional ordering options" className="space-y-4 md:hidden">
         {creator && <Link href={`/custom-orders?seller=${encodeURIComponent(creator.sellerId)}&product=${encodeURIComponent(creator.id)}`} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#a68a64] bg-[#fffaf3] px-3 text-[12px] font-semibold text-[#6d5539] transition hover:bg-[#f6eddf]">Request a custom quote for this creation</Link>}
         {creator && whatsappNumber && <a href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hello! I'm interested in ${product.name} on TreatStory.${selectedWeight ? ` Preferred size: ${selectedWeight.value} ${selectedWeight.unit}.` : ''}`)}`} target="_blank" rel="noopener noreferrer" className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#17834a] bg-[#e9f8f0] px-3 text-[12px] font-semibold text-[#17683b] transition hover:bg-[#d8f0e5]"><MessageCircle className="h-5 w-5"/>Order via WhatsApp</a>}
         {whatsappNumber && <p className="px-1 text-[11px] leading-[1.5] text-[#86766b]">WhatsApp orders are arranged directly with the seller and may not appear in your TreatStory order history.</p>}
@@ -255,7 +254,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
       {creator && whatsappNumber && <a href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hello! I'm interested in ${product.name} on TreatStory.${selectedWeight ? ` Preferred size: ${selectedWeight.value} ${selectedWeight.unit}.` : ''}`)}`} target="_blank" rel="noopener noreferrer" className="hidden min-h-12 md:flex items-center justify-center gap-2 rounded-full border border-[#17834a] bg-[#e9f8f0] px-5 text-sm font-semibold text-[#17683b] transition hover:bg-[#d8f0e5]"><MessageCircle className="h-5 w-5"/>Order via WhatsApp</a>}
       {creator && whatsappNumber && <p className="hidden text-xs text-muted-foreground md:block">WhatsApp requests are handled directly by the seller and won't appear in your website order history unless a website order is also placed.</p>}
       {creator && <p className="hidden text-xs leading-5 text-muted-foreground md:block">Your preferences are kept with your selected size and shared with the seller. Delivery and booking details are checked before confirming your order.</p>}
-    </div>{creator && <div className="pt-2 md:col-span-2 md:pt-0"><ProductReviews productId={creator.id} /></div>}</div>}
+    </div>{creator && <div className="px-4 pt-2 md:col-span-2 md:px-0 md:pt-0"><ProductReviews productId={creator.id} /></div>}</div>}
   </main><MobileBuyBar target={purchaseControls} enabled={!!product && !loading && !error} resetKey={productId}>
     <div className="min-w-0"><p className="text-[10px] font-medium text-[#9b8b7e]">Total price{minQty > 1 ? ' · ' + minQty + ' units' : ''}</p><p className="mt-0.5 truncate text-[17px] font-bold text-[#31251c]">{product?.showPrice ? formatPrice(selectedPrice * minQty) : 'Price on request'}</p></div>
     <Button type="button" disabled={!available} onClick={() => void addCurrent()} className="h-12 min-w-[144px] shrink-0 rounded-full bg-[#754328] px-5 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(70,38,22,0.16)] hover:bg-[#663b23] disabled:opacity-50"><ShoppingBag className="mr-2 h-[18px] w-[18px]"/>{available ? 'Add to cart' : 'Unavailable'}</Button>
