@@ -17,6 +17,8 @@ const applicationSchema = z
   .object({
     businessName: z.string().trim().min(2).max(120),
     businessCategory: z.enum(['home-bakery', 'art', 'handmade', 'other']),
+    businessCity: z.string().trim().min(2).max(80).optional(),
+    businessState: z.string().trim().min(2).max(80).optional(),
     contactEmail: z
       .string()
       .trim()
@@ -160,6 +162,8 @@ export async function PATCH(request: NextRequest) {
           slug,
           businessName: application.businessName,
           businessCategory: application.businessCategory,
+          businessCity: application.businessCity || '',
+          businessState: application.businessState || '',
           contactEmail: application.contactEmail,
           contactPhone: application.contactPhone,
           description: application.description,
