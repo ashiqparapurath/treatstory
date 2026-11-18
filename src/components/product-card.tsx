@@ -36,9 +36,9 @@ export function ProductCard({ product }: ProductCardProps) {
       <CardHeader className="relative overflow-hidden rounded-none bg-[#f1eee9] p-0">
         <div className="relative aspect-[3/4] w-full touch-pan-y overflow-hidden bg-[#efe7dd] sm:aspect-[3/4]" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
           <div key={gallery.index} className={`absolute inset-0 ${gallery.direction === 'next' ? 'treatstory-photo-next' : 'treatstory-photo-previous'}`}><ProductImage src={images[gallery.index]} alt={product.name} sizes={LEGACY_CARD_IMAGE_SIZES}/></div>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[78%] bg-gradient-to-t from-[#17120f]/95 via-[#221b17]/60 to-transparent sm:h-3/4 sm:from-black/85 sm:via-black/20" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-[#17120f]/88 via-[#221b17]/45 to-transparent sm:h-3/4 sm:from-black/85 sm:via-black/20" />
           <Link href={`/product/${encodeURIComponent(product.id)}`} aria-label={`View details for ${product.name}`} className="absolute inset-0 z-10" />
-          <span aria-hidden="true" className="pointer-events-none absolute left-2.5 top-2.5 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-[#28201c]/85 text-[9px] font-bold tracking-tight text-white/90 shadow-sm sm:hidden">ts</span>
+          
           {images.length > 1 && (
             <>
               <Button variant="ghost" size="icon" aria-label="Previous image" className="absolute left-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 rounded-full border border-white/50 bg-white/30 backdrop-blur-xl text-foreground shadow-sm hover:bg-white/50 sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" onClick={e => {e.preventDefault();e.stopPropagation();gallery.move(-1);}}>
@@ -63,14 +63,14 @@ export function ProductCard({ product }: ProductCardProps) {
             </Button>
             </div>
           </div>
-          <div className="pointer-events-none absolute inset-x-2.5 bottom-2.5 z-20 flex flex-col gap-1.5 text-white sm:hidden">
+          <div className="mobile-card-glass pointer-events-none absolute inset-x-2 bottom-2 z-20 flex flex-col gap-1.5 rounded-[19px] border border-white/25 bg-[#1d1714]/55 px-2.5 py-2.5 text-white shadow-[0_7px_20px_rgba(17,12,10,0.24)] backdrop-blur-[8px] sm:hidden">
             <h3 className="line-clamp-2 text-[12px] font-semibold leading-[16px] tracking-[-0.025em] drop-shadow-sm">{product.name}</h3>
             <p className="truncate text-[16px] font-bold leading-[21px] tracking-tight drop-shadow-sm">{product.showPrice ? formatPrice(product.price) : 'Price on request'}</p>
             <div className="pointer-events-auto mt-0.5 grid grid-cols-[44px_minmax(0,1fr)] items-center gap-2">
               <Link href="/cart" aria-label="View shopping bag" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/30 bg-[#faf8f4]/90 text-[#352a22] shadow-sm backdrop-blur-sm transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
                 <ShoppingBag aria-hidden="true" className="h-[17px] w-[17px]" />
               </Link>
-              {product.showPrice ? <button type="button" onClick={handleAddToCart} aria-label={'Add ' + product.name + ' to cart'} className="min-h-11 min-w-0 truncate rounded-full border border-white/55 bg-white/15 px-1 text-[10px] font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/25 active:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">Add to cart</button> : <Link href={'/product/' + encodeURIComponent(product.id)} className="flex min-h-11 min-w-0 items-center justify-center truncate rounded-full border border-white/55 bg-white/15 px-1 text-[10px] font-semibold text-white backdrop-blur-sm">View product</Link>}
+              {product.showPrice ? <button type="button" onClick={handleAddToCart} aria-label={'Add ' + product.name + ' to cart'} className="min-h-11 min-w-0 truncate rounded-[16px] border border-white/60 bg-white/15 px-1 text-[9px] font-semibold text-white shadow-inner backdrop-blur-md min-[375px]:text-[10px] transition-colors hover:bg-white/25 active:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">Add to cart</button> : <Link href={'/product/' + encodeURIComponent(product.id)} className="flex min-h-11 min-w-0 items-center justify-center truncate rounded-full border border-white/55 bg-white/15 px-1 text-[10px] font-semibold text-white backdrop-blur-sm">View product</Link>}
             </div>
           </div>
         </div>

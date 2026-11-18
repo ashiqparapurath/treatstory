@@ -23,5 +23,5 @@ export function MobileBuyBar({ target, enabled, resetKey, children }: {
     return () => observer.disconnect();
   }, [target, enabled, resetKey]);
   if (!visible) return null;
-  return <aside aria-label="Quick purchase" className="fixed inset-x-0 bottom-[calc(70px+env(safe-area-inset-bottom))] z-30 flex items-center justify-between gap-3 border-t border-[#e8e0d5] bg-[#fffefa]/95 px-4 pb-3 pt-3 shadow-[0_-8px_28px_rgba(35,29,23,0.1)] backdrop-blur-xl md:hidden">{children}</aside>;
+  return <aside aria-label="Quick purchase" className="fixed inset-x-3 bottom-[calc(82px+env(safe-area-inset-bottom))] z-30 flex items-center justify-between gap-3 rounded-[23px] border border-[#e8ddd1] bg-[#fffdfa]/95 px-3.5 py-3 shadow-[0_14px_38px_rgba(44,27,16,0.20)] backdrop-blur-xl md:hidden">{children}</aside>;
 }

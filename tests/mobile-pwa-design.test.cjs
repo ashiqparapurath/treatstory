@@ -64,7 +64,7 @@ test('mobile image-overlay cards retain real prices, stock actions and >=44px ta
   const seller=read('src/components/seller-product-card.tsx');
   for(const card of [legacy,seller]){
     assert.match(card,/aspect-\[3\/4\]/);
-    assert.match(card,/h-\[78%\] bg-gradient-to-t/);
+    assert.match(card,/h-\[62%\] bg-gradient-to-t/);
     assert.match(card,/rounded-\[21px\]/);
     assert.match(card,/line-clamp-2 text-\[12px\]/);
     assert.match(card,/grid-cols-\[44px_minmax\(0,1fr\)\]/);
@@ -107,8 +107,8 @@ test('reference-style mobile card uses full-bleed image, bottom text gradient an
   const legacy=read('src/components/product-card.tsx');
   for(const card of [seller,legacy]){
     assert.match(card,/shadow-\[0_10px_24px/);
-    assert.match(card,/bg-\[#28201c\]\/85/);
-    assert.match(card,/pointer-events-none absolute inset-x-2\.5 bottom-2\.5 z-20 flex flex-col/);
+    assert.match(card,/rounded-\[19px\] border border-white\/25 bg-\[#1d1714\]\/55/);
+    assert.match(card,/mobile-card-glass pointer-events-none absolute inset-x-2 bottom-2 z-20/);
     assert.match(card,/sm:hidden/);
     assert.doesNotMatch(card,/max-w-\[calc\(100%-4\.5rem\)\]/,'no large category pill on image');
     assert.doesNotMatch(card,/min-h-\[124px\]/,'all mobile copy must overlay photo');
@@ -138,7 +138,7 @@ test('mobile home uses requested location permission, shows readable active bann
   assert.match(home,/bg-\[linear-gradient\(90deg/);
   assert.doesNotMatch(legacy,/<ProductSkuCopy|SKU:|product\.sku/);
   assert.doesNotMatch(seller,/<ProductSkuCopy|SKU:|p\.sku/);
-  assert.match(details,/<ProductSkuCopy sku=\{creator\.sku\}/);
+  assert.match(details,/<div className="mt-3 hidden sm:block"><ProductSkuCopy sku=\{creator\.sku\}/);
 });
 
 test('product details preserve persistent bottom navigation and purchase action without overlapping',()=>{
@@ -148,7 +148,8 @@ test('product details preserve persistent bottom navigation and purchase action 
   assert.match(header,/<nav aria-label="Mobile navigation"/);
   assert.doesNotMatch(header,/!isProductDetail && <nav/);
   assert.match(header,/mobileNavIsActive\(pathname, 'shop'\)/);
-  assert.match(bar,/bottom-\[calc\(70px\+env\(safe-area-inset-bottom\)\)\]/);
+  assert.match(bar,/inset-x-3 bottom-\[calc\(82px\+env\(safe-area-inset-bottom\)\)\]/);
+  assert.match(bar,/rounded-\[23px\] border border-\[#e8ddd1\]/);
   assert.match(bar,/rootMargin:'0px 0px -170px 0px'/);
   assert.match(bar,/z-30/);
   assert.match(header,/pwa-bottom-nav.*z-40/);
@@ -165,5 +166,24 @@ test('SKU remains searchable but is hidden from listing cards including exact-ma
   assert.doesNotMatch(legacy, /<ProductSkuCopy|>SKU:|product\.sku/);
   assert.doesNotMatch(match, /font-mono|>\{sku\}<\/span>|', SKU '/);
   assert.match(match, /Matching product/);
-  assert.match(detail, /<ProductSkuCopy sku=\{creator\.sku\}/);
+  assert.match(detail, /<div className="mt-3 hidden sm:block"><ProductSkuCopy sku=\{creator\.sku\}/);
+});
+
+test('mobile reference polish keeps SKU off small screens and gives card/purchase actions breathing room',()=>{
+ const legacy=read('src/components/product-card.tsx');
+ const seller=read('src/components/seller-product-card.tsx');
+ const detail=read('src/components/product-detail-client.tsx');
+ const bar=read('src/components/mobile-buy-bar.tsx');
+ for (const card of [legacy,seller]) {
+   assert.match(card,/mobile-card-glass/);
+   assert.match(card,/inset-x-2 bottom-2 z-20/);
+   assert.match(card,/rounded-\[19px\] border border-white\/25/);
+   assert.doesNotMatch(card,/>ts<\/span>/);
+   assert.match(card,/rounded-\[16px\]/);
+   assert.match(card,/pointer-events-auto mt-0\.5 grid/);
+ }
+ assert.match(detail,/hidden sm:block"><ProductSkuCopy/);
+ assert.match(bar,/bottom-\[calc\(82px\+env\(safe-area-inset-bottom\)\)\]/);
+ assert.match(bar,/rounded-\[23px\]/);
+ assert.doesNotMatch(bar,/fixed inset-x-0 bottom-/);
 });
