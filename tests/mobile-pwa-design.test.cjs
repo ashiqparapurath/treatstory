@@ -20,6 +20,22 @@ test('reference-style mobile home retains a working product search and catalogue
   assert.doesNotMatch(category,/New York|Up to 40|fake|placeholder-price/i);
 });
 
+test('mobile category rail uses the refreshed category pictograms without changing search links',()=>{
+  const category=read('src/components/mobile-category-rail.tsx');
+  for (const [label, query, icon] of [
+    ['Cakes', 'cake', 'Cake'],
+    ['Cookies', 'cookie', 'CookiesIcon'],
+    ['Breads', 'bread', 'Wheat'],
+    ['Handmade', 'handmade', 'HandHeart'],
+    ['Art', 'art', 'Paintbrush'],
+  ]) {
+    assert.ok(category.includes(`label: '${label}', query: '${query}', Icon: ${icon}`), `Expected ${icon} for ${label}`);
+  }
+  assert.match(category, /function CookiesIcon\(props: SVGProps<SVGSVGElement>\)/);
+  assert.match(category, /href=\{`\/products\?q=\$\{encodeURIComponent\(query\)\}`\}/);
+  assert.doesNotMatch(category,/CakeSlice|Croissant|Icon: Gift|Icon: Palette|Icon: Cookie,/);
+});
+
 test('mobile PWA keeps buyer routes and role-aware More/Profile navigation',()=>{
   const header=read('src/components/header.tsx');
   assert.match(header,/grid grid-cols-5/);
