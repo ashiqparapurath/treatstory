@@ -69,7 +69,7 @@ export default function BecomeSellerPage() {
                 <span className="font-serif italic font-normal text-[#997957]">Discovered by more.</span>
               </h1>
               <p className="mt-5 max-w-lg text-sm leading-7 text-[#655a4e] sm:text-base sm:leading-8">
-                Your talent deserves to be seen. Bring your home bakes, art or handmade creations to a marketplace built around independent makers in Kerala.
+                Your talent deserves to be seen across India. Bring your home bakes, art or handmade creations to a marketplace for independent makers in every state.
               </p>
               <div className="mt-7 flex flex-wrap items-center gap-4">
                 <a href="#seller-application" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#30291f] px-6 text-sm font-semibold text-white transition hover:bg-[#4b4033] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#71583b]">
