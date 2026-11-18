@@ -76,7 +76,6 @@ export function MobileLocationIndicator() {
       // Never start another automatic permission prompt after a declined
       // request during this tab session. The button always allows a retry.
       if (sessionStorage.getItem(AUTO_KEY)) return () => { mounted.current = false; };
-      sessionStorage.setItem(AUTO_KEY, '1');
     } catch { /* Private browsing may disable storage. */ }
 
     const start = async () => {
@@ -90,14 +89,21 @@ export function MobileLocationIndicator() {
           return;
         }
       } catch { /* Call the browser API directly if querying is unsupported. */ }
-      if (!cancelled) locate(false);
+      if (cancelled) return;
+      // Strict Mode may unmount the first effect before permissions resolve.
+      // Mark the automatic attempt only when the live effect is ready to run it.
+      try {
+        if (sessionStorage.getItem(AUTO_KEY)) return;
+        sessionStorage.setItem(AUTO_KEY, '1');
+      } catch { /* Optional session-only flag. */ }
+      locate(false);
     };
     void start();
     return () => { cancelled = true; mounted.current = false; };
   }, [locate]);
 
   const prompt = status === 'denied' ? 'Location blocked in browser settings. Tap to retry.' :
-    status === 'found' ? 'Approximate current area. Tap to refresh your location.' :
+    status === 'found' ? 'Approximate area via OpenStreetMap. Tap to refresh; this is not your saved delivery address.' :
     'Find your approximate area using browser location permission.';
   return (
     <button type="button" onClick={() => locate(true)} disabled={status === 'loading'}

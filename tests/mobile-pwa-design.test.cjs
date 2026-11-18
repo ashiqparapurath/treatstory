@@ -95,7 +95,7 @@ test('mobile product page visibly shows selected price and honors requested safe
   assert.match(detail,/formatPrice\(selectedPrice\)/);
   assert.match(detail,/gallery\.select\(n\)/);
   assert.match(detail,/aria-label="Select weight or size"/);
-  assert.match(header,/Made with care in Kerala/);
+  assert.match(header,/<MobileLocationIndicator \/>/);
   assert.match(header,/aria-label="Browse products and category filters"/);
   assert.match(header,/className="sr-only">Search products<\/button>/);
   assert.match(header,/rounded-t-\[22px\]/);
@@ -113,4 +113,30 @@ test('reference-style mobile card uses full-bleed image, bottom text gradient an
     assert.doesNotMatch(card,/max-w-\[calc\(100%-4\.5rem\)\]/,'no large category pill on image');
     assert.doesNotMatch(card,/min-h-\[124px\]/,'all mobile copy must overlay photo');
   }
+});
+
+test('mobile home uses requested location permission, shows readable active banners and hides SKU on cards',()=>{
+  const header=read('src/components/header.tsx');
+  const location=read('src/components/mobile-location-indicator.tsx');
+  const area=read('src/app/api/location/area/route.ts');
+  const home=read('src/components/home-client.tsx');
+  const legacy=read('src/components/product-card.tsx');
+  const seller=read('src/components/seller-product-card.tsx');
+  const details=read('src/components/product-detail-client.tsx');
+  assert.match(header,/<MobileLocationIndicator \/>/);
+  assert.match(header,/font-semibold">Treat<\/span><span className="font-normal">Story<\/span>/);
+  assert.match(location,/navigator\.geolocation\.getCurrentPosition/);
+  assert.match(location,/navigator\.permissions\?\.query/);
+  assert.match(location,/sessionStorage\.setItem\(AUTO_KEY/);
+  assert.match(location,/status === 'denied'/);
+  assert.match(location,/Math\.round\(position\.coords\.latitude \* 100\) \/ 100/);
+  assert.match(area,/publicCount/);
+  assert.match(area,/zoom: '10'/);
+  assert.match(home,/min-h-\[244px\]/);
+  assert.match(home,/line-clamp-4 text-\[16px\]/);
+  assert.match(home,/min-h-11 max-w-\[76%\]/);
+  assert.match(home,/bg-\[linear-gradient\(90deg/);
+  assert.doesNotMatch(legacy,/<ProductSkuCopy|SKU:|product\.sku/);
+  assert.doesNotMatch(seller,/<ProductSkuCopy|SKU:|p\.sku/);
+  assert.match(details,/<ProductSkuCopy sku=\{creator\.sku\}/);
 });
