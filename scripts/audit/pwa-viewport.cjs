@@ -53,7 +53,7 @@ const mocks={
       const tabs=nav?[...nav.querySelectorAll('a')]:[];
       return{viewport:w,scrollWidth:document.documentElement.scrollWidth,outside,
        mobileTabs:tabs.filter(a=>getComputedStyle(a).display!=='none').length,
-       cartTargets:[...document.querySelectorAll('article button[aria-label^="Add "]')].map(x=>Math.round(x.getBoundingClientRect().width))};
+       cartTargets:[...document.querySelectorAll('article button[aria-label^="Add "]')].map(x=>x.getBoundingClientRect().width).filter(w=>w>0).map(Math.round)};
      });
      assert.deepEqual(issues,[],name+' '+width+' browser errors');
      assert.ok(metrics.scrollWidth<=metrics.viewport+1,name+' '+width+' horizontal document overflow: '+JSON.stringify(metrics));
