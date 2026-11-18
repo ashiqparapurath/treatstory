@@ -6,7 +6,8 @@ import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/header';
 import { normalizeProductSku } from '@/lib/product-sku';
 import { SkuSearchResult } from '@/components/sku-search-result';
-import { ChevronDown, Search, SlidersHorizontal } from 'lucide-react';
+import { Search, SlidersHorizontal } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { SellerStorefrontProducts } from '@/components/seller-storefront-products';
 import { ProductGridContainer } from '@/components/product-grid';
@@ -25,6 +26,24 @@ function ProductsPageContent({ searchTerm, filters }: { searchTerm: string; filt
   if (error) return <LoadError retry={retry} error={error} />;
   if (isLoading) return <ProductGridSkeleton count={8} />;
   return <><ProductGridContainer products={products||[]} externalSearchTerm={searchTerm} filters={filters} hasMore={hasMore} loadingMore={loadingMore} loadMore={loadMore}/>{hasMore&&<button type="button" disabled={loadingMore} onClick={()=>void loadMore()} className="mt-6 rounded-full border px-5 py-3 text-sm">{loadingMore?'Loading…':'Show more products'}</button>}</>;
+}
+
+type ExploreOption = { value: string; label: string };
+function ExploreFilterControl({ id, label, ariaLabel, value, options, onValueChange }: {
+  id: string; label: string; ariaLabel: string; value: string;
+  options: ExploreOption[]; onValueChange: (value: string) => void;
+}) {
+  return <div className="min-w-0 space-y-1.5">
+    <label htmlFor={id} className="block text-xs font-medium text-[#6e5847]">{label}</label>
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger id={id} aria-label={ariaLabel} className="h-12 w-full min-w-0 rounded-xl border-[#e4d9cc] bg-white px-3 text-[13px] text-[#352b24] focus-visible:ring-[#895335]">
+        <SelectValue/>
+      </SelectTrigger>
+      <SelectContent position="popper" sideOffset={6} className="max-w-[calc(100vw-2rem)]">
+        {options.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+      </SelectContent>
+    </Select>
+  </div>;
 }
 
 function ProductsSearchPage() {
@@ -71,50 +90,22 @@ function ProductsSearchPage() {
               className="min-h-9 rounded-full px-3 text-xs font-medium text-[#815536] hover:bg-[#f5eae0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#895335]">Clear filters</button>
           </div>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <label className="min-w-0 space-y-1.5 text-xs font-medium text-[#6e5847]">
-              <span className="block">Category</span>
-              <span className="relative block">
-                <select aria-label="Filter by category" value={filters.category} onChange={event => setFilters(current => ({ ...current, category: event.target.value }))}
-                  className="h-12 w-full appearance-none rounded-xl border border-[#e4d9cc] bg-white pl-3 pr-9 text-[13px] text-[#352b24] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#895335]">
-                  {categoryOptions.map(category => <option key={category} value={category}>{category === 'All' ? 'All categories' : category}</option>)}
-                </select>
-                <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-4 h-4 w-4 text-[#947960]"/>
-              </span>
-            </label>
-            <label className="min-w-0 space-y-1.5 text-xs font-medium text-[#6e5847]">
-              <span className="block">Price</span>
-              <span className="relative block">
-                <select aria-label="Filter by price" value={filters.price} onChange={event => setFilters(current => ({ ...current, price: event.target.value as CatalogFilters['price'] }))}
-                  className="h-12 w-full appearance-none rounded-xl border border-[#e4d9cc] bg-white pl-3 pr-9 text-[13px] text-[#352b24] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#895335]">
-                  <option value="all">Any price</option><option value="under-500">Under ₹500</option>
-                  <option value="500-1000">₹500–₹999</option><option value="1000-2500">₹1,000–₹2,499</option>
-                  <option value="over-2500">₹2,500 and above</option>
-                </select>
-                <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-4 h-4 w-4 text-[#947960]"/>
-              </span>
-            </label>
-            <label className="min-w-0 space-y-1.5 text-xs font-medium text-[#6e5847]">
-              <span className="block">Availability</span>
-              <span className="relative block">
-                <select aria-label="Filter by availability" value={filters.availability} onChange={event => setFilters(current => ({ ...current, availability: event.target.value as CatalogFilters['availability'] }))}
-                  className="h-12 w-full appearance-none rounded-xl border border-[#e4d9cc] bg-white pl-3 pr-9 text-[13px] text-[#352b24] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#895335]">
-                  <option value="all">All items</option><option value="orderable">Available to order</option>
-                  <option value="made-to-order">Made to order</option><option value="unavailable">Unavailable</option>
-                </select>
-                <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-4 h-4 w-4 text-[#947960]"/>
-              </span>
-            </label>
-            <label className="min-w-0 space-y-1.5 text-xs font-medium text-[#6e5847]">
-              <span className="block">Sort by</span>
-              <span className="relative block">
-                <select aria-label="Sort Explore products" value={filters.sort} onChange={event => setFilters(current => ({ ...current, sort: event.target.value as CatalogFilters['sort'] }))}
-                  className="h-12 w-full appearance-none rounded-xl border border-[#e4d9cc] bg-white pl-3 pr-9 text-[13px] text-[#352b24] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#895335]">
-                  <option value="default">Default order</option><option value="price-asc">Price: Low to high</option>
-                  <option value="price-desc">Price: High to low</option><option value="name-asc">Name: A to Z</option>
-                </select>
-                <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-4 h-4 w-4 text-[#947960]"/>
-              </span>
-            </label>
+            <ExploreFilterControl id="explore-category" label="Category" ariaLabel="Filter by category"
+              value={filters.category} onValueChange={value => setFilters(current => ({ ...current, category: value }))}
+              options={categoryOptions.map(category => ({ value: category, label: category === 'All' ? 'All categories' : category }))}/>
+            <ExploreFilterControl id="explore-price" label="Price" ariaLabel="Filter by price"
+              value={filters.price} onValueChange={value => setFilters(current => ({ ...current, price: value as CatalogFilters['price'] }))}
+              options={[{value:'all',label:'Any price'}, {value:'under-500',label:'Under ₹500'},
+                {value:'500-1000',label:'₹500–₹999'}, {value:'1000-2500',label:'₹1,000–₹2,499'},
+                {value:'over-2500',label:'₹2,500 and above'}]}/>
+            <ExploreFilterControl id="explore-availability" label="Availability" ariaLabel="Filter by availability"
+              value={filters.availability} onValueChange={value => setFilters(current => ({ ...current, availability: value as CatalogFilters['availability'] }))}
+              options={[{value:'all',label:'All items'}, {value:'orderable',label:'Available to order'},
+                {value:'made-to-order',label:'Made to order'}, {value:'unavailable',label:'Unavailable'}]}/>
+            <ExploreFilterControl id="explore-sort" label="Sort by" ariaLabel="Sort Explore products"
+              value={filters.sort} onValueChange={value => setFilters(current => ({ ...current, sort: value as CatalogFilters['sort'] }))}
+              options={[{value:'default',label:'Default order'}, {value:'price-asc',label:'Price: Low to high'},
+                {value:'price-desc',label:'Price: High to low'}, {value:'name-asc',label:'Name: A to Z'}]}/>
           </div>
           <p className="mt-3 text-[11px] leading-5 text-[#887567]">Filters apply to loaded listings in both collections. Sort is within each collection; use Show more to load additional items.</p>
         </div>}
