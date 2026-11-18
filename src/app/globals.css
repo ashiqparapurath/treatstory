@@ -119,10 +119,11 @@ nav a[aria-current="page"] { color: hsl(var(--foreground)); text-decoration: und
 }
 /* Avoid a 1–2px horizontal shift when dashboard tabs have different heights. */
 @media (min-width: 768px) {
-  /* Keep a permanent viewport gutter when Radix Select locks body scrolling.
-     react-remove-scroll otherwise adds a second, artificial right margin. */
+  /* Radix Select injects a late body[data-scroll-locked] !important rule.
+     The html prefix wins its specificity contest; otherwise that added right
+     margin pushes the entire Shop All page left when a dropdown opens. */
   html { scrollbar-gutter: stable; overflow-y: scroll; }
-  body[data-scroll-locked] {
+  html body[data-scroll-locked] {
     margin-right: 0 !important;
     padding-right: 0 !important;
   }
