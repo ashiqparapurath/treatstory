@@ -276,10 +276,30 @@ test('mobile product page hides optional order forms until expanded',()=>{
  assert.match(detail,/group-open:rotate-180/);
  assert.match(detail,/hidden space-y-2 text-sm font-medium md:block/);
  assert.match(detail,/hidden min-h-12 md:flex/);
- assert.match(detail,/ref=\{purchaseControls\} id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-2 rounded-\[20px\]/);
+ assert.match(detail,/ref=\{purchaseControls\} id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-3 py-1/);
  assert.match(detail,/onClick=\{\(\) => void addCurrent\(\)\}/);
  assert.match(detail,/onClick=\{buyNow\}/);
  assert.match(detail,/WhatsApp orders are arranged directly/);
  assert.match(reviews,/Customer reviews/);
  assert.match(reviews,/md:mt-7 md:rounded-2xl md:p-7/);
+});
+
+
+test('mobile ordering controls have breathing room without hiding cart, WhatsApp or custom quote functionality',()=>{
+ const page=read('src/components/product-detail-client.tsx');
+ const reviews=read('src/components/product-reviews.tsx');
+ assert.match(page,/space-y-5 pb-7 pt-6 md:space-y-4 md:py-0/);
+ assert.match(page,/Add a note/);
+ assert.match(page,/Other ways to order/);
+ assert.match(page,/px-4 py-3 md:hidden/);
+ assert.match(page,/space-y-3 border-t border-\[#eee5dc\] pt-4/);
+ assert.match(page,/grid-cols-2 gap-3 py-1 md:grid-cols-\[auto_1fr\]/);
+ assert.match(page,/h-12 min-w-0 rounded-full/);
+ assert.doesNotMatch(page,/grid scroll-mt-48 grid-cols-2 gap-2 rounded-\[20px\]/);
+ assert.match(page,/onClick=\{buyNow\}/);
+ assert.match(page,/onClick=\{\(\) => void addCurrent\(\)\}/);
+ assert.match(page,/Order via WhatsApp/);
+ assert.match(page,/Request a custom quote for this creation/);
+ assert.match(page,/pt-2 md:col-span-2 md:pt-0/);
+ assert.match(reviews,/p-5 shadow-\[0_4px_16px/);
 });
