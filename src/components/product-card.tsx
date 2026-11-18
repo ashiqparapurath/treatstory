@@ -38,7 +38,7 @@ export function ProductCard({ product }: ProductCardProps) {
           <div key={gallery.index} className={`absolute inset-0 ${gallery.direction === 'next' ? 'treatstory-photo-next' : 'treatstory-photo-previous'}`}><ProductImage src={images[gallery.index]} alt={product.name} sizes={LEGACY_CARD_IMAGE_SIZES}/></div>
           <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-3/4 bg-gradient-to-t from-black/85 via-black/20 to-transparent sm:block" />
           <Link href={`/product/${encodeURIComponent(product.id)}`} aria-label={`View details for ${product.name}`} className="absolute inset-0 z-10" />
-          <span className="pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-4.5rem)] truncate rounded-full border border-white/80 bg-white/95 px-2.5 py-1.5 text-[10px] font-semibold text-[#754328] shadow-sm backdrop-blur-sm sm:hidden">{product.category}</span>
+          <span className={`pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-4.5rem)] truncate rounded-full border border-white/80 bg-white/95 px-2.5 py-1.5 text-[10px] font-semibold text-[#754328] shadow-sm backdrop-blur-sm sm:hidden ${product.category.length > 10 ? 'max-[389px]:hidden' : ''}`}>{product.category}</span>
           {images.length > 1 && (
             <>
               <Button variant="ghost" size="icon" aria-label="Previous image" className="absolute left-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 rounded-full border border-white/50 bg-white/30 backdrop-blur-xl text-foreground shadow-sm hover:bg-white/50 sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" onClick={e => {e.preventDefault();e.stopPropagation();gallery.move(-1);}}>
