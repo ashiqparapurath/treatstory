@@ -50,6 +50,10 @@ const { chromium, firefox, webkit } = require('playwright');
           const restored=await measure();
           assert.ok(Math.abs(before.mainLeft-restored.mainLeft)<1,engine+' page moved after closing dropdown: '+JSON.stringify({before,restored}));
         } finally {await desktop.close();}
+        if(process.env.TREATSTORY_DROPDOWN_ONLY === '1') {
+          console.log(`PASS ${engine}: Shop All dropdown did not shift centered content or sidebar`);
+          continue;
+        }
         for(const [width,height] of [[320,568],[360,640],[390,844],[568,320],[768,1024],[1440,900]]) {
           const page=await browser.newPage({viewport:{width,height},reducedMotion:'reduce'});
           for(const mode of ['contact','dialog','alert','support']) {
