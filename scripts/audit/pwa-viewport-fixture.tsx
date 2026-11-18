@@ -1,7 +1,7 @@
-import React, {useRef} from 'react';
+import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {Header} from '@/components/header';
-import {MobileBuyBar} from '@/components/mobile-buy-bar';
+import ProductDetailClient from '@/components/product-detail-client';
 import {MobileCategoryRail} from '@/components/mobile-category-rail';
 import {ProductCard} from '@/components/product-card';
 import {SellerProductCard} from '@/components/seller-product-card';
@@ -40,24 +40,10 @@ function Page(){
  </div>;
 }
 function DetailPage(){
- const target=useRef<HTMLDivElement>(null);
- return <div className="min-h-screen bg-[#fffcf9] text-[#29251f]">
-  <Header/>
-  <main className="section-shell pb-48 pt-0 md:pt-8">
-    <div className="aspect-[1/1.08] w-full rounded-b-2xl bg-[#ead9c8] md:max-w-md md:rounded-2xl"/>
-    <section className="mt-5 space-y-3" aria-label="Fixture product detail">
-     <h1 className="text-2xl font-semibold">Blush Meadow Bouquet</h1>
-     <p className="text-lg font-semibold">₹1,599</p>
-     <p>Seller: Test creator</p>
-     <p className="leading-6">A carefully chosen handmade creation for every story.</p>
-     <div className="min-h-[650px]">Select a size or quantity to continue.</div>
-     <div ref={target} id="purchase-actions" className="flex h-12 gap-3"><button type="button">Add to bag</button><button type="button">Buy now</button></div>
-    </section>
-  </main>
-  <MobileBuyBar target={target} enabled resetKey="synthetic-detail">
-    <div className="min-w-0"><p className="text-[10px]">Total price</p><strong>₹1,599</strong></div>
-    <button type="button" className="h-12 min-w-[144px] shrink-0 rounded-full bg-[#754328] px-4 text-white">Add to cart</button>
-  </MobileBuyBar>
- </div>;
+ const detail: MarketplaceProduct = {...seller, id:'sample-handmade', name:'Blush Meadow Bouquet',
+  category:'Gifts', price:1599, imageUrls:[image,image,image,image], description:'A soft blush bouquet of hand-arranged seasonal blooms, made to order with care. Perfect for a thoughtful celebration or a meaningful gift.',
+  minimumOrderQuantity:1, stockQuantity:9, availability:'made-to-order',
+  weightOptions:[{value:0.5,unit:'kg',price:1599,stockQuantity:9},{value:1,unit:'kg',price:2599,stockQuantity:9},{value:1.5,unit:'kg',price:3599,stockQuantity:9},{value:2,unit:'kg',price:4599,stockQuantity:9},{value:4,unit:'kg',price:7999,stockQuantity:9}]};
+ return <ProductDetailClient initialProduct={detail} initialSellerListing/>;
 }
 createRoot(document.getElementById('app')!).render(location.pathname.startsWith('/product/') ? <DetailPage/> : <Page/>);

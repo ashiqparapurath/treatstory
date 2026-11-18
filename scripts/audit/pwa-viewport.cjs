@@ -7,12 +7,18 @@ const out='work/pwa-viewport';
 const placeholder=encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240"><rect width="200" height="240" fill="#e6cdb5"/><circle cx="120" cy="75" r="50" fill="#aa7956"/><circle cx="70" cy="160" r="55" fill="#744327"/></svg>');
 const mocks={
  'next/link':"import React from 'react';export default function Link({href,children,...rest}){return React.createElement('a',{href,...rest},children)}",
- 'next/navigation':"export function usePathname(){return window.location.pathname}",
- '@/firebase':"export function useUser(){return {user:null,isUserLoading:false}};export function useAccountRole(){return {role:null,isRoleLoading:false,roleError:null}}",
- '@/context/cart-context':"export function useCart(){return {cartCount:2,addToCart(){}}}",
+ 'next/navigation':"export function usePathname(){return window.location.pathname};export function useParams(){return {id:'seller:sample-handmade'}};export function useRouter(){return {push(){}}}",
+ '@/firebase':"export function useUser(){return {user:null,isUserLoading:false}};export function useAccountRole(){return {role:null,isRoleLoading:false,roleError:null}};export function useFirestore(){return {}}",
+ '@/context/cart-context':"export function useCart(){return {cartCount:2,addToCart(){},startDirectCheckout(){}}};export function cartLineId(){return 'sample-line'}",
  '@/hooks/use-mobile-attention':"export function useMobileAttention(){return {orders:false,applications:false}}",
  '@/components/more-navigation-trail':"export function MoreNavigationTrail(){return null}",
  '@/components/mobile-location-indicator':"import React from 'react';export function MobileLocationIndicator(){return React.createElement('button',{'aria-label':'Detect your current location'},'Detect your area')}",
+ '@/hooks/use-scroll-to-top':"export function useScrollToTop(){}",
+ '@/components/product-reviews':"export function ProductReviews(){return null};export function ProductRatingBadge(){return null}",
+ '@/components/product-share-button':"import React from 'react';export function ProductShareButton(){return React.createElement('button',{type:'button','aria-label':'Share product',className:'flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm'},'↗')}",
+ '@/components/product-sku-copy':"export function ProductSkuCopy(){return null}",
+ '@/lib/user-notices':"export class ActionError extends Error{};export function getErrorNotice(e){return {description:String(e)}}",
+ 'firebase/firestore':"export function doc(_db,collection,id){return {collection,id}};export async function getDoc(ref){return {exists:()=>true,id:ref.id,data:()=>ref.collection==='sellers'?{businessName:'Test Creator',logoUrl:'',whatsappNumber:'97412345678'}:{id:'sample-handmade',sellerId:'sample-creator',status:'published',name:'Blush Meadow Bouquet',category:'Gifts',price:1599,description:'A soft blush bouquet of hand-arranged seasonal blooms, made to order with care.',imageUrls:['https://example.test/fixture-product.jpg'],showPrice:true,availability:'made-to-order',stockQuantity:9}}}",
  '@/hooks/use-toast':"export function useToast(){return {toast(){}}}",
  '@/components/favorite-toggle':"import React from 'react';export function FavoriteToggle({title}){return React.createElement('button',{type:'button','aria-label':'Save '+title,className:'flex h-11 w-11 items-center justify-center rounded-full border bg-white text-[#754328]'},'♡')}",
  '@/components/product-image':"import React from 'react';export function ProductImage(props){return React.createElement('img',{src:'data:image/svg+xml,"+placeholder+"',alt:props.alt,className:'absolute inset-0 h-full w-full object-cover'})}",
@@ -24,7 +30,7 @@ const mocks={
   jsx:'automatic',tsconfig:'tsconfig.json',outfile:path.join(out,'fixture.js'),
   define:{'process.env.NODE_ENV':'"production"'},
   plugins:[{name:'fixture-mocks',setup(build){
-   build.onResolve({filter:/^(next\/link|next\/navigation|@\/firebase|@\/context\/cart-context|@\/hooks\/use-mobile-attention|@\/components\/more-navigation-trail|@\/components\/mobile-location-indicator|@\/hooks\/use-toast|@\/components\/favorite-toggle|@\/components\/product-image|@\/hooks\/use-product-gallery)$/},args=>({path:args.path,namespace:'fixture'}));
+   build.onResolve({filter:/^(next\/link|next\/navigation|@\/firebase|@\/context\/cart-context|@\/hooks\/use-mobile-attention|@\/components\/more-navigation-trail|@\/components\/mobile-location-indicator|@\/hooks\/use-scroll-to-top|@\/components\/product-reviews|@\/components\/product-share-button|@\/components\/product-sku-copy|@\/lib\/user-notices|firebase\/firestore|@\/hooks\/use-toast|@\/components\/favorite-toggle|@\/components\/product-image|@\/hooks\/use-product-gallery)$/},args=>({path:args.path,namespace:'fixture'}));
    build.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:mocks[args.path],loader:'js',resolveDir:process.cwd()}));
   }}]});
  const cssDir='.next/static/css';
@@ -69,6 +75,8 @@ const mocks={
      if(width<768){
        await page.goto('http://127.0.0.1:'+srv.address().port+'/product/synthetic', {waitUntil:'domcontentloaded'});
        await page.getByRole('heading',{name:'Blush Meadow Bouquet'}).waitFor();
+       await page.getByRole('group',{name:'Select weight or size'}).waitFor();
+       await page.getByRole('link',{name:/Test Creator/}).waitFor();
        const quick=page.getByRole('complementary',{name:'Quick purchase'});
        await quick.waitFor();
        const detailLayout=await page.evaluate(()=>{
