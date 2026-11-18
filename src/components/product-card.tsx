@@ -32,13 +32,13 @@ export function ProductCard({ product }: ProductCardProps) {
 
 
   return (
-    <Card className="group relative h-full overflow-hidden rounded-[20px] border border-[#eee6de] bg-white shadow-[0_5px_18px_rgba(35,29,23,0.065)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(35,29,23,0.12)] sm:rounded-[22px] sm:border-white/70 sm:bg-[#f1eee9]">
+    <Card className="group relative h-full overflow-hidden rounded-[21px] border-0 bg-[#2b211d] shadow-[0_10px_24px_rgba(35,29,23,0.16)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(35,29,23,0.12)] sm:rounded-[22px] sm:border sm:border-white/70 sm:bg-[#f1eee9] sm:shadow-[0_5px_18px_rgba(35,29,23,0.065)]">
       <CardHeader className="relative overflow-hidden rounded-none bg-[#f1eee9] p-0">
-        <div className="relative aspect-[1/1.06] w-full touch-pan-y overflow-hidden bg-[#efe7dd] sm:aspect-[3/4]" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
+        <div className="relative aspect-[3/4] w-full touch-pan-y overflow-hidden bg-[#efe7dd] sm:aspect-[3/4]" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
           <div key={gallery.index} className={`absolute inset-0 ${gallery.direction === 'next' ? 'treatstory-photo-next' : 'treatstory-photo-previous'}`}><ProductImage src={images[gallery.index]} alt={product.name} sizes={LEGACY_CARD_IMAGE_SIZES}/></div>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-3/4 bg-gradient-to-t from-black/85 via-black/20 to-transparent sm:block" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[78%] bg-gradient-to-t from-[#17120f]/95 via-[#221b17]/60 to-transparent sm:h-3/4 sm:from-black/85 sm:via-black/20" />
           <Link href={`/product/${encodeURIComponent(product.id)}`} aria-label={`View details for ${product.name}`} className="absolute inset-0 z-10" />
-          <span className={`pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-4.5rem)] truncate rounded-full border border-white/80 bg-white/95 px-2.5 py-1.5 text-[10px] font-semibold text-[#754328] shadow-sm backdrop-blur-sm sm:hidden ${product.category.length > 10 ? 'max-[389px]:hidden' : ''}`}>{product.category}</span>
+          <span aria-hidden="true" className="pointer-events-none absolute left-2.5 top-2.5 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-[#28201c]/85 text-[9px] font-bold tracking-tight text-white/90 shadow-sm sm:hidden">ts</span>
           {images.length > 1 && (
             <>
               <Button variant="ghost" size="icon" aria-label="Previous image" className="absolute left-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 rounded-full border border-white/50 bg-white/30 backdrop-blur-xl text-foreground shadow-sm hover:bg-white/50 sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" onClick={e => {e.preventDefault();e.stopPropagation();gallery.move(-1);}}>
@@ -47,7 +47,7 @@ export function ProductCard({ product }: ProductCardProps) {
               <Button variant="ghost" size="icon" aria-label="Next image" className="absolute right-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 rounded-full border border-white/50 bg-white/30 backdrop-blur-xl text-foreground shadow-sm hover:bg-white/50 sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" onClick={e => {e.preventDefault();e.stopPropagation();gallery.move(1);}}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              <div className="pointer-events-none absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 gap-1.5 sm:bottom-auto sm:top-3">
+              <div className="pointer-events-none absolute left-1/2 top-3 z-20 hidden -translate-x-1/2 gap-1.5 sm:flex">
                 {images.map((_, index) => <span key={index} className={`h-1.5 rounded-full shadow-sm transition-all ${index === gallery.index ? 'w-4 bg-white' : 'w-1.5 bg-white/60'}`} />)}
               </div>
             </>
@@ -63,15 +63,18 @@ export function ProductCard({ product }: ProductCardProps) {
             </Button>
             </div>
           </div>
+          <div className="pointer-events-none absolute inset-x-2.5 bottom-2.5 z-20 flex flex-col gap-1.5 text-white sm:hidden">
+            <h3 className="line-clamp-2 text-[12px] font-semibold leading-[16px] tracking-[-0.025em] drop-shadow-sm">{product.name}</h3>
+            <p className="truncate text-[16px] font-bold leading-[21px] tracking-tight drop-shadow-sm">{product.showPrice ? formatPrice(product.price) : 'Price on request'}</p>
+            <div className="pointer-events-auto mt-0.5 grid grid-cols-[44px_minmax(0,1fr)] items-center gap-2">
+              <Link href="/cart" aria-label="View shopping bag" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/30 bg-[#faf8f4]/90 text-[#352a22] shadow-sm backdrop-blur-sm transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+                <ShoppingBag aria-hidden="true" className="h-[17px] w-[17px]" />
+              </Link>
+              {product.showPrice ? <button type="button" onClick={handleAddToCart} aria-label={'Add ' + product.name + ' to cart'} className="min-h-11 min-w-0 truncate rounded-full border border-white/55 bg-white/15 px-1 text-[10px] font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/25 active:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">Add to cart</button> : <Link href={'/product/' + encodeURIComponent(product.id)} className="flex min-h-11 min-w-0 items-center justify-center truncate rounded-full border border-white/55 bg-white/15 px-1 text-[10px] font-semibold text-white backdrop-blur-sm">View product</Link>}
+            </div>
+          </div>
         </div>
       </CardHeader>
-      <div className="flex min-h-[124px] flex-col justify-between gap-2.5 px-3 pb-3.5 pt-3 sm:hidden">
-        <div className="space-y-1"><p className="truncate text-[10px] font-medium uppercase tracking-[0.08em] text-[#9d826c]">{product.category}</p><Link href={`/product/${encodeURIComponent(product.id)}`} className="line-clamp-2 text-[13px] font-semibold leading-[19px] text-[#30251c]">{product.name}</Link></div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="min-w-0 truncate text-[15px] font-bold tracking-tight text-[#754328]">{product.showPrice ? formatPrice(product.price) : 'Price on request'}</span>
-          <button type="button" disabled={!product.showPrice} onClick={handleAddToCart} aria-label={`Add ${product.name} to bag`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#754328] text-white shadow-[0_3px_10px_rgba(69,37,21,0.16)] transition-colors active:bg-[#57331f] disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]"><ShoppingBag className="h-4 w-4"/></button>
-        </div>
-      </div>
     </Card>
   );
 }
