@@ -222,7 +222,14 @@ async function boot(browser,account){
   await a.page.screenshot({path:'work/support-matrix-mobile.png'});
   assert.ok(await a.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await a.page.setViewportSize({width:390,height:500});
-  const composer=await a.page.getByRole('textbox',{name:'Message',exact:true}).boundingBox();assert.ok(composer.y+composer.height<=500);
+  // Wait for viewport resize handlers to commit the new layout before
+  // asserting that the actual message composer is visible on short screens.
+  await a.page.waitForFunction(() => {
+    const input=document.getElementById('secure-message');
+    if(!input)return false;
+    const box=input.getBoundingClientRect();
+    return box.height>0&&box.top>=0&&box.bottom<=window.innerHeight;
+  },null,{timeout:10000});
   await a.page.getByRole('button',{name:'Back to conversations',exact:true}).click();
   await a.page.getByRole('button',{name:'Devices and recovery',exact:true}).click();
   await a.page.getByRole('dialog').waitFor();
