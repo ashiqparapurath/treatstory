@@ -63,7 +63,7 @@ const { chromium, firefox, webkit } = require('playwright');
             const check=async()=>{
               const result=await page.evaluate(()=>{
                 const width=document.documentElement.clientWidth;
-                const bad=[...document.querySelectorAll('a[href^="mailto:"],[role="dialog"],[role="alertdialog"],[role="combobox"],[role="listbox"]')].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&(r.left < -1 || r.right>width+1)}).map(el=>el.outerHTML.slice(0,180));
+                const bad=[...document.querySelectorAll('a[href^="mailto:"],[role="dialog"],[role="alertdialog"],[role="combobox"],[role="listbox"]')].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&(r.left < -1 || r.right>width+1)}).map(el=>{const r=el.getBoundingClientRect();return {role:el.getAttribute('role')||el.tagName, left:Math.round(r.left), right:Math.round(r.right), width:Math.round(r.width), viewport:width, element:el.outerHTML.slice(0,145)};});
                 return {overflow:document.documentElement.scrollWidth>width+1,bad};
               });
               assert.equal(result.overflow,false,`${engine} ${width}x${height} ${mode}: page overflow`);
