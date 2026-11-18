@@ -366,8 +366,12 @@ test('Explore offers working Category, Price, Availability and Sort controls for
   const legacy=read('src/components/product-grid.tsx');
   const sellers=read('src/components/seller-storefront-products.tsx');
   for (const name of ['Filter by category','Filter by price','Filter by availability','Sort Explore products']) {
-    assert.ok(page.includes('aria-label="' + name + '"'),name);
+    assert.ok(page.includes('ariaLabel="' + name + '"'),name);
   }
+  assert.match(page,/<SelectTrigger id=\{id\} aria-label=\{ariaLabel\}/);
+  assert.match(page,/<SelectContent position="popper" sideOffset=\{6\}/);
+  assert.match(page,/<SelectItem key=\{option.value\} value=\{option.value\}>/);
+  assert.doesNotMatch(page,/<select\b|<datalist\b|<option\b/);
   assert.match(page,/setFilters\(\{ \.\.\.defaultCatalogFilters \}\)/);
   assert.match(page,/<SellerStorefrontProducts searchTerm=\{searchTerm\} filters=\{filters\}/);
   assert.match(page,/<ProductsPageContent searchTerm=\{searchTerm\} filters=\{filters\}/);
