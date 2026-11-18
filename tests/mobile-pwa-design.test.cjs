@@ -103,7 +103,7 @@ test('mobile product page visibly shows selected price and honors requested safe
 test('mobile card text is directly over the photo rather than inside a glass rectangle',()=>{
  for(const file of ['src/components/seller-product-card.tsx','src/components/product-card.tsx']){
   const card=read(file);
-  assert.match(card,/shadow-\[0_12px_24px/);
+  assert.match(card,/shadow-\[0_5px_18px/);
   assert.match(card,/inset-x-2\.5 bottom-3 z-20 flex flex-col gap-1\.5/);
   assert.doesNotMatch(card,/mobile-card-glass/);
   assert.match(card,/rounded-\[22px\] bg-\[#efe7dd\]/);
