@@ -20,7 +20,7 @@ export default function AboutPage() {
             <div className="sm:hidden">
               <div
                 role="img"
-                aria-label="Handmade cake, flowers, a wrapped gift and a crocheted bag by Kerala creators"
+                aria-label="Handmade cake, flowers, a wrapped gift and a crocheted bag by TreatStory creators"
                 className="aspect-[5/4] w-full bg-no-repeat bg-right bg-[length:200%_auto]"
                 style={{ backgroundImage: "url('/img/our-story-banner.webp'), url('/img/our-story-creators.svg')" }}
               />
@@ -30,7 +30,7 @@ export default function AboutPage() {
                   The Story Behind <em>TreatStory</em>
                 </h1>
                 <p className="text-[15px] leading-7">
-                  A Kerala-born marketplace that brings together talented home bakers, crafters, and handmade creators, giving their creations a bigger, brighter audience.
+                  Born in Kerala and growing across India, TreatStory brings home bakers, artists, crafters and handmade creators together. Each independent seller sets their own delivery and pickup coverage.
                 </p>
               </div>
             </div>
