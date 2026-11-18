@@ -266,3 +266,20 @@ test('install TreatStory reminder briefly appears then auto-dismisses, with manu
  assert.match(notice,/beforeinstallprompt/);
  assert.match(notice,/onClick=\{\(\) => void install\(\)\}/);
 });
+
+
+test('mobile product page hides optional order forms until expanded',()=>{
+ const detail=read('src/components/product-detail-client.tsx');
+ const reviews=read('src/components/product-reviews.tsx');
+ assert.match(detail,/Add a note <span className="font-normal/);
+ assert.match(detail,/Other ways to order/);
+ assert.match(detail,/group-open:rotate-180/);
+ assert.match(detail,/hidden space-y-2 text-sm font-medium md:block/);
+ assert.match(detail,/hidden min-h-12 md:flex/);
+ assert.match(detail,/ref=\{purchaseControls\} id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-2 rounded-\[20px\]/);
+ assert.match(detail,/onClick=\{\(\) => void addCurrent\(\)\}/);
+ assert.match(detail,/onClick=\{buyNow\}/);
+ assert.match(detail,/WhatsApp orders are arranged directly/);
+ assert.match(reviews,/Customer reviews/);
+ assert.match(reviews,/md:mt-7 md:rounded-2xl md:p-7/);
+});

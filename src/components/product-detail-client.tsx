@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { MarketplaceProduct, Seller } from '@/lib/marketplace-types';
 import type { Product } from '@/lib/products';
-import { ArrowLeft, ChevronLeft, ChevronRight, ShoppingBag, Store, MessageCircle, Phone } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, ShoppingBag, Store, MessageCircle, Phone } from 'lucide-react';
 import { useProductGallery } from '@/hooks/use-product-gallery';
 
 const formatPrice = (v: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v);
@@ -217,20 +217,50 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
             </button>)}
           </div>
         </section>}
-        <div className="space-y-4 py-4 md:py-0">
-          {creator && <div className="mt-5 flex flex-wrap gap-2 text-xs text-[#6b604e]">{creator.weightValue && creator.weightUnit && <span className="rounded-full bg-[#f5f0e8] px-3 py-2">Weight / quantity: {creator.weightValue} {creator.weightUnit}</span>}{creator.preparationDays !== undefined && <span className="rounded-full bg-[#f5f0e8] px-3 py-2">Preparation: {creator.preparationDays} day(s)</span>}{minQty > 1 && <span className="rounded-full bg-[#f5f0e8] px-3 py-2">Minimum: {minQty} units</span>}{creator.availability === 'made-to-order' && <span className="rounded-full bg-[#f5f0e8] px-3 py-2">Made to order</span>}</div>}
+        <div className="space-y-3 py-4 md:space-y-4 md:py-0">
+          {creator && <div className="flex flex-wrap gap-2 pb-0.5 text-[11px] text-[#6b604e] md:mt-5 md:text-xs">
+            {creator.weightValue && creator.weightUnit && <span className="hidden rounded-full bg-[#f5f0e8] px-3 py-2 md:inline-flex">Weight / quantity: {creator.weightValue} {creator.weightUnit}</span>}
+            {creator.preparationDays !== undefined && <span className={`rounded-full bg-[#f5f0e8] px-3 py-2 ${creator.preparationDays === 0 ? 'hidden md:inline-flex' : 'inline-flex'}`}>Preparation: {creator.preparationDays} day(s)</span>}
+            {minQty > 1 && <span className="inline-flex rounded-full bg-[#f5f0e8] px-3 py-2">Minimum: {minQty} units</span>}
+            {creator.availability === 'made-to-order' && <span className="hidden rounded-full bg-[#f5f0e8] px-3 py-2 md:inline-flex">Made to order</span>}
+          </div>
         {creator && (creator.ingredients || creator.allergens?.length || creator.dietaryTags?.length || creator.shelfLifeDays != null || creator.storageInstructions) && <section className="mt-5 space-y-3 border-t pt-5"><h3 className="text-sm font-semibold">Ingredients & food information</h3><p className="text-[11px] text-amber-800">Information is provided by the seller. If you have allergies, confirm ingredients and cross-contact precautions directly with the creator before ordering.</p>{creator.ingredients && <p className="whitespace-pre-wrap text-sm"><strong>Ingredients:</strong> {creator.ingredients}</p>}{!!creator.allergens?.length && <p className="text-sm"><strong>Declared allergens:</strong> {creator.allergens.join(', ')}</p>}{!!creator.dietaryTags?.length && <p className="text-sm"><strong>Seller dietary labels:</strong> {creator.dietaryTags.join(', ')}</p>}{creator.shelfLifeDays != null && <p className="text-sm"><strong>Stated shelf life:</strong> {creator.shelfLifeDays} day(s)</p>}{creator.storageInstructions && <p className="whitespace-pre-wrap text-sm"><strong>Storage:</strong> {creator.storageInstructions}</p>}</section>}
         {creator?.careInstructions && <div className="mt-5 border-t pt-4"><h3 className="text-sm font-semibold">Care & ingredients</h3><p className="mt-2 whitespace-pre-wrap text-sm text-[#675d53]">{creator.careInstructions}</p></div>}
         </div>
       {creator?.availability === 'available' && !hasStock && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">This size does not have enough stock for the minimum order quantity ({minQty}). Choose another size or contact the seller.</p>}
       {creator && (creator.customizationOptions?.length || 0) > 0 && <div className="space-y-4 rounded-2xl border border-[#e8e0d5] bg-white p-5"><div><h2 className="font-medium">Make it yours</h2><p className="mt-1 text-xs text-muted-foreground">Optional personalization requests. The creator will confirm feasibility; prices are not automatically changed.</p></div>{creator.customizationOptions?.map((field,i) => <label key={i} className="block space-y-1.5 text-xs font-medium">{field}<Input maxLength={120} value={answers[field] || ''} placeholder="Your preference" onChange={e => setAnswers(v => ({...v,[field]:e.target.value}))} /></label>)}</div>}
-      {creator && <label className="block space-y-2 text-sm font-medium">Notes for the creator (optional)<Textarea maxLength={500} rows={3} placeholder="Special requests, colours, gifting instructions…" value={requestNote} onChange={e=>setRequestNote(e.target.value)} className="bg-white"/></label>}
-      <div ref={purchaseControls} id="purchase-actions" className="grid scroll-mt-48 grid-cols-[auto_1fr] gap-3"><Button type="button" disabled={!available} onClick={() => void addCurrent()} variant="outline" className="h-12 rounded-full border-[#29251f] bg-white px-5" aria-label={`Add ${product.name} to bag`}><ShoppingBag className="mr-2 h-4 w-4" />Add to bag</Button><Button type="button" disabled={!available} onClick={buyNow} className="h-12 rounded-full bg-[#29251f] text-white hover:bg-[#51463a]">{available ? creator ? 'Buy now' : 'View bag' : 'Unavailable'}</Button></div>
+      {creator && <>
+        <details className="group rounded-[18px] border border-[#ece3d9] bg-[#fbf8f4] px-3.5 py-2.5 md:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-[13px] font-semibold text-[#49382c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328] [&::-webkit-details-marker]:hidden">
+            <span>Add a note <span className="font-normal text-[#938273]">(optional)</span></span>
+            <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 text-[#866b58] transition-transform group-open:rotate-180"/>
+          </summary>
+          <label className="block pb-1 pt-2 text-[12px] font-medium text-[#564537]">Instructions for the creator
+            <Textarea maxLength={500} rows={3} placeholder="Colours, gifting instructions, special requests…" value={requestNote} onChange={e=>setRequestNote(e.target.value)} className="mt-2 bg-white text-[16px]"/>
+          </label>
+        </details>
+        <label className="hidden space-y-2 text-sm font-medium md:block">Notes for the creator (optional)<Textarea maxLength={500} rows={3} placeholder="Special requests, colours, gifting instructions…" value={requestNote} onChange={e=>setRequestNote(e.target.value)} className="bg-white"/></label>
+      </>}
+      <div ref={purchaseControls} id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-2 rounded-[20px] border border-[#eee3d9] bg-[#faf7f3] p-2.5 shadow-sm md:grid-cols-[auto_1fr] md:gap-3 md:rounded-none md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+        <Button type="button" disabled={!available} onClick={() => void addCurrent()} variant="outline" className="h-11 min-w-0 rounded-[15px] border-[#d9c9bc] bg-white px-2 text-[12px] font-medium text-[#49382c] md:h-12 md:rounded-full md:border-[#29251f] md:px-5 md:text-sm" aria-label={`Add ${product.name} to bag`}><ShoppingBag className="mr-1.5 h-4 w-4 shrink-0 md:mr-2" />Add to bag</Button>
+        <Button type="button" disabled={!available} onClick={buyNow} className="h-11 min-w-0 rounded-[15px] bg-[#754328] px-2 text-[12px] font-semibold text-white hover:bg-[#653820] md:h-12 md:rounded-full md:bg-[#29251f] md:text-sm md:hover:bg-[#51463a]">{available ? creator ? 'Buy now' : 'View bag' : 'Unavailable'}</Button>
+      </div>
       <div className="hidden justify-start sm:flex"><FavoriteToggle productId={creator ? 'seller:' + product.id : product.id} title={product.name} imageUrl={photos[0]}/></div>
-      {creator && <Link href={`/custom-orders?seller=${encodeURIComponent(creator.sellerId)}&product=${encodeURIComponent(creator.id)}`} className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#a68a64] bg-[#fffaf3] px-5 text-sm font-semibold text-[#6d5539] transition hover:bg-[#f6eddf]">Request a custom quote for this creation</Link>}
-      {creator && whatsappNumber && <a href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hello! I'm interested in ${product.name} on TreatStory.${selectedWeight ? ` Preferred size: ${selectedWeight.value} ${selectedWeight.unit}.` : ''}`)}`} target="_blank" rel="noopener noreferrer" className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#17834a] bg-[#e9f8f0] px-5 text-sm font-semibold text-[#17683b] transition hover:bg-[#d8f0e5]"><MessageCircle className="h-5 w-5"/>Order via WhatsApp</a>}
-      {creator && whatsappNumber && <p className="text-xs text-muted-foreground">WhatsApp requests are handled directly by the seller and won't appear in your website order history unless a website order is also placed.</p>}
-      {creator && <p className="text-xs leading-5 text-muted-foreground">Your preferences are kept with your selected size and shared with the seller. Delivery and booking details are checked before confirming your order.</p>}
+      {creator && <details className="group rounded-[18px] border border-[#eee5dc] bg-white p-3 md:hidden">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-[13px] font-semibold text-[#49382c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328] [&::-webkit-details-marker]:hidden">
+          <span>Other ways to order</span><ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 text-[#866b58] transition-transform group-open:rotate-180"/>
+        </summary>
+        <div className="space-y-2 border-t border-[#eee5dc] pt-3">
+          {creator && <Link href={`/custom-orders?seller=${encodeURIComponent(creator.sellerId)}&product=${encodeURIComponent(creator.id)}`} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#a68a64] bg-[#fffaf3] px-3 text-[12px] font-semibold text-[#6d5539] transition hover:bg-[#f6eddf]">Request a custom quote for this creation</Link>}
+          {creator && whatsappNumber && <a href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hello! I'm interested in ${product.name} on TreatStory.${selectedWeight ? ` Preferred size: ${selectedWeight.value} ${selectedWeight.unit}.` : ''}`)}`} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#17834a] bg-[#e9f8f0] px-3 text-[12px] font-semibold text-[#17683b] transition hover:bg-[#d8f0e5]"><MessageCircle className="h-5 w-5"/>Order via WhatsApp</a>}
+          {whatsappNumber && <p className="px-1 text-[11px] leading-[1.5] text-[#86766b]">WhatsApp orders are arranged directly with the seller and may not appear in your TreatStory order history.</p>}
+          <p className="px-1 text-[11px] leading-[1.5] text-[#86766b]">Your preferences and delivery details are confirmed before the order is placed.</p>
+        </div>
+      </details>}
+      {creator && <Link href={`/custom-orders?seller=${encodeURIComponent(creator.sellerId)}&product=${encodeURIComponent(creator.id)}`} className="hidden min-h-12 md:flex items-center justify-center gap-2 rounded-full border border-[#a68a64] bg-[#fffaf3] px-5 text-sm font-semibold text-[#6d5539] transition hover:bg-[#f6eddf]">Request a custom quote for this creation</Link>}
+      {creator && whatsappNumber && <a href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hello! I'm interested in ${product.name} on TreatStory.${selectedWeight ? ` Preferred size: ${selectedWeight.value} ${selectedWeight.unit}.` : ''}`)}`} target="_blank" rel="noopener noreferrer" className="hidden min-h-12 md:flex items-center justify-center gap-2 rounded-full border border-[#17834a] bg-[#e9f8f0] px-5 text-sm font-semibold text-[#17683b] transition hover:bg-[#d8f0e5]"><MessageCircle className="h-5 w-5"/>Order via WhatsApp</a>}
+      {creator && whatsappNumber && <p className="hidden text-xs text-muted-foreground md:block">WhatsApp requests are handled directly by the seller and won't appear in your website order history unless a website order is also placed.</p>}
+      {creator && <p className="hidden text-xs leading-5 text-muted-foreground md:block">Your preferences are kept with your selected size and shared with the seller. Delivery and booking details are checked before confirming your order.</p>}
     </div>{creator && <div className="md:col-span-2"><ProductReviews productId={creator.id} /></div>}</div>}
   </main><MobileBuyBar target={purchaseControls} enabled={!!product && !loading && !error} resetKey={productId}>
     <div className="min-w-0"><p className="text-[10px] font-medium text-[#9b8b7e]">Total price{minQty > 1 ? ' · ' + minQty + ' units' : ''}</p><p className="mt-0.5 truncate text-[17px] font-bold text-[#31251c]">{product?.showPrice ? formatPrice(selectedPrice * minQty) : 'Price on request'}</p></div>
