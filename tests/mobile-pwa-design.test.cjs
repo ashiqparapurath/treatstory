@@ -59,19 +59,33 @@ test('iOS and Android PWA safe areas and original icons remain supported',()=>{
   assert.match(css,/pwa-bottom-nav/);
 });
 
-test('refined mobile cards use real product metadata and 44px cart touch targets',()=>{
+test('mobile image-overlay cards retain real prices, stock actions and >=44px targets',()=>{
   const legacy=read('src/components/product-card.tsx');
   const seller=read('src/components/seller-product-card.tsx');
   for(const card of [legacy,seller]){
-    assert.match(card,/min-h-\[124px\]/);
+    assert.match(card,/aspect-\[3\/4\]/);
+    assert.match(card,/h-\[78%\] bg-gradient-to-t/);
+    assert.match(card,/rounded-\[21px\]/);
+    assert.match(card,/line-clamp-2 text-\[12px\]/);
+    assert.match(card,/grid-cols-\[44px_minmax\(0,1fr\)\]/);
     assert.match(card,/h-11 w-11 shrink-0/);
-    assert.match(card,/text-\[10px\] font-medium uppercase/);
+    assert.match(card,/min-h-11 min-w-0/);
+    assert.match(card,/<FavoriteToggle compact/);
+    assert.match(card,/sm:h-3\/4 sm:from-black\/85 sm:via-black\/20/);
+    assert.match(card,/sm:border sm:border-white\/70/);
     assert.match(card,/showPrice/);
-    assert.doesNotMatch(card,/4\.9|special discount|40%/i);
+    assert.doesNotMatch(card,/min-h-\[124px\]/,'no separate white mobile card footer');
+    assert.doesNotMatch(card,/4\.9|special discount|40%/i,'no invented ratings or discounts');
   }
-  assert.match(seller,/p\.availability === 'made-to-order'/);
+  assert.match(legacy,/product\.showPrice \? formatPrice\(product\.price\)/);
+  assert.match(legacy,/onClick=\{handleAddToCart\}/);
+  assert.match(legacy,/href="\/cart" aria-label="View shopping bag"/);
+  assert.match(seller,/p\.availability !== 'unavailable'/);
+  assert.match(seller,/hasDifferentPrices \? 'From '/);
+  assert.match(seller,/disabled=\{!available\}/);
   assert.match(seller,/onClick=\{\(\) => addToBag\(p\)\}/);
-  assert.match(legacy,/addToCart\(product\)/);
+  assert.match(seller,/onClick=\{\(\) => buyNow\(p\)\}/);
+  assert.match(seller,/Unavailable/);
 });
 
 test('mobile product page visibly shows selected price and honors requested safe areas',()=>{
@@ -88,20 +102,15 @@ test('mobile product page visibly shows selected price and honors requested safe
 });
 
 
-test('mobile cards have reference-style image-first layout and real category badges',()=>{
+test('reference-style mobile card uses full-bleed image, bottom text gradient and small TS mark',()=>{
   const seller=read('src/components/seller-product-card.tsx');
   const legacy=read('src/components/product-card.tsx');
   for(const card of [seller,legacy]){
-    assert.match(card,/aspect-\[1\/1\.06\]/);
-    assert.match(card,/max-w-\[calc\(100%-4\.5rem\)\]/);
-    assert.match(card,/rounded-full border border-white\/80 bg-white\/95/);
+    assert.match(card,/shadow-\[0_10px_24px/);
+    assert.match(card,/bg-\[#28201c\]\/85/);
+    assert.match(card,/pointer-events-none absolute inset-x-2\.5 bottom-2\.5 z-20 flex flex-col/);
     assert.match(card,/sm:hidden/);
-    assert.match(card,/<FavoriteToggle compact/);
-    assert.match(card,/min-h-\[124px\]/);
-    assert.match(card,/h-11 w-11 shrink-0/);
-    assert.doesNotMatch(card,/>4\.8<|>4\.9<|40% off/i,'do not invent ratings or sale prices');
+    assert.doesNotMatch(card,/max-w-\[calc\(100%-4\.5rem\)\]/,'no large category pill on image');
+    assert.doesNotMatch(card,/min-h-\[124px\]/,'all mobile copy must overlay photo');
   }
-  assert.match(seller,/>Made to order<\/span>/);
-  assert.match(seller,/hasDifferentPrices/);
-  assert.match(legacy,/product\.category/);
 });
