@@ -7,11 +7,12 @@ const out='work/pwa-viewport';
 const placeholder=encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240"><rect width="200" height="240" fill="#e6cdb5"/><circle cx="120" cy="75" r="50" fill="#aa7956"/><circle cx="70" cy="160" r="55" fill="#744327"/></svg>');
 const mocks={
  'next/link':"import React from 'react';export default function Link({href,children,...rest}){return React.createElement('a',{href,...rest},children)}",
- 'next/navigation':"export function usePathname(){return '/'}",
+ 'next/navigation':"export function usePathname(){return window.location.pathname}",
  '@/firebase':"export function useUser(){return {user:null,isUserLoading:false}};export function useAccountRole(){return {role:null,isRoleLoading:false,roleError:null}}",
  '@/context/cart-context':"export function useCart(){return {cartCount:2,addToCart(){}}}",
  '@/hooks/use-mobile-attention':"export function useMobileAttention(){return {orders:false,applications:false}}",
  '@/components/more-navigation-trail':"export function MoreNavigationTrail(){return null}",
+ '@/components/mobile-location-indicator':"import React from 'react';export function MobileLocationIndicator(){return React.createElement('button',{'aria-label':'Detect your current location'},'Detect your area')}",
  '@/hooks/use-toast':"export function useToast(){return {toast(){}}}",
  '@/components/favorite-toggle':"import React from 'react';export function FavoriteToggle({title}){return React.createElement('button',{type:'button','aria-label':'Save '+title,className:'flex h-11 w-11 items-center justify-center rounded-full border bg-white text-[#754328]'},'♡')}",
  '@/components/product-image':"import React from 'react';export function ProductImage(props){return React.createElement('img',{src:'data:image/svg+xml,"+placeholder+"',alt:props.alt,className:'absolute inset-0 h-full w-full object-cover'})}",
@@ -23,7 +24,7 @@ const mocks={
   jsx:'automatic',tsconfig:'tsconfig.json',outfile:path.join(out,'fixture.js'),
   define:{'process.env.NODE_ENV':'"production"'},
   plugins:[{name:'fixture-mocks',setup(build){
-   build.onResolve({filter:/^(next\/link|next\/navigation|@\/firebase|@\/context\/cart-context|@\/hooks\/use-mobile-attention|@\/components\/more-navigation-trail|@\/hooks\/use-toast|@\/components\/favorite-toggle|@\/components\/product-image|@\/hooks\/use-product-gallery)$/},args=>({path:args.path,namespace:'fixture'}));
+   build.onResolve({filter:/^(next\/link|next\/navigation|@\/firebase|@\/context\/cart-context|@\/hooks\/use-mobile-attention|@\/components\/more-navigation-trail|@\/components\/mobile-location-indicator|@\/hooks\/use-toast|@\/components\/favorite-toggle|@\/components\/product-image|@\/hooks\/use-product-gallery)$/},args=>({path:args.path,namespace:'fixture'}));
    build.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:mocks[args.path],loader:'js',resolveDir:process.cwd()}));
   }}]});
  const cssDir='.next/static/css';
@@ -64,6 +65,31 @@ const mocks={
       assert.equal(metrics.mobileTabs,5,name+' '+width+' mobile tabs');
       assert.ok(metrics.cartTargets.every(v=>v>=43),name+' '+width+' cart buttons >=44 CSS px');
       assert.ok(metrics.unavailable >= 1,name+' '+width+' disabled unavailable action is visible');
+     }
+     if(width<768){
+       await page.goto('http://127.0.0.1:'+srv.address().port+'/product/synthetic', {waitUntil:'domcontentloaded'});
+       await page.getByRole('heading',{name:'Blush Meadow Bouquet'}).waitFor();
+       const quick=page.getByRole('complementary',{name:'Quick purchase'});
+       await quick.waitFor();
+       const detailLayout=await page.evaluate(()=>{
+         const nav=document.querySelector('nav[aria-label="Mobile navigation"]');
+         const bar=document.querySelector('aside[aria-label="Quick purchase"]');
+         const nr=nav?.getBoundingClientRect(),br=bar?.getBoundingClientRect();
+         const explore=nav?.querySelector('a[href="/products"]');
+         return {nav:nr?{top:nr.top,bottom:nr.bottom,left:nr.left,right:nr.right}:null,
+          buyBar:br?{top:br.top,bottom:br.bottom,left:br.left,right:br.right}:null,
+          exploreActive:explore?.getAttribute('aria-current')==='page',width:innerWidth,height:innerHeight,
+          scrollWidth:document.documentElement.scrollWidth};
+       });
+       assert.ok(detailLayout.nav && detailLayout.buyBar,name+' '+width+' product nav and quick purchase bar both visible');
+       assert.equal(detailLayout.exploreActive,true,name+' '+width+' Explore active on product detail');
+       assert.ok(detailLayout.nav.top >= detailLayout.buyBar.bottom-1,name+' '+width+' purchase bar overlaps bottom nav: '+JSON.stringify(detailLayout));
+       assert.ok(detailLayout.nav.top-detailLayout.buyBar.bottom <= 16,name+' '+width+' large gap between buy bar and nav');
+       assert.ok(detailLayout.buyBar.top>=0 && detailLayout.buyBar.right<=width+1,name+' '+width+' purchase bar clipped');
+       assert.ok(detailLayout.scrollWidth<=width+1,name+' '+width+' product overflow');
+       await page.screenshot({path:path.join(out,name+'-detail-'+width+'.png'),fullPage:false});
+       await page.goto('http://127.0.0.1:'+srv.address().port+'/');
+       await page.getByRole('heading',{name:'Featured products'}).waitFor();
      }
      await page.screenshot({path:path.join(out,name+'-'+width+'.png'),fullPage:false});
      await page.close();

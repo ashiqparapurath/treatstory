@@ -1,6 +1,7 @@
-import React from 'react';
+import React, {useRef} from 'react';
 import {createRoot} from 'react-dom/client';
 import {Header} from '@/components/header';
+import {MobileBuyBar} from '@/components/mobile-buy-bar';
 import {MobileCategoryRail} from '@/components/mobile-category-rail';
 import {ProductCard} from '@/components/product-card';
 import {SellerProductCard} from '@/components/seller-product-card';
@@ -38,4 +39,25 @@ function Page(){
    </main>
  </div>;
 }
-createRoot(document.getElementById('app')!).render(<Page/>);
+function DetailPage(){
+ const target=useRef<HTMLDivElement>(null);
+ return <div className="min-h-screen bg-[#fffcf9] text-[#29251f]">
+  <Header/>
+  <main className="section-shell pb-48 pt-0 md:pt-8">
+    <div className="aspect-[1/1.08] w-full rounded-b-2xl bg-[#ead9c8] md:max-w-md md:rounded-2xl"/>
+    <section className="mt-5 space-y-3" aria-label="Fixture product detail">
+     <h1 className="text-2xl font-semibold">Blush Meadow Bouquet</h1>
+     <p className="text-lg font-semibold">₹1,599</p>
+     <p>Seller: Test creator</p>
+     <p className="leading-6">A carefully chosen handmade creation for every story.</p>
+     <div className="min-h-[650px]">Select a size or quantity to continue.</div>
+     <div ref={target} id="purchase-actions" className="flex h-12 gap-3"><button type="button">Add to bag</button><button type="button">Buy now</button></div>
+    </section>
+  </main>
+  <MobileBuyBar target={target} enabled resetKey="synthetic-detail">
+    <div className="min-w-0"><p className="text-[10px]">Total price</p><strong>₹1,599</strong></div>
+    <button type="button" className="h-12 min-w-[144px] shrink-0 rounded-full bg-[#754328] px-4 text-white">Add to cart</button>
+  </MobileBuyBar>
+ </div>;
+}
+createRoot(document.getElementById('app')!).render(location.pathname.startsWith('/product/') ? <DetailPage/> : <Page/>);
