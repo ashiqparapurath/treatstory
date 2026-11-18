@@ -60,7 +60,7 @@ test('seller applications collect city/state and keep older applications compati
   const settings=read('src/components/seller-store-settings.tsx');
   assert.match(apply,/id="businessCity" required/);
   assert.match(apply,/id="businessState" required/);
-  assert.match(apply,/businessName,businessCategory,businessCity,businessState,contactEmail/);
+  for(const field of ['businessName:businessName.trim()','businessCity:businessCity.trim()','businessState:businessState.trim()','contactEmail:contactEmail.trim()']) assert.ok(apply.includes(field),field);
   assert.match(api,/businessCity: z.string\(\).trim\(\).min\(2\).max\(80\).optional\(\)/);
   assert.match(api,/businessState: z.string\(\).trim\(\).min\(2\).max\(80\).optional\(\)/);
   assert.match(api,/businessCity: application.businessCity \|\| ''/);
