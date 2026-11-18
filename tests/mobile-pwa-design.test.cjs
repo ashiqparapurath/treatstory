@@ -277,7 +277,7 @@ test('mobile product page keeps optional notes collapsed but shows custom order 
  assert.match(detail,/group-open:rotate-180/);
  assert.match(detail,/hidden space-y-2 text-sm font-medium md:block/);
  assert.match(detail,/hidden min-h-12 md:flex/);
- assert.match(detail,/ref=\{purchaseControls\} id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-3 py-0/);
+ assert.match(detail,/ref=\{purchaseControls\} id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-4 py-0/);
  assert.match(detail,/onClick=\{\(\) => void addCurrent\(\)\}/);
  assert.match(detail,/onClick=\{buyNow\}/);
  assert.match(detail,/WhatsApp orders are arranged directly/);
@@ -294,7 +294,7 @@ test('mobile ordering controls have breathing room without hiding cart, WhatsApp
  assert.match(page,/aria-label="Additional ordering options"/);
  assert.match(page,/px-4 py-3 md:hidden/);
  assert.doesNotMatch(page,/Other ways to order/);
- assert.match(page,/grid-cols-2 gap-3 py-0 md:grid-cols-\[auto_1fr\]/);
+ assert.match(page,/grid-cols-2 gap-4 py-0 md:grid-cols-\[auto_1fr\]/);
  assert.match(page,/h-12 min-w-0 rounded-full/);
  assert.doesNotMatch(page,/grid scroll-mt-48 grid-cols-2 gap-2 rounded-\[20px\]/);
  assert.match(page,/onClick=\{buyNow\}/);
@@ -331,7 +331,12 @@ test('mobile seller header offers one WhatsApp message action and reviews are in
   assert.doesNotMatch(detail,/\bPhone\b/);
   assert.match(detail,/px-4 pt-2 md:col-span-2 md:px-0 md:pt-0/);
   assert.match(detail,/aria-label="Additional ordering options" className="space-y-4 md:hidden"/);
+  // The actual flex wrapper contains the note, purchase row and alternate links.
+  assert.match(detail,/data-testid="product-order-controls" className="flex flex-col gap-4"/);
+  const controls=detail.slice(detail.indexOf('data-testid="product-order-controls"'),detail.indexOf('<ProductReviews productId='));
+  assert.ok(controls.indexOf('Add a note') < controls.indexOf('id="purchase-actions"'));
+  assert.ok(controls.indexOf('id="purchase-actions"') < controls.indexOf('aria-label="Additional ordering options"'));
   // Note, primary purchase row, quote and WhatsApp all share a 16px vertical rhythm.
   assert.match(detail,/space-y-4 pb-7 pt-6 md:py-0/);
-  assert.match(detail,/id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-3 py-0/);
+  assert.match(detail,/id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-4 py-0/);
 });
