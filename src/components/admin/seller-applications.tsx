@@ -56,6 +56,7 @@ export function SellerApplications() {
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold">{application.businessName}</h3>
                   <p className="text-xs uppercase tracking-widest text-muted-foreground">{application.businessCategory}</p>
+                  {(application.businessCity || application.businessState) && <p className="text-xs text-muted-foreground">Based in {[application.businessCity,application.businessState].filter(Boolean).join(', ')}</p>}
                   <p className="text-sm text-muted-foreground">{application.description}</p>
                   <p className="text-sm">{application.contactEmail} · {application.contactPhone}</p>
                   {!application.ownerUid && <p className="text-xs font-medium text-amber-800">Guest application · Applicant must register and verify this email before approval</p>}
