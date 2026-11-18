@@ -216,7 +216,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
             </button>)}
           </div>
         </section>}
-        <div className="space-y-6 pb-7 pt-6 md:space-y-4 md:py-0">
+        <div className="space-y-4 pb-7 pt-6 md:py-0">
           {creator && <div className="flex flex-wrap gap-2 pb-0.5 text-[11px] text-[#6b604e] md:mt-5 md:text-xs">
             {creator.weightValue && creator.weightUnit && <span className="hidden rounded-full bg-[#f5f0e8] px-3 py-2 md:inline-flex">Weight / quantity: {creator.weightValue} {creator.weightUnit}</span>}
             {creator.preparationDays !== undefined && <span className={`rounded-full bg-[#f5f0e8] px-3 py-2 ${creator.preparationDays === 0 ? 'hidden md:inline-flex' : 'inline-flex'}`}>Preparation: {creator.preparationDays} day(s)</span>}
@@ -240,7 +240,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
         </details>
         <label className="hidden space-y-2 text-sm font-medium md:block">Notes for the creator (optional)<Textarea maxLength={500} rows={3} placeholder="Special requests, colours, gifting instructions…" value={requestNote} onChange={e=>setRequestNote(e.target.value)} className="bg-white"/></label>
       </>}
-      <div ref={purchaseControls} id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-3 py-1 md:grid-cols-[auto_1fr] md:gap-3 md:py-0">
+      <div ref={purchaseControls} id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-3 py-0 md:grid-cols-[auto_1fr] md:gap-3">
         <Button type="button" disabled={!available} onClick={() => void addCurrent()} variant="outline" className="h-12 min-w-0 rounded-full border-[#d9c9bc] bg-white px-2 text-[12px] font-medium text-[#49382c] md:border-[#29251f] md:px-5 md:text-sm" aria-label={`Add ${product.name} to bag`}><ShoppingBag className="mr-1.5 h-4 w-4 shrink-0 md:mr-2" />Add to bag</Button>
         <Button type="button" disabled={!available} onClick={buyNow} className="h-12 min-w-0 rounded-full bg-[#754328] px-2 text-[12px] font-semibold text-white hover:bg-[#653820] md:bg-[#29251f] md:text-sm md:hover:bg-[#51463a]">{available ? creator ? 'Buy now' : 'View bag' : 'Unavailable'}</Button>
       </div>
