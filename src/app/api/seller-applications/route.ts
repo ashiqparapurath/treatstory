@@ -200,7 +200,15 @@ export async function PATCH(request: NextRequest) {
       }
       if(!approved) {
         // Rejected guest applicants still receive an email even with no account.
-        queueRejectedSellerApplicationMail(tx,db,{id,...application},now);
+        queueRejectedSellerApplicationMail(tx,db,{
+          id,
+          businessName:String(application.businessName),
+          businessCategory:String(application.businessCategory),
+          businessCity:application.businessCity,
+          businessState:application.businessState,
+          contactEmail:String(application.contactEmail),
+          submittedAt:application.submittedAt,
+        },now);
       }
       tx.update(ref, {
         status: approved ? 'approved' : 'rejected',
