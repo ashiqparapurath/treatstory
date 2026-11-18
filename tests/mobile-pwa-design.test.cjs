@@ -89,7 +89,7 @@ test('mobile product cards show real prices with rounded image bottoms and 44px 
 test('mobile product page visibly shows selected price and honors requested safe areas',()=>{
   const detail=read('src/components/product-detail-client.tsx');
   const header=read('src/components/header.tsx');
-  assert.match(detail,/md:hidden"><p className="text-\[25px\] font-bold/);
+  assert.match(detail,/text-\[20px\] font-semibold tracking-\[-0\.03em\] text-\[#754328\]/);
   assert.match(detail,/formatPrice\(selectedPrice\)/);
   assert.match(detail,/gallery\.select\(n\)/);
   assert.match(detail,/aria-label="Select weight or size"/);
@@ -167,7 +167,7 @@ test('SKU remains searchable but is hidden from listing cards including exact-ma
 test('bottom-purchase bar keeps inset floating style and measures immediately on mount',()=>{
  const detail=read('src/components/product-detail-client.tsx');
  const bar=read('src/components/mobile-buy-bar.tsx');
- assert.match(detail,/hidden sm:block"><ProductSkuCopy/);
+ assert.match(detail,/hidden md:block"><ProductSkuCopy/);
  assert.match(bar,/bottom-\[calc\(82px\+env\(safe-area-inset-bottom\)\)\]/);
  assert.match(bar,/rounded-\[23px\]/);
  assert.match(bar,/element\.getBoundingClientRect\(\)/);
