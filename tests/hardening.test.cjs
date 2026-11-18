@@ -120,6 +120,7 @@ test('guest submissions cannot set privileges; approval requires admin and verif
     }),
   };
   const mocks = {
+    'next/server': {after(){}},
     '@/lib/server/firebase-admin': {
       getServerFirebase: () => ({ db, auth }),
       verifiedUser: async () => ({ db, auth, uid }),
