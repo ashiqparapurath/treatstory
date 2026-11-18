@@ -1,7 +1,8 @@
 'use client';import { ProductGridSkeleton, LoadError } from '@/components/loading-states';
 import { usePagedPublicCatalog } from '@/firebase/firestore/use-paged-public-catalog';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/header';
 import { normalizeProductSku } from '@/lib/product-sku';
 import { SkuSearchResult } from '@/components/sku-search-result';
@@ -24,13 +25,16 @@ function ProductsPageContent({ searchTerm }: { searchTerm: string }) {
   return <><ProductGridContainer products={products||[]} externalSearchTerm={searchTerm} hasMore={hasMore} loadingMore={loadingMore} loadMore={loadMore}/>{hasMore&&<button type="button" disabled={loadingMore} onClick={()=>void loadMore()} className="mt-6 rounded-full border px-5 py-3 text-sm">{loadingMore?'Loading…':'Show more products'}</button>}</>;
 }
 
-export default function ProductsPage() {
-  const [searchTerm, setSearchTerm] = useState('');
+function ProductsSearchPage() {
+  const searchParams = useSearchParams();
+  const incomingQuery = searchParams.get('q') ?? '';
+  const [searchTerm, setSearchTerm] = useState(incomingQuery);
+  useEffect(() => setSearchTerm(incomingQuery), [incomingQuery]);
   const exactSku = normalizeProductSku(searchTerm);
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
-      <main className="section-shell flex-1 pb-16 pt-10 sm:pb-24 sm:pt-14">
+      <main className="section-shell flex-1 pb-16 pt-7 sm:pb-24 sm:pt-14">
         <CatalogMaintenanceGate>
         <div className="mb-9 border-b border-[#e8e0d5] pb-8 sm:mb-12 sm:pb-10">
           <p className="eyebrow text-[#a68a64]">The whole collection</p>
@@ -61,4 +65,8 @@ export default function ProductsPage() {
       </footer>
     </div>
   );
+}
+
+export default function ProductsPage() {
+  return <Suspense fallback={<div className="min-h-screen bg-background"><Header/><main className="section-shell py-10"><div role="status" className="h-64 animate-pulse rounded-3xl bg-[#eee8df]"/></main></div>}><ProductsSearchPage/></Suspense>;
 }

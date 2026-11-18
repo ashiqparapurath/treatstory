@@ -10,6 +10,7 @@ import {HeroImage}from'@/components/hero-image';
 import{BANNER_IMAGE_SIZES}from'@/lib/image-source';
 import { OptimizedImage } from '@/components/optimized-image';
 import { ArrowRight, Sparkles } from 'lucide-react';
+import { MobileCategoryRail } from '@/components/mobile-category-rail';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -53,8 +54,18 @@ function BannerCarousel() {
       <CarouselContent>
         {banners.map((banner,index) => (
           <CarouselItem key={banner.id}>
-            <Card className="overflow-hidden rounded-[24px] border-0 shadow-none">
-              <CardContent className="relative flex h-[clamp(200px,54vw,236px)] items-center justify-center p-0 sm:h-64 md:h-72 lg:h-[340px]">
+            <Card className="overflow-hidden rounded-[22px] border-0 bg-[#f7f0e8] shadow-none">
+              <CardContent className="relative h-[178px] overflow-hidden p-0 md:hidden">
+                <div className="absolute inset-y-0 right-0 w-[55%] bg-[#e9d9c6]">{(requested.has(index)||index===active)&&<OptimizedImage src={banner.imageUrl} alt={banner.title} fill sizes="(max-width: 767px) 60vw, 0px" quality={75} loading="lazy" onLoad={()=>{if(index===active)setFirstLoaded(true);}} className="object-cover"/>}</div>
+                <div className="absolute inset-0 bg-gradient-to-r from-[#f9f3eb] via-[#f9f3eb] to-[#f9f3eb]/0"/>
+                <div className="relative z-10 flex h-full max-w-[68%] flex-col items-start justify-center px-4 py-4 text-left">
+                  <span className="rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-medium text-[#81502e]">Just for you</span>
+                  <h2 className="mt-2 line-clamp-2 text-xl font-semibold leading-tight tracking-tight text-[#34251b]">{banner.title}</h2>
+                  <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-[#79685a]">{banner.subtitle}</p>
+                  <Link href={banner.buttonLink} className="mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[#874a28] px-3.5 text-[11px] font-semibold text-white">{banner.buttonText}<ArrowRight aria-hidden="true" className="h-3.5 w-3.5"/></Link>
+                </div>
+              </CardContent>
+              <CardContent className="relative hidden h-[clamp(200px,54vw,236px)] items-center justify-center p-0 md:flex md:h-72 lg:h-[340px]">
                 <div className="absolute inset-0 bg-[#e8dfd2]"/>{(requested.has(index)||index===active)&&<OptimizedImage src={banner.imageUrl} alt={banner.title} fill sizes={BANNER_IMAGE_SIZES} quality={75} loading="lazy" fetchPriority={index===active?'auto':'low'} onLoad={()=>{if(index===active)setFirstLoaded(true);}} className="object-cover"/>}
                 <div className="absolute inset-0 bg-black/40" />
                 <div className="relative max-w-2xl px-5 py-3 text-center text-white sm:px-10 sm:py-6">
@@ -72,6 +83,7 @@ function BannerCarousel() {
       </CarouselContent>
       <CarouselPrevious className="absolute left-4 top-1/2 hidden -translate-y-1/2 border-white/50 bg-white/30 backdrop-blur-xl md:flex" />
       <CarouselNext className="absolute right-4 top-1/2 hidden -translate-y-1/2 border-white/50 bg-white/30 backdrop-blur-xl md:flex" />
+      <div className="mt-3 flex items-center justify-center gap-1.5 md:hidden" aria-label={`Banner ${active + 1} of ${banners.length}`}>{banners.map((banner,n)=><span key={banner.id} className={`h-1.5 rounded-full ${n===active?'w-5 bg-[#874a28]':'w-1.5 bg-[#e4ddd6]'}`} />)}</div>
     </Carousel>
   );
 }
@@ -81,7 +93,7 @@ export default function Home() {
     <div className="flex min-h-screen flex-col overflow-hidden bg-background">
       <Header />
       <main className="flex-1">
-        <section className="section-shell pb-10 pt-9 sm:pb-10 sm:pt-8 lg:pb-12 lg:pt-10">
+        <section className="section-shell hidden pb-10 pt-9 md:block sm:pb-10 sm:pt-8 lg:pb-12 lg:pt-10">
           <div className="grid items-center gap-7 md:grid-cols-[0.95fr_1.05fr] md:gap-8 lg:gap-10">
             <div className="relative z-10 order-1 min-w-0 max-w-xl pb-0 md:pb-0">
               <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#e6ded2] bg-white/70 px-3 py-2 sm:mb-3">
@@ -129,19 +141,20 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="section-shell pb-9 sm:pb-11">
+        <section className="section-shell pb-6 pt-5 md:pb-11 md:pt-0">
           <div className="mb-5 flex items-end justify-between gap-4">
-            <div><p className="eyebrow text-[#a68a64]">A little inspiration</p><h2 className="mt-2 text-[1.55rem] font-medium leading-tight tracking-tight sm:text-3xl">The latest from TreatStory</h2></div>
+            <div><p className="eyebrow hidden text-[#a68a64] md:block">A little inspiration</p><h2 className="text-[19px] font-semibold tracking-tight text-[#30251c] md:mt-2 md:text-3xl md:font-medium"> <span className="md:hidden">Special offers</span><span className="hidden md:inline">The latest from TreatStory</span></h2></div><Link href="/products" className="inline-flex min-h-10 items-center gap-1 text-xs font-medium text-[#874a28] md:hidden">See all <ArrowRight className="h-3.5 w-3.5"/></Link>
             <Link href="/products" className="hidden items-center gap-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.15em] sm:flex">Shop all <ArrowRight className="h-4 w-4" /></Link>
           </div>
           <BannerCarousel />
         </section>
 
-        <section className="bg-[#f1ede6] py-9 sm:py-12">
+        <section className="bg-white py-5 md:bg-[#f1ede6] md:py-12">
           <div className="section-shell">
             <CatalogMaintenanceGate>
-            <div className="mb-7 flex flex-col justify-between gap-3 sm:mb-9 sm:flex-row sm:items-end">
-              <div><p className="eyebrow text-[#a68a64]">Picked for you</p><h2 className="mt-2 text-3xl font-medium tracking-tight sm:text-4xl">Find your next favourite</h2><p className="mt-2 text-sm text-muted-foreground">Thoughtful finds, all in one happy place.</p></div>
+            <div className="mb-8 md:hidden"><MobileCategoryRail /></div>
+            <div className="mb-5 flex flex-col justify-between gap-3 sm:mb-9 sm:flex-row sm:items-end">
+              <div><p className="eyebrow hidden text-[#a68a64] md:block">Picked for you</p><h2 className="text-[19px] font-semibold tracking-tight text-[#30251c] md:mt-2 md:text-4xl md:font-medium"><span className="md:hidden">Featured products</span><span className="hidden md:inline">Find your next favourite</span></h2><p className="mt-2 hidden text-sm text-muted-foreground md:block">Thoughtful finds, all in one happy place.</p></div>
               <Link href="/products" className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em]">View everything <ArrowRight className="h-4 w-4" /></Link>
             </div>
             <div className="mb-7"><SellerStorefrontProducts limitCount={8} /></div>
@@ -150,7 +163,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="section-shell py-9 sm:py-12">
+        <section className="section-shell hidden py-9 md:block sm:py-12">
           <div className="overflow-hidden rounded-[26px] bg-[#29241f] px-6 py-8 text-center text-[#faf8f3] sm:px-10 sm:py-10">
             <p className="eyebrow text-[#cbb18b]">The joy is in the finding</p>
             <h2 className="mx-auto mt-4 max-w-2xl text-3xl font-medium leading-tight tracking-tight sm:text-4xl">A good find can turn an ordinary day into a lovely story.</h2>
@@ -158,7 +171,7 @@ export default function Home() {
           </div>
         </section>
       </main>
-      <footer className="border-t border-[#e8e0d5] bg-[#faf8f3] py-8">
+      <footer className="hidden border-t border-[#e8e0d5] bg-[#faf8f3] py-8 md:block">
         <div className="section-shell flex flex-col items-center justify-between gap-5 text-center sm:flex-row sm:text-left">
           <div><Link href="/" className="brand-wordmark text-3xl">TreatStory</Link><p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Little finds. Lovely stories.</p></div>
           <div className="flex flex-wrap justify-center gap-5 text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground"><Link href="/about" className="hover:text-foreground">Our story</Link><Link href="/terms-of-service" className="hover:text-foreground">Terms</Link><Link href="/privacy-policy" className="hover:text-foreground">Privacy</Link></div>

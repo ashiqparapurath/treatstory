@@ -39,7 +39,7 @@ export const metadata: Metadata = {
 };
 
 // Keep browser-managed system-bar insets rather than requesting edge-to-edge at page load.
-export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'auto', themeColor: branding.background };
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: branding.background };
 
 export default function RootLayout({
   children,

@@ -96,10 +96,10 @@ test('mobile bottom nav has five balanced destinations, role shortcut, More and 
   const hook = fs.readFileSync('src/hooks/use-mobile-attention.ts', 'utf8');
   const firebase = fs.readFileSync('src/firebase/provider.tsx', 'utf8');
   assert.match(header, /grid-cols-5/);
-  assert.match(header, /onClick=\{\(\) => \{ if \(item.label !== 'More'\) clearMoreJourney\(\); \}\}/, 'Home Shop Cart and Profile should end More history');
+  assert.match(header, /onClick=\{\(\) => \{ if \(item.label !== 'More'\) clearMoreJourney\(\); \}\}/, 'Home Explore Wishlist and Profile should end More history');
   assert.match(header, /aria-label="TreatStory home" onClick=\{clearMoreJourney\}/);
-  assert.match(header, /item.label === 'Cart' && cartCount/);
-  assert.doesNotMatch(header, /item.label === 'Cart' && cartCount > 0 && <span/);
+  assert.match(header, /label: 'Wishlist', icon: Heart, active: pathname === '\/favorites'/);
+  assert.match(header, /href=\"\/cart\" aria-label=\{`Shopping bag, \$\{cartCount\} items`\}/);
   assert.match(header, /label: 'More', icon: Menu, active: mobileNavIsActive\(pathname, 'more'\)/);
   assert.match(header, /label: 'Profile', icon: UserRound, active: isMobileProfilePath/);
   assert.match(header, /href: profileHref/);
@@ -109,6 +109,8 @@ test('mobile bottom nav has five balanced destinations, role shortcut, More and 
   assert.doesNotMatch(header, /\{attention\.orders \+ attention\.applications\}/);
   assert.match(header, /md:hidden/);
   assert.match(header, /className="hidden items-center justify-end/);
+  assert.match(header, /name="q" aria-label="Search TreatStory products"/);
+  assert.match(header, /!isProductDetail && <nav/);
   assert.match(more, /morePageSections\(roleReady && user \? role : null, !!user, attention\)/);
   assert.match(more, /aria-label="Account actions"/);
   assert.match(hook, /const unsubscribe: Array<\(\) => void> = \[\]/);

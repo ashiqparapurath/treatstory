@@ -32,11 +32,11 @@ export function ProductCard({ product }: ProductCardProps) {
 
 
   return (
-    <Card className="group relative h-full overflow-hidden rounded-[22px] border border-white/70 bg-[#f1eee9] shadow-[0_6px_24px_rgba(35,29,23,0.09)] transition-shadow duration-300 hover:shadow-[0_16px_36px_rgba(35,29,23,0.15)]">
+    <Card className="group relative h-full overflow-hidden rounded-2xl border border-[#eee5dc] bg-white shadow-[0_5px_18px_rgba(35,29,23,0.055)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(35,29,23,0.12)] sm:rounded-[22px] sm:border-white/70 sm:bg-[#f1eee9]">
       <CardHeader className="relative overflow-hidden rounded-none bg-[#f1eee9] p-0">
-        <div className="relative aspect-[3/4] w-full touch-pan-y overflow-hidden" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
+        <div className="relative aspect-[4/4.3] w-full touch-pan-y overflow-hidden sm:aspect-[3/4]" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
           <div key={gallery.index} className={`absolute inset-0 ${gallery.direction === 'next' ? 'treatstory-photo-next' : 'treatstory-photo-previous'}`}><ProductImage src={images[gallery.index]} alt={product.name} sizes={LEGACY_CARD_IMAGE_SIZES}/></div>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-3/4 bg-gradient-to-t from-black/85 via-black/20 to-transparent sm:block" />
           <Link href={`/product/${encodeURIComponent(product.id)}`} aria-label={`View details for ${product.name}`} className="absolute inset-0 z-10" />
           {images.length > 1 && (
             <>
@@ -52,7 +52,7 @@ export function ProductCard({ product }: ProductCardProps) {
             </>
           )}
       <div className="absolute right-2 top-2 z-20"><FavoriteToggle compact productId={product.id} title={product.name} imageUrl={images[0]} /></div>
-          <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex flex-col gap-2.5 text-white sm:inset-x-4 sm:bottom-4">
+          <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 hidden flex-col gap-2.5 text-white sm:inset-x-4 sm:bottom-4 sm:flex">
             <h3 className="line-clamp-2 text-sm font-semibold leading-snug drop-shadow-sm sm:text-base">{product.name}</h3>
             {product.description && <p className="hidden text-[11px] leading-snug text-white/85 sm:line-clamp-2 sm:text-xs">{product.description}</p>}
             <div className="flex items-center justify-between gap-2">
@@ -64,6 +64,13 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
       </CardHeader>
+      <div className="flex min-h-[99px] flex-col justify-between gap-2 px-3 pb-3 pt-2.5 sm:hidden">
+        <Link href={`/product/${encodeURIComponent(product.id)}`} className="line-clamp-2 text-[13px] font-semibold leading-5 text-[#30251c]">{product.name}</Link>
+        <div className="flex items-center justify-between gap-2">
+          <span className="min-w-0 truncate text-sm font-bold text-[#874a28]">{product.showPrice ? formatPrice(product.price) : 'Price on request'}</span>
+          <button type="button" disabled={!product.showPrice} onClick={handleAddToCart} aria-label={`Add ${product.name} to bag`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#874a28] text-white disabled:opacity-50"><ShoppingBag className="h-4 w-4"/></button>
+        </div>
+      </div>
     </Card>
   );
 }
