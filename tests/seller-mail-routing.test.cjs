@@ -77,7 +77,8 @@ test('seller submission queues receipt and admin email inside transaction for gu
 test('seller review queue is server-driven; browser cannot duplicate a review email',()=>{
   const api=read('src/app/api/seller-applications/route.ts');
   const ui=read('src/components/admin/seller-applications.tsx');
-  assert.match(api,/queueRejectedSellerApplicationMail\(tx,db,\{id,\.\.\.application\},now\)/);
+  assert.match(api,/queueRejectedSellerApplicationMail\\(tx,db,\\{/);
+  assert.match(api,/contactEmail:String\\(application.contactEmail\\)/);
   assert.match(api,/template: 'seller_application_approved'/);
   assert.match(api,/processMailQueue\(db,auth,3\)/);
   assert.match(api,/queueNewSellerApplicationMails\(tx,db,\{id,\.\.\.data,submittedAt\},adminEmail\)/);
