@@ -96,6 +96,26 @@ const mocks={
        assert.ok(detailLayout.buyBar.top>=0 && detailLayout.buyBar.right<=width+1,name+' '+width+' purchase bar clipped');
        assert.ok(detailLayout.scrollWidth<=width+1,name+' '+width+' product overflow');
        await page.screenshot({path:path.join(out,name+'-detail-'+width+'.png'),fullPage:false});
+       // Validate spacing on the actual purchase-controls component, not just CSS strings.
+       await page.getByText('Other ways to order',{exact:true}).scrollIntoViewIfNeeded();
+       const orderSpacing=await page.evaluate(()=>{
+         const detailSections=[...document.querySelectorAll('details')];
+         const note=detailSections.find(x=>x.querySelector('summary')?.textContent?.includes('Add a note'));
+         const other=detailSections.find(x=>x.querySelector('summary')?.textContent?.includes('Other ways to order'));
+         const actions=document.getElementById('purchase-actions');
+         if(!note||!other||!actions)return null;
+         const n=note.getBoundingClientRect(),a=actions.getBoundingClientRect(),o=other.getBoundingClientRect();
+         return {notesToCart:a.top-n.bottom,cartToOther:o.top-a.bottom,
+           actionsWidth:a.width,notesOpen:note.open,otherOpen:other.open,
+           viewportWidth:document.documentElement.clientWidth};
+       });
+       assert.ok(orderSpacing,name+' '+width+' missing product order sections');
+       assert.ok(orderSpacing.notesToCart>=12,name+' '+width+' creator note and cart buttons too close: '+JSON.stringify(orderSpacing));
+       assert.ok(orderSpacing.cartToOther>=12,name+' '+width+' cart and other ordering controls too close: '+JSON.stringify(orderSpacing));
+       assert.ok(orderSpacing.actionsWidth<=orderSpacing.viewportWidth,name+' '+width+' order buttons overflow');
+       assert.equal(orderSpacing.notesOpen,false,name+' '+width+' optional notes collapsed by default');
+       assert.equal(orderSpacing.otherOpen,false,name+' '+width+' secondary ordering options collapsed by default');
+       await page.screenshot({path:path.join(out,name+'-orders-'+width+'.png'),fullPage:false});
        await page.goto('http://127.0.0.1:'+srv.address().port+'/');
        await page.getByRole('heading',{name:'Featured products'}).waitFor();
      }
