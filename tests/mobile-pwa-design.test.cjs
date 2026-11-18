@@ -271,7 +271,7 @@ test('mobile promotional banner is compact and keeps the CTA close to its copy',
 });
 
 
-test('install TreatStory reminder briefly appears then auto-dismisses, with manual close retained',()=>{
+test('install TreatStory preserves user-initiated prompt after guidance timeout',()=>{
  const layout=read('src/app/layout.tsx');
  const notice=read('src/components/app-install-notice.tsx');
  assert.match(layout,/<AppInstallNotice \/>/);
@@ -279,7 +279,12 @@ test('install TreatStory reminder briefly appears then auto-dismisses, with manu
  assert.match(notice,/aria-label="Install TreatStory"/);
  assert.match(notice,/7000/);
  assert.match(notice,/window\.clearTimeout\(timeout\)/);
- assert.match(notice,/if \(!visible \|\| busy\) return/);
+ assert.match(notice,/if \(!visible \|\| busy \|\| installEvent\) return/);
+ assert.match(notice,/\[visible, busy, installEvent\]/);
+ assert.match(notice,/reminderShownKey/);
+ assert.match(notice,/await installEvent\.prompt\(\)/);
+ assert.match(notice,/const choice = await installEvent\.userChoice/);
+ assert.match(notice,/event\.preventDefault\(\)/);
  assert.match(notice,/sessionStorage", dismissedKey, "1"/);
  assert.match(notice,/aria-label="Dismiss install notification"/);
  assert.match(notice,/beforeinstallprompt/);
