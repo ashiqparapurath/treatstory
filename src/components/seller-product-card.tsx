@@ -30,20 +30,19 @@ export function SellerProductCard({ product: p, addToBag, buyNow }: {
     : (p.stockQuantity ?? 0) >= minOrder;
   const available = p.availability !== 'unavailable' && p.showPrice &&
     (p.availability === 'made-to-order' || enoughStock);
-  return <article className="group relative min-w-0 overflow-hidden rounded-[20px] border border-[#eee6de] bg-white shadow-[0_5px_18px_rgba(35,29,23,0.065)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(35,29,23,0.12)] sm:rounded-[22px] sm:border-white/70 sm:bg-[#f1eee9]">
-    <div className="relative aspect-[1/1.06] touch-pan-y overflow-hidden bg-[#efe7dd] sm:aspect-[3/4]" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
+  return <article className="group relative min-w-0 overflow-hidden rounded-[21px] border-0 bg-[#2b211d] shadow-[0_10px_24px_rgba(35,29,23,0.16)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(35,29,23,0.12)] sm:rounded-[22px] sm:border sm:border-white/70 sm:bg-[#f1eee9] sm:shadow-[0_5px_18px_rgba(35,29,23,0.065)]">
+    <div className="relative aspect-[3/4] touch-pan-y overflow-hidden bg-[#efe7dd] sm:aspect-[3/4]" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
       <div key={gallery.index} className={`absolute inset-0 ${gallery.direction === 'next' ? 'treatstory-photo-next' : 'treatstory-photo-previous'}`}>
         <ProductImage src={photos[gallery.index]} alt={`${p.name} — photo ${gallery.index + 1}`} />
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-3/4 bg-gradient-to-t from-black/85 via-black/20 to-transparent sm:block"/>
-      {p.availability === 'made-to-order' && <span className="pointer-events-none absolute bottom-2 left-2 z-20 rounded-full border border-white/80 bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-[#754328] shadow-sm backdrop-blur-sm sm:hidden">Made to order</span>}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[78%] bg-gradient-to-t from-[#17120f]/95 via-[#221b17]/60 to-transparent sm:h-3/4 sm:from-black/85 sm:via-black/20"/>
       <Link href={`/product/seller:${encodeURIComponent(p.id)}`} aria-label={`View details and photos for ${p.name}`} className="absolute inset-0 z-10 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#c9ae85]"/>
-      <span className={`pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-4.5rem)] truncate rounded-full border border-white/80 bg-white/95 px-2.5 py-1.5 text-[10px] font-semibold text-[#754328] shadow-sm backdrop-blur-sm sm:hidden ${p.category.length > 10 ? 'max-[389px]:hidden' : ''}`}>{p.category}</span>
+      <span aria-hidden="true" className="pointer-events-none absolute left-2.5 top-2.5 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-[#28201c]/85 text-[9px] font-bold tracking-tight text-white/90 shadow-sm sm:hidden">ts</span>
       <div className="absolute right-2 top-2 z-20 drop-shadow-sm"><FavoriteToggle compact productId={'seller:' + p.id} title={p.name} imageUrl={photos[0]} /></div>
       {photos.length > 1 && <>
         <button type="button" onClick={() => gallery.move(-1)} aria-label={`Previous photo of ${p.name}`} className="absolute left-2 top-1/2 z-20 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-white/30 backdrop-blur-xl text-[#29251f] shadow transition-opacity sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"><ChevronLeft className="h-4 w-4"/></button>
         <button type="button" onClick={() => gallery.move(1)} aria-label={`Next photo of ${p.name}`} className="absolute right-2 top-1/2 z-20 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-white/30 backdrop-blur-xl text-[#29251f] shadow transition-opacity sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"><ChevronRight className="h-4 w-4"/></button>
-        <div aria-label={`Photo ${gallery.index + 1} of ${photos.length}`} className="pointer-events-none absolute bottom-2 right-2 z-20 flex gap-1 sm:bottom-auto sm:right-auto sm:left-1/2 sm:top-11 sm:-translate-x-1/2">{photos.slice(0,10).map((_,n) => <span key={n} className={`h-1.5 rounded-full bg-white ${gallery.index === n ? 'w-3' : 'w-1.5 opacity-60'}`} />)}</div>
+        <div aria-label={`Photo ${gallery.index + 1} of ${photos.length}`} className="pointer-events-none absolute left-1/2 top-11 z-20 hidden -translate-x-1/2 gap-1 sm:flex">{photos.slice(0,10).map((_,n) => <span key={n} className={`h-1.5 rounded-full bg-white ${gallery.index === n ? 'w-3' : 'w-1.5 opacity-60'}`} />)}</div>
       </>}
       <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 hidden flex-col gap-2 text-white sm:inset-x-4 sm:bottom-4 sm:flex">
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug drop-shadow-sm sm:text-base">{p.name}</h3>
@@ -54,12 +53,15 @@ export function SellerProductCard({ product: p, addToBag, buyNow }: {
           <button type="button" disabled={!available} onClick={() => buyNow(p)} className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-full border border-white/70 bg-white/15 px-2 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/25 disabled:opacity-60">{available ? 'Buy now' : 'Unavailable'}</button>
         </div>
       </div>
-    </div>
-    <div className="flex min-h-[124px] flex-col justify-between gap-2.5 px-3 pb-3.5 pt-3 sm:hidden">
-      <div className="space-y-1"><p className="truncate text-[10px] font-medium uppercase tracking-[0.08em] text-[#9d826c]">{p.category}</p><h3 className="line-clamp-2 text-[13px] font-semibold leading-[19px] text-[#30251c]">{p.name}</h3></div>
-      <div className="flex items-center justify-between gap-2">
-        <span className="min-w-0 truncate text-[15px] font-bold tracking-tight text-[#754328]">{p.showPrice ? `${hasDifferentPrices ? 'From ' : ''}${money(lowestPrice)}` : 'Price on request'}</span>
-        <button type="button" disabled={!available} onClick={() => addToBag(p)} aria-label={`Add ${p.name} to bag`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#754328] text-white shadow-[0_3px_10px_rgba(69,37,21,0.16)] transition-colors active:bg-[#57331f] disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]"><ShoppingBag className="h-4 w-4"/></button>
+      <div className="pointer-events-none absolute inset-x-2.5 bottom-2.5 z-20 flex flex-col gap-1.5 text-white sm:hidden">
+        <h3 className="line-clamp-2 text-[12px] font-semibold leading-[16px] tracking-[-0.025em] drop-shadow-sm">{p.name}</h3>
+        <p className="truncate text-[16px] font-bold leading-[21px] tracking-tight drop-shadow-sm">{p.showPrice ? (hasDifferentPrices ? 'From ' : '') + money(lowestPrice) : 'Price on request'}</p>
+        <div className="pointer-events-auto mt-0.5 grid grid-cols-[44px_minmax(0,1fr)] items-center gap-2">
+          <button type="button" disabled={!available} onClick={() => addToBag(p)} aria-label={'Add ' + p.name + ' to bag'} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/30 bg-[#faf8f4]/90 text-[#352a22] shadow-sm backdrop-blur-sm transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-75">
+            <ShoppingBag aria-hidden="true" className="h-[17px] w-[17px]" />
+          </button>
+          <button type="button" disabled={!available} onClick={() => buyNow(p)} aria-label={available ? 'Buy ' + p.name + ' now' : p.name + ' unavailable'} className="min-h-11 min-w-0 truncate rounded-full border border-white/55 bg-white/15 px-1 text-[10px] font-semibold text-white backdrop-blur-sm transition-colors enabled:hover:bg-white/25 enabled:active:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:text-white/70">{available ? 'Buy now' : 'Unavailable'}</button>
+        </div>
       </div>
     </div>
   </article>;
