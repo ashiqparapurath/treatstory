@@ -73,14 +73,22 @@ CRON_SECRET=SECRET_B
 
 `APPS_SCRIPT_MAIL_SECRET` must equal the script's `MAIL_WEBHOOK_SECRET`. `CRON_SECRET` must match in both places. Keep all secrets server-only; never add `NEXT_PUBLIC_` to their names.
 
-Optional:
+**Required for new seller-application alerts:** set a real monitored admin inbox in Vercel (server-side only):
 
 ```env
-MAIL_REPLY_TO=your-monitored-address@gmail.com
-MAIL_SUPPORT_EMAIL=your-team-address@gmail.com
+MAIL_ADMIN_EMAIL=your-admin-inbox@example.com
 ```
 
-The optional team address receives new support-ticket and seller-application alerts. No sender-address environment variable is needed: mail comes from the Google account selected in Step 4.
+The existing `MAIL_SUPPORT_EMAIL` is used as a fallback for seller-application alerts if `MAIL_ADMIN_EMAIL` is unset. To receive support-ticket notifications as well, configure:
+
+```env
+MAIL_SUPPORT_EMAIL=your-team-address@gmail.com
+MAIL_REPLY_TO=your-monitored-address@gmail.com
+```
+
+Both recipient variables must contain **one valid mailbox**, not a comma-separated list. The admin alert uses the `seller_application_new` template and links to the admin workspace. If neither admin nor support address is configured, the application is still saved and the applicant receipt is queued, but no admin email is sent. Inspect server logs for `Seller application admin email is not configured`; then add `MAIL_ADMIN_EMAIL` and redeploy. Existing applications are not automatically backfilled.
+
+No sender-address environment variable is needed: mail comes from the Google account selected in Step 4. Never prefix these secrets or team addresses with `NEXT_PUBLIC_`.
 
 Keep the existing `NEXT_PUBLIC_FIREBASE_PROJECT_ID` and private `FIREBASE_SERVICE_ACCOUNT_JSON` values configured. The secure APIs, account-link generation and mail queue require them. To obtain the JSON, open **Firebase Project Settings → Service accounts → Generate new private key**; paste the **entire downloaded JSON** as the private Vercel variable's value, not the filename. Its project ID must match the client project. Do not put this credential in Apps Script.
 
@@ -131,6 +139,18 @@ Some server events deliberately supply a specific button label; that takes prece
 | Seller access/general | `seller_access_updated`, `update` |
 
 After any Apps Script code change, choose **Deploy → Manage deployments → Edit → New version → Deploy**. Saving the editor alone does not update `/exec`. Keep the existing deployment URL where possible.
+
+## Verify both Firebase sign-in providers and new seller alerts
+
+TreatStory uses the **same private outbox and Apps Script relay** for email/password and Google-authenticated user accounts. Firebase UID is the source of truth; no provider-specific mail credential is needed.
+
+1. **Email/password:** Create a fresh test account. Verify a `verify_email` and a one-time `welcome` job appear in private Firestore `mail_outbox`; check the inbox and complete the verification link. Signing in again must not send a second welcome.
+2. **Google:** Register a **new Google account** (not one that has already used TreatStory). It should queue the same one-time `welcome` email, without asking the Google-verified account to verify again. Sign out and sign back in with Google; no duplicate welcome should appear.
+3. **Guest, password, or Google seller applicant:** Submit a **new** seller application for each test identity. After the application is saved, the outbox must contain `seller_application_received` addressed to the form's contact email and `seller_application_new` addressed to `MAIL_ADMIN_EMAIL` (or `MAIL_SUPPORT_EMAIL` fallback), with deterministic identifiers that prevent submission duplicates. Check both inboxes and spam folders.
+4. **Review:** Approve a verified test applicant. The account gets one `seller_application_approved` update via the server transaction. Reject a different test application (including a guest if convenient); the contact address gets `seller_application_declined` even without an associated Firebase user.
+5. Check the outbox `status` / `lastStage` / `lastError` and **Apps Script → Executions**. The 5-minute retry trigger must be installed. `accepted` means MailApp accepted the send; it does **not** prove final inbox receipt.
+
+These checks are especially important after changing Vercel environment variables or updating `Code.gs` (which must be redeployed as a **new Apps Script version**). The repository's emulator tests use a mock relay and do not send real production emails. For privacy, do not share recipient addresses, queued payloads, action URLs or secrets.
 
 ## Step 8 — Check live delivery using your own test accounts
 
