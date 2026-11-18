@@ -322,7 +322,7 @@ test('mobile custom quote and WhatsApp links show without an expandable box',()=
 test('mobile seller header offers one WhatsApp message action and reviews are inset',()=>{
   const detail=read('src/components/product-detail-client.tsx');
   const start=detail.indexOf('className="mt-5 md:hidden"');
-  const end=detail.indexOf('className="mt-4 hidden min-h-14"',start);
+  const end=detail.indexOf('className="mt-4 hidden min-h-14',start);
   assert.ok(start>=0 && end>start, 'seller profile row exists');
   const sellerRow=detail.slice(start,end);
   assert.match(sellerRow,/aria-label=\{'Message ' \+ sellerName \+ ' on WhatsApp'\}/);
