@@ -12,7 +12,9 @@ test('native-style mobile header retains the original desktop header styling', (
   const header=fs.readFileSync('src/components/header.tsx','utf8');
   assert.match(header,/sticky top-0 z-40 border-b border-\[#e9e2d8\]/);
   assert.match(header,/shadow-\[0_3px_18px/);
-  assert.match(header,/rounded-b-\[26px\] bg-\[#874a28\]/);
+  assert.match(header,/rounded-b-\[28px\] bg-\[#754328\]/);
+  assert.match(header,/className="brand-wordmark block w-fit/);
+  assert.match(header,/Made with care in Kerala/);
   assert.match(header,/md:block sticky top-0/);
   assert.doesNotMatch(header,/border-b-0 bg-background shadow-none/);
 });

@@ -58,3 +58,31 @@ test('iOS and Android PWA safe areas and original icons remain supported',()=>{
   assert.match(css,/prefers-reduced-motion: reduce/);
   assert.match(css,/pwa-bottom-nav/);
 });
+
+test('refined mobile cards use real product metadata and 44px cart touch targets',()=>{
+  const legacy=read('src/components/product-card.tsx');
+  const seller=read('src/components/seller-product-card.tsx');
+  for(const card of [legacy,seller]){
+    assert.match(card,/min-h-\[124px\]/);
+    assert.match(card,/h-11 w-11 shrink-0/);
+    assert.match(card,/text-\[10px\] font-medium uppercase/);
+    assert.match(card,/showPrice/);
+    assert.doesNotMatch(card,/4\.9|special discount|40%/i);
+  }
+  assert.match(seller,/p\.availability === 'made-to-order'/);
+  assert.match(seller,/onClick=\{\(\) => addToBag\(p\)\}/);
+  assert.match(legacy,/addToCart\(product\)/);
+});
+
+test('mobile product page visibly shows selected price and honors requested safe areas',()=>{
+  const detail=read('src/components/product-detail-client.tsx');
+  const header=read('src/components/header.tsx');
+  assert.match(detail,/md:hidden"><p className="text-\[25px\] font-bold/);
+  assert.match(detail,/formatPrice\(selectedPrice\)/);
+  assert.match(detail,/gallery\.select\(n\)/);
+  assert.match(detail,/aria-label="Select weight or size"/);
+  assert.match(header,/Made with care in Kerala/);
+  assert.match(header,/aria-label="Browse products and category filters"/);
+  assert.match(header,/className="sr-only">Search products<\/button>/);
+  assert.match(header,/rounded-t-\[22px\]/);
+});
