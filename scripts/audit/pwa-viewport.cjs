@@ -105,17 +105,22 @@ const mocks={
        const orderSpacing=await page.evaluate(()=>{
          const notes=[...document.querySelectorAll('details')].find(x=>x.querySelector('summary')?.textContent?.includes('Add a note'));
          const actions=document.getElementById('purchase-actions');
+         const controls=document.querySelector('[data-testid="product-order-controls"]');
          const extra=document.querySelector('[aria-label="Additional ordering options"]');
          const quote=extra?.querySelector('a[href^="/custom-orders"]');
          const whats=extra?.querySelector('a[href^="https://wa.me/"]');
-         if(!notes||!actions||!extra||!quote)return null;
+         if(!notes||!actions||!extra||!quote||!controls)return null;
          const n=notes.getBoundingClientRect(),act=actions.getBoundingClientRect(),q=quote.getBoundingClientRect(),w=whats?.getBoundingClientRect();
+         const purchaseButtons=[...actions.querySelectorAll('button')];
+         const left=purchaseButtons[0]?.getBoundingClientRect(),right=purchaseButtons[1]?.getBoundingClientRect();
          return {noteGap:act.top-n.bottom,quoteGap:q.top-act.bottom,whatsGap:w?w.top-q.bottom:null,
+           purchaseGap:left&&right?right.left-left.right:null,verticalGap:getComputedStyle(controls).rowGap,
            quoteHeight:q.height,whatsHeight:w?.height??null,
            extraWidth:extra.getBoundingClientRect().width,viewportWidth:document.documentElement.clientWidth,
            notesOpen:notes.open,hasOtherDetails:!!extra.querySelector('details')};
        });
        assert.ok(orderSpacing,name+' '+width+' ordering controls missing');
+       assert.equal(orderSpacing.verticalGap,'16px',name+' '+width+' ordering wrapper needs 16px gap');
        assert.ok(orderSpacing.noteGap>=12,name+' '+width+' notes too close: '+JSON.stringify(orderSpacing));
        assert.ok(orderSpacing.quoteGap>=12,name+' '+width+' custom quote too close: '+JSON.stringify(orderSpacing));
        if(orderSpacing.whatsGap!==null)assert.ok(orderSpacing.whatsGap>=8,name+' '+width+' WhatsApp too close: '+JSON.stringify(orderSpacing));
@@ -123,6 +128,7 @@ const mocks={
        assert.ok(Math.abs(orderSpacing.noteGap-16)<=2,name+' '+width+' note/purchase gap is not 16px: '+JSON.stringify(orderSpacing));
        assert.ok(Math.abs(orderSpacing.quoteGap-16)<=2,name+' '+width+' purchase/quote gap is not 16px: '+JSON.stringify(orderSpacing));
        if(orderSpacing.whatsGap!==null)assert.ok(Math.abs(orderSpacing.whatsGap-16)<=2,name+' '+width+' quote/WhatsApp gap is not 16px: '+JSON.stringify(orderSpacing));
+       assert.ok(orderSpacing.purchaseGap!==null && Math.abs(orderSpacing.purchaseGap-16)<=2,name+' '+width+' bag/buy buttons need a 16px gap: '+JSON.stringify(orderSpacing));
        assert.ok(orderSpacing.quoteHeight>=44,name+' '+width+' quote button undersized');
        if(orderSpacing.whatsHeight!==null)assert.ok(orderSpacing.whatsHeight>=44,name+' '+width+' WhatsApp button undersized');
        assert.ok(orderSpacing.extraWidth<=orderSpacing.viewportWidth,name+' '+width+' ordering controls overflow');
