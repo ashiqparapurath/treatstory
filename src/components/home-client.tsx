@@ -31,7 +31,7 @@ function HomePageContent() {
   if (error) return <LoadError retry={retry} error={error} />;
   if (isLoading) return <ProductGridSkeleton count={8} />;
   if (!products?.length) return null;
-  return <ProductGridContainer products={products} />;
+  return <ProductGridContainer products={products} mobileCompact />;
 }
 
 function BannerCarousel() {
@@ -47,7 +47,11 @@ function BannerCarousel() {
   useEffect(()=>{if(!firstLoaded||!banners?.length)return;setRequested(previous=>new Set([...previous,active,(active+1)%banners.length]));},[active,firstLoaded,banners?.length]);
 
   if (isLoading) return <Skeleton className="h-[clamp(200px,54vw,236px)] w-full rounded-[24px] sm:h-64 md:h-72" />;
-  if (!banners || banners.length === 0) return null;
+  if (!banners || banners.length === 0) return <div className="relative flex min-h-[166px] items-center overflow-hidden rounded-[22px] bg-[#f2e5d7] px-5 md:hidden">
+    <div className="absolute inset-y-0 right-0 w-[55%] opacity-70"><HeroImage alt="Homemade bakes and handmade creations"/></div>
+    <div className="absolute inset-0 bg-gradient-to-r from-[#f2e5d7] via-[#f2e5d7]/95 to-transparent"/>
+    <div className="relative z-10 max-w-[67%]"><p className="text-[10px] font-semibold text-[#95643f]">Made with care</p><h2 className="mt-2 text-[19px] font-semibold leading-6 text-[#34251b]">A little something lovely.</h2><Link href="/products" className="mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[#874a28] px-3.5 text-[11px] font-semibold text-white">Explore collection<ArrowRight className="h-3.5 w-3.5"/></Link></div>
+  </div>;
 
   return (
     <Carousel setApi={setApi} className="w-full" opts={{ align: "start", loop: true }}>
@@ -92,7 +96,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col overflow-hidden bg-background">
       <Header />
-      <main className="flex-1">
+      <main className="flex-1"><h1 className="sr-only md:hidden">TreatStory — discover home bakes and handmade creations in Kerala</h1>
         <section className="section-shell hidden pb-10 pt-9 md:block sm:pb-10 sm:pt-8 lg:pb-12 lg:pt-10">
           <div className="grid items-center gap-7 md:grid-cols-[0.95fr_1.05fr] md:gap-8 lg:gap-10">
             <div className="relative z-10 order-1 min-w-0 max-w-xl pb-0 md:pb-0">

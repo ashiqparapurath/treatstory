@@ -11,10 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
-interface ProductGridContainerProps { products: Product[]; hasMore?: boolean; loadingMore?: boolean; loadMore?: () => Promise<void>; externalSearchTerm?: string; }
+interface ProductGridContainerProps { products: Product[]; hasMore?: boolean; loadingMore?: boolean; loadMore?: () => Promise<void>; externalSearchTerm?: string; mobileCompact?: boolean; }
 interface ProductGridProps extends ProductGridContainerProps { categories: string[]; initialCategory: string | null; }
 
-function ProductGrid({ products, categories, initialCategory, hasMore, loadingMore, loadMore, externalSearchTerm }: ProductGridProps) {
+function ProductGrid({ products, categories, initialCategory, hasMore, loadingMore, loadMore, externalSearchTerm, mobileCompact }: ProductGridProps) {
   const [ownSearchTerm, setOwnSearchTerm] = useState('');
   const searchTerm = externalSearchTerm ?? ownSearchTerm;
   const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'All');
@@ -36,7 +36,7 @@ function ProductGrid({ products, categories, initialCategory, hasMore, loadingMo
 
   return (
     <div>
-      <div className="mb-7 flex flex-col gap-4 border-b border-[#e9e2d8] pb-6 lg:mb-9 lg:flex-row lg:items-center lg:justify-between">
+      <div className={`mb-7 flex-col gap-4 border-b border-[#e9e2d8] pb-6 lg:mb-9 lg:flex-row lg:items-center lg:justify-between ${mobileCompact ? "hidden md:flex" : "flex"}`}>
         {externalSearchTerm === undefined && <div className="relative w-full lg:max-w-[340px]">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -64,13 +64,13 @@ function ProductGrid({ products, categories, initialCategory, hasMore, loadingMo
         </div>
       </div>
 
-      <div className="mb-5 flex items-center justify-between">
+      <div className={`mb-5 items-center justify-between ${mobileCompact ? "hidden md:flex" : "flex"}`}>
         <p className="text-xs text-muted-foreground">{sku ? 'Matching product code ' + sku : <><span className="font-semibold text-foreground">{filteredProducts.length}</span> pieces to explore</>}</p>
         <p className="hidden text-[10px] uppercase tracking-[0.16em] text-muted-foreground sm:block">Curated for everyday living</p>
       </div>
 
       {sku ? <SkuSearchResult sku={sku} /> : filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-2 gap-x-3 gap-y-7 sm:gap-x-5 sm:gap-y-9 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-x-5 sm:gap-y-9 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
           {filteredProducts.slice(0, visibleCount).map((product) => <ProductCard key={product.id} product={product} />)}
         </div>
       ) : (

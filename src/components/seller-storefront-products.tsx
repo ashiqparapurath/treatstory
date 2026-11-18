@@ -74,11 +74,11 @@ export function SellerStorefrontProducts({ limitCount, searchTerm }: { limitCoun
   if (error) return <LoadError retry={retry} error={error} />;
   if (isLoading) return <ProductGridSkeleton count={limitCount || 8} />;
   if (!data?.length) return null;
-  return <section className="space-y-6">
-    <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a68a64]">From independent creators</p><h2 className="mt-2 text-2xl font-medium tracking-tight sm:text-3xl">Made with a little more love</h2></div><span className="inline-flex items-center gap-2 text-xs text-muted-foreground"><Store className="h-4 w-4" />TreatStory sellers</span></div>
+  return <section className="space-y-4 md:space-y-6">
+    <div className={limitCount ? "hidden flex-wrap items-end justify-between gap-4 md:flex" : "flex flex-wrap items-end justify-between gap-4"}><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a68a64]">From independent creators</p><h2 className="mt-2 text-2xl font-medium tracking-tight sm:text-3xl">Made with a little more love</h2></div><span className="inline-flex items-center gap-2 text-xs text-muted-foreground"><Store className="h-4 w-4" />TreatStory sellers</span></div>
     {!limitCount && searchTerm === undefined && <div className="relative max-w-sm"><Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search creator products by name or SKU…" aria-label="Search creator products" className="rounded-full bg-white pl-11" /></div>}
     {sku ? <SkuSearchResult sku={sku} /> : visible.length === 0 ? <p className="text-sm text-muted-foreground">{loadingMore?'Loading matches…':hasMore?'No matches on this page. Choose Show more creations.':'No matching creator products.'}</p> : (
-      <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-3 sm:gap-x-5 sm:gap-y-8 lg:grid-cols-4">
         {visible.slice(0, visibleCount).map(p => <SellerProductCard key={p.id} product={p}
           addToBag={product => preparePurchase(product, 'cart')}
           buyNow={product => preparePurchase(product, 'direct')}
@@ -86,7 +86,7 @@ export function SellerStorefrontProducts({ limitCount, searchTerm }: { limitCoun
       </div>
     )}
     {!sku&&!limitCount&&(visibleCount<visible.length||hasMore)&&<button type="button" disabled={loadingMore} onClick={async()=>{if(visibleCount>=visible.length)await loadMore();setVisibleCount(n=>n+24);}} className="min-h-11 rounded-xl border px-5 text-sm">{loadingMore?'Loading creations…':'Show more creations'}</button>}
-    <p className="text-xs text-muted-foreground">Buy now takes you directly to checkout. Cash on Delivery is subject to seller confirmation.</p>
+    <p className="hidden text-xs text-muted-foreground md:block">Buy now takes you directly to checkout. Cash on Delivery is subject to seller confirmation.</p>
     <Dialog open={!!pendingChoice} onOpenChange={open => {
       if (!open) { setPendingChoice(null); setSelectedWeightIndex(null); }
     }}>

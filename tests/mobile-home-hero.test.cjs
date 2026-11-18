@@ -8,10 +8,12 @@ test('mobile homepage hides decorative hero, keeps copy and desktop hero', () =>
   for(const marker of ['<HeroImage alt=', 'Little finds.', 'Lovely stories.', 'Explore collection', '<BannerCarousel />', '<SellerStorefrontProducts']) assert.ok(source.includes(marker),marker);
 });
 
-test('original header divider remains visible on mobile and desktop', () => {
+test('native-style mobile header retains the original desktop header styling', () => {
   const header=fs.readFileSync('src/components/header.tsx','utf8');
   assert.match(header,/sticky top-0 z-40 border-b border-\[#e9e2d8\]/);
   assert.match(header,/shadow-\[0_3px_18px/);
+  assert.match(header,/rounded-b-\[26px\] bg-\[#874a28\]/);
+  assert.match(header,/md:block sticky top-0/);
   assert.doesNotMatch(header,/border-b-0 bg-background shadow-none/);
 });
 
@@ -26,7 +28,8 @@ test('mobile homepage keeps both hero buttons in one row on compact screens', ()
  assert.match(page,/<span className="hero-cta-full" aria-hidden="true">Explore collection<\/span>/);
  assert.match(page,/href="\/about"[^>]*shrink-0[^>]*whitespace-nowrap[^>]*>Our story<\/Link>/);
  assert.doesNotMatch(page,/min-\[400px\]:flex-row/);
- assert.match(page,/sm:text-3xl">The latest from TreatStory/);
+ assert.match(page,/<span className="hidden md:inline">The latest from TreatStory/);
+ assert.match(page,/<span className="md:hidden">Special offers/);
 });
 
 test('Explore label uses the available hero-column space instead of screen width', () => {
