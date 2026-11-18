@@ -30,12 +30,12 @@ export function SellerProductCard({ product: p, addToBag, buyNow }: {
     : (p.stockQuantity ?? 0) >= minOrder;
   const available = p.availability !== 'unavailable' && p.showPrice &&
     (p.availability === 'made-to-order' || enoughStock);
-  return <article className="group relative min-w-0 overflow-hidden rounded-[26px] border border-white/35 bg-[#2b211d] shadow-[0_12px_24px_rgba(35,29,23,0.17)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(35,29,23,0.12)] sm:rounded-[22px] sm:border sm:border-white/70 sm:bg-[#f1eee9] sm:shadow-[0_5px_18px_rgba(35,29,23,0.065)]">
-    <div className="relative aspect-[3/4] touch-pan-y overflow-hidden rounded-[26px] bg-[#efe7dd] sm:aspect-[3/4] sm:rounded-none" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
+  return <article className="group relative min-w-0 overflow-hidden rounded-[22px] border border-white/70 bg-[#2b211d] shadow-[0_5px_18px_rgba(35,29,23,0.065)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(35,29,23,0.12)] sm:rounded-[22px] sm:border sm:border-white/70 sm:bg-[#f1eee9] sm:shadow-[0_5px_18px_rgba(35,29,23,0.065)]">
+    <div className="relative aspect-[3/4] touch-pan-y overflow-hidden rounded-[22px] bg-[#efe7dd] sm:aspect-[3/4] sm:rounded-none" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
       <div key={gallery.index} className={`absolute inset-0 ${gallery.direction === 'next' ? 'treatstory-photo-next' : 'treatstory-photo-previous'}`}>
         <ProductImage src={photos[gallery.index]} alt={`${p.name} — photo ${gallery.index + 1}`} />
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[72%] rounded-b-[26px] bg-gradient-to-t from-[#16110f]/95 via-[#251c17]/55 to-transparent sm:h-3/4 sm:rounded-none sm:from-black/85 sm:via-black/20"/>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[72%] rounded-b-[22px] bg-gradient-to-t from-[#16110f]/95 via-[#251c17]/55 to-transparent sm:h-3/4 sm:rounded-none sm:from-black/85 sm:via-black/20"/>
       <Link href={`/product/seller:${encodeURIComponent(p.id)}`} aria-label={`View details and photos for ${p.name}`} className="absolute inset-0 z-10 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#c9ae85]"/>
       
       <div className="absolute right-2 top-2 z-20 drop-shadow-sm"><FavoriteToggle compact productId={'seller:' + p.id} title={p.name} imageUrl={photos[0]} /></div>

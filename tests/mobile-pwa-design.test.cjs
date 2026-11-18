@@ -64,8 +64,8 @@ test('mobile product cards show real prices with rounded image bottoms and 44px 
  const seller=read('src/components/seller-product-card.tsx');
  for(const card of [legacy,seller]){
    assert.match(card,/aspect-\[3\/4\]/);
-   assert.match(card,/rounded-\[26px\] border border-white\/35/);
-   assert.match(card,/rounded-b-\[26px\] bg-gradient-to-t/);
+   assert.match(card,/rounded-\[22px\] border border-white\/70/);
+   assert.match(card,/rounded-b-\[22px\] bg-gradient-to-t/);
    assert.match(card,/pointer-events-none absolute inset-x-2\.5 bottom-3 z-20 flex flex-col gap-1\.5 text-white sm:hidden/);
    assert.match(card,/grid-cols-\[44px_minmax\(0,1fr\)\]/);
    assert.match(card,/h-11 w-11 shrink-0/);
@@ -106,7 +106,7 @@ test('mobile card text is directly over the photo rather than inside a glass rec
   assert.match(card,/shadow-\[0_12px_24px/);
   assert.match(card,/inset-x-2\.5 bottom-3 z-20 flex flex-col gap-1\.5/);
   assert.doesNotMatch(card,/mobile-card-glass/);
-  assert.match(card,/rounded-\[26px\] bg-\[#efe7dd\]/);
+  assert.match(card,/rounded-\[22px\] bg-\[#efe7dd\]/);
  }
 });
 
