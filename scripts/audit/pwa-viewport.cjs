@@ -8,7 +8,7 @@ const placeholder=encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" vi
 const mocks={
  'next/link':"import React from 'react';export default function Link({href,children,...rest}){return React.createElement('a',{href,...rest},children)}",
  'next/navigation':"export function usePathname(){return window.location.pathname};export function useParams(){return {id:'seller:sample-handmade'}};export function useRouter(){return {push(){}}}",
- '@/firebase':"export function useUser(){return {user:null,isUserLoading:false}};export function useAccountRole(){return {role:null,isRoleLoading:false,roleError:null}};export function useFirestore(){return {}}",
+ '@/firebase':"export function useUser(){return {user:null,isUserLoading:false}};export function useAccountRole(){return {role:null,isRoleLoading:false,roleError:null}};const sharedDb={};export function useFirestore(){return sharedDb}",
  '@/context/cart-context':"export function useCart(){return {cartCount:2,addToCart(){},startDirectCheckout(){}}};export function cartLineId(){return 'sample-line'}",
  '@/hooks/use-mobile-attention':"export function useMobileAttention(){return {orders:false,applications:false}}",
  '@/components/more-navigation-trail':"export function MoreNavigationTrail(){return null}",
