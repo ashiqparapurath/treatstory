@@ -93,12 +93,22 @@ const { chromium, firefox, webkit } = require('playwright');
             const confirmation = seller.getByRole('alertdialog',{name:'Discard your changes?'});
             await confirmation.getByRole('button',{name:'Keep editing'}).waitFor();
             assert.equal(await confirmation.getByRole('button',{name:'Keep editing'}).evaluate(el=>el===document.activeElement),true);
+            // Radix animates the alert dialog for 200ms; measure settled
+            // geometry across viewport changes, not an intermediate zoom frame.
             for (const width of [320,360,375,390,430,1280]) {
               await seller.setViewportSize({width,height:568});
-              assert.ok(await confirmation.evaluate(el=>{
+              await seller.waitForTimeout(250);
+              const layout = await confirmation.evaluate(el => {
                 const rect=el.getBoundingClientRect();
-                return rect.left>=0 && rect.right<=innerWidth+1 && el.scrollWidth<=el.clientWidth+1;
-              }));
+                const controls=[...el.querySelectorAll('button')].map(button=>{
+                  const bounds=button.getBoundingClientRect();
+                  return {name:button.textContent?.trim(),left:bounds.left,right:bounds.right};
+                });
+                return {left:rect.left,right:rect.right,width:innerWidth,scrollWidth:el.scrollWidth,
+                  clientWidth:el.clientWidth,controls,
+                  fits:rect.left>=-1 && rect.right<=innerWidth+1 && el.scrollWidth<=el.clientWidth+1};
+              });
+              assert.ok(layout.fits,engine+' discard dialog '+width+'px: '+JSON.stringify(layout));
             }
             await seller.setViewportSize({width:320,height:568});
             await confirmation.getByRole('button',{name:'Keep editing'}).click();
