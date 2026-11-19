@@ -163,7 +163,8 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
   }
 
   const panel = 'rounded-2xl border border-[#e6dfd5] bg-white p-5 sm:p-6';
-  return <form onSubmit={save} className="min-w-0 space-y-4 pb-8 sm:space-y-5">
+  return <>
+    <form onSubmit={save} className="min-w-0 space-y-4 pb-8 sm:space-y-5">
     <div role="tablist" aria-label="Store settings sections" className="grid grid-cols-3 gap-1 rounded-2xl border border-[#e6dfd5] bg-white p-1.5">
       {([{id:'profile',label:'Profile',icon:Store},{id:'delivery',label:'Delivery',icon:Truck},{id:'operations',label:'Operations',icon:Clock3}] as const).map(tab => <button key={tab.id} role="tab" type="button" id={`store-settings-tab-${tab.id}`} aria-selected={settingsTab === tab.id} aria-controls={`store-settings-${tab.id}`} onClick={() => setSettingsTab(tab.id)} className={`flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-semibold transition sm:text-sm ${settingsTab === tab.id ? 'bg-[#29251f] text-white' : 'text-[#766a5c] hover:bg-[#f5f0e9]'}`}><tab.icon className="h-4 w-4 shrink-0" />{tab.label}</button>)}
     </div>
@@ -264,6 +265,9 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
       <div><p className="flex items-center gap-2 font-semibold text-[#8b3b31]"><ShieldCheck className="h-4 w-4" />Account & privacy</p><p className="mt-1 text-xs text-muted-foreground">You can request permanent account deletion from your profile. Open orders must be completed first.</p></div>
       <Link href="/account#delete-account" className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-full border border-[#d9b4ad] px-4 text-xs font-semibold text-[#8b3b31]">Manage account</Link>
     </div>}
-  </form>
-      {seller.businessCategory==='home-bakery'&&<SellerCompliance/>};
+    </form>
+    {settingsTab === 'profile' && seller.businessCategory === 'home-bakery' && (
+      <SellerCompliance initialLicenseNumber={seller.fssaiNumber || seller.foodLicenseNumber || ''} />
+    )}
+  </>;
 }
