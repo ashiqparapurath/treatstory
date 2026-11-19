@@ -263,16 +263,16 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
           </details>
             </section>
             <section data-step hidden={step !== 1} className="space-y-4">
-              <p className="text-xs leading-5 text-muted-foreground">Choose images straight from your phone or computer. Upload up to ten photos securely; the first photo becomes the cover.</p>
+              <p className="text-xs leading-5 text-muted-foreground">Add up to 10 photos. Choose JPG, PNG or WebP files up to 2 MB each.</p>
               <div className="flex flex-wrap items-center gap-3">
                 <label htmlFor="sellerPhotoFiles" className={`flex min-h-28 w-full justify-center cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-[#bfae95] bg-[#f8f5f0] px-5 text-xs font-semibold text-[#594b39] ${uploading || busy || !enabled || photoCount >= 10 ? 'pointer-events-none opacity-50' : ''}`}><ImagePlus className="h-4 w-4" />{uploading ? 'Uploading photos…' : 'Upload product photos'}</label>
                 <input id="sellerPhotoFiles" className="sr-only" type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={uploading || busy || !enabled || photoCount >= 10} onChange={e => { const files = [...(e.target.files ?? [])]; e.target.value = ''; if (files.length) void onUploadPhotos(files); }} />
                 <span role="status" aria-live="polite" className="text-xs text-muted-foreground">{uploadProgress || `${photoCount} / 10 photos`}</span>
               </div>
-              {photos.length > 0 && <ul className="grid gap-3 sm:grid-cols-2">{photos.map((url,i) =>
-                <li key={url} className="min-w-0 overflow-hidden rounded-xl bg-white">
-                  <img src={url} alt={i === 0 ? 'Cover photo' : 'Product photo ' + (i + 1)} className="aspect-[2/1] w-full object-cover"/>
-                  <div className="flex flex-wrap items-center justify-between gap-1 px-2">
+              {photos.length > 0 && <ul className="grid gap-2 sm:grid-cols-2">{photos.map((url,i) =>
+                <li key={url} className={'min-w-0 overflow-hidden rounded-xl bg-white ' + (i ? 'flex items-center gap-2 px-2 sm:block sm:px-0' : 'sm:col-span-2')}>
+                  <img src={url} alt={i === 0 ? 'Cover photo' : 'Product photo ' + (i + 1)} className={i ? 'size-16 shrink-0 rounded-lg object-cover sm:aspect-[2/1] sm:h-auto sm:w-full' : 'max-h-56 w-full aspect-[2/1] object-cover'}/>
+                  <div className="flex flex-1 flex-wrap items-center justify-between gap-1 px-2">
                     {i === 0 ? <span className="text-xs font-semibold">Cover photo</span> :
                       <button type="button" disabled={uploading} className="min-h-11 text-xs underline" onClick={() => arrangePhotos([url, ...photos.filter(photo => photo !== url)])}>Set as cover</button>}
                     <div className="flex">
@@ -332,14 +332,14 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
           </details>
             </section>
             <section data-step hidden={step !== 3} className="space-y-4 break-words">
-              {photos[0] && <img src={photos[0]} alt="Listing cover" className="max-h-64 w-full rounded-2xl object-contain bg-[#eee9e2]"/>}
+              {photos[0] && <img src={photos[0]} alt="Listing cover" className="aspect-[2/1] max-h-64 w-full rounded-2xl object-contain bg-[#eee9e2]"/>}
               <div><p className="text-xs text-muted-foreground">{[storeName,draft.category].filter(Boolean).join(' · ')}</p>
                 <h3 className="mt-1 text-xl font-semibold">{draft.name}</h3>
                 <p className="mt-2 whitespace-pre-line text-sm">{draft.description}</p></div>
               <div className="rounded-xl bg-white p-4 text-sm">
                 {draft.weightOptions.length ? <ul>{draft.weightOptions.map((w,i) => <li key={i} className="flex flex-wrap justify-between gap-2 py-1">
                   <span>{w.value} {w.unit}</span><span>₹{w.price} · {w.stockQuantity || draft.stockQuantity || '0'} in stock</span></li>)}</ul> : <p>₹{draft.price}</p>}
-                <p className="mt-2 capitalize">{draft.availability.replaceAll('-', ' ')} · {draft.stockQuantity || '0'} shared stock</p>
+                <p className="mt-2 capitalize">{draft.availability.replaceAll('-', ' ')}{(!draft.weightOptions.length || draft.weightOptions.some(size => !size.stockQuantity)) && ` · ${draft.stockQuantity || '0'} in stock`}</p>
                 {editing && <p className="mt-2">Current listing status: {draft.status}</p>}
                 {sku && <ProductSkuCopy sku={sku}/>}
               </div>
@@ -347,10 +347,10 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
             {fieldError && <p role="alert" className="mt-3 text-sm text-red-800">{fieldError}</p>}
             {saveError && <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">{saveError}</p>}
           </div>
-          <footer className="flex shrink-0 flex-wrap items-center gap-2 border-t border-[#e8e0d5] bg-white px-4 pt-2 pb-[max(.5rem,env(safe-area-inset-bottom))] sm:px-7">
-            {step > 0 && <Button type="button" variant="ghost" disabled={blocked} onClick={() => move(step-1)}>Back</Button>}
+          <footer className="flex shrink-0 items-center gap-2 border-t border-[#e8e0d5] bg-white px-4 pt-2 pb-[max(.5rem,env(safe-area-inset-bottom))] sm:px-7">
+            {step > 0 && <Button type="button" variant="ghost" aria-label="Back" className={step === 3 ? 'size-11 shrink-0 p-0' : ''} disabled={blocked} onClick={() => move(step-1)}>{step === 3 ? <ArrowLeft size={18}/> : 'Back'}</Button>}
             {step < 3 ? <Button type="submit" disabled={blocked} className="ml-auto rounded-full px-6">Continue</Button> :
-              <div className="ml-auto flex flex-wrap gap-2">
+              <div className="ml-auto grid min-w-0 grid-cols-2 gap-2 [&_button]:px-2 sm:[&_button]:px-4">
                 <Button type="button" variant="outline" disabled={blocked || !enabled} onClick={() => onSubmit('draft')}>Save as Draft</Button>
                 <Button type="button" disabled={blocked || !enabled} onClick={() => onSubmit('published')}>{busy ? 'Saving…' : editing && draft.status === 'published' ? 'Save changes' : 'Publish Product'}</Button>
               </div>}

@@ -56,6 +56,9 @@ const { chromium, firefox, webkit } = require('playwright');
         }
         const seller = await browser.newPage({viewport:{width:320,height:568}});
         try {
+          await seller.route('https://images.example.com/**', route => route.fulfill({
+            contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAIAAAA7ljmRAAAAFElEQVR4nGPct3oSAwwwMSABFA4ASg8CAQx4gxcAAAAASUVORK5CYII=','base64')
+          }));
           for (const mode of ['ai-add','ai-edit']) {
             let calls = 0;
             await seller.route('**/api/seller/description', route => {
@@ -131,6 +134,7 @@ const { chromium, firefox, webkit } = require('playwright');
             await checkWizardWidths();
             await next.click();
             await seller.getByText('Step 4 of 4').waitFor();
+            await seller.getByAltText('Listing cover').evaluate(img => img.decode());
             await checkWizardWidths();
             await seller.getByRole('button',{name: mode === 'ai-edit' ? 'Save changes' : 'Save as Draft'}).click();
             assert.equal(await seller.getByTestId('saved').textContent(),(mode === 'ai-edit' ? 'published' : 'draft') + '/Edited cocoa cookies.');
