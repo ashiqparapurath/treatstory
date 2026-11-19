@@ -50,8 +50,8 @@ test('image links can be added individually with validation and gallery actions'
 test('seller page has distinctive product imagery, accurate trial terms and benefits',()=>{
  const page=read('src/app/become-a-seller/page.tsx');
  for(const marker of ['function CreatorHero()','function SellerBenefits()','function HowItWorks()','function SellerFaq()','Made by you.','Loved by many.','A space of your own','Stay close to every order','SELLER_TRIAL_MESSAGE'])assert.ok(page.includes(marker),marker);
- assert.match(page,/our-story-creators\.svg/);
- assert.match(page,/alt="Illustration of cakes/);
+ assert.match(page,/creator-hero-editorial-20261119\.webp/);
+ assert.match(page,/alt="Artisan berry cake, pastries, handmade ceramics/);
  assert.match(page,/Home bakers must provide FSSAI registration or licence details/);
  assert.match(page,/Sellers across India can apply/);
 });

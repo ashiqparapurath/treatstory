@@ -24,8 +24,8 @@ test('new seller landing is a fully rebuilt editorial page that respects mobile 
   assert.match(page,/function SellerFaq\(\)/);
   assert.match(page,/Made by you\./);
   assert.match(page,/Loved by many\./);
-  assert.match(page,/src="\/img\/our-story-creators\.svg"/);
-  assert.match(page,/alt="Illustration of cakes, ceramics, embroidery and handmade gifts/);
+  assert.match(page,/src="\/img\/creator-hero-editorial-20261119\.webp"/);
+  assert.match(page,/alt="Artisan berry cake, pastries, handmade ceramics and embroidered linen/);
   assert.match(page,/lg:grid-cols-\[minmax\(0,1fr\)_minmax\(0,0\.95fr\)\]/);
   assert.match(page,/-mx-4 overflow-hidden bg-\[#252a25\]/);
   assert.match(page,/sm:mx-0 sm:rounded-\[28px\]/);
