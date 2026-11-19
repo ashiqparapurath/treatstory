@@ -13,6 +13,8 @@ const approvedApplicationSchema = z.object({
   contactEmail: z.email().max(254),
   contactPhone: z.string().min(5).max(40),
   description: z.string().min(1).max(2000),
+  instagramUrl: z.string().optional(),
+  fssaiNumber: z.string().optional(),
   approvalPlan: z.enum(['three_months', 'six_months', 'full']),
 }).passthrough();
 
@@ -54,6 +56,8 @@ export async function activateApprovedSeller(
     contactEmail: details.contactEmail,
     contactPhone: details.contactPhone,
     description: details.description,
+    instagramUrl: details.instagramUrl || '',
+    fssaiNumber: details.fssaiNumber || '',
     logoUrl: '',
     coverUrl: '',
     isOpen: true,

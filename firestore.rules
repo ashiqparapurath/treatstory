@@ -214,10 +214,12 @@ service cloud.firestore {
         resource.data.status == 'active' &&
         resource.data.accessEndsAt > request.time &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'description', 'logoUrl', 'contactPhone', 'whatsappNumber', 'isOpen', 'updatedAt',
+          'description', 'logoUrl', 'contactPhone', 'whatsappNumber', 'instagramUrl', 'fssaiNumber', 'isOpen', 'updatedAt',
           'deliveryMethods', 'deliveryPincodes', 'deliveryCoverage', 'deliveryFee', 'pickupAddress',
           'deliverySlots', 'dailyOrderCapacity', 'acceptanceHours', 'businessCity', 'businessState'
         ]) &&
+        request.resource.data.get('fssaiNumber', '').matches('^([0-9]{14})?$') &&
+        request.resource.data.get('instagramUrl', '').matches('^(https://www[.]instagram[.]com/[a-zA-Z0-9._]{1,30}/)?$') &&
         (!('logoUrl' in request.resource.data) ||
           (request.resource.data.logoUrl is string &&
             request.resource.data.logoUrl.size() <= 2048 &&

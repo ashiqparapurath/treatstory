@@ -1,5 +1,6 @@
 'use client';
 
+import { instagramProfileUrl, fssaiNumberPattern } from '@/lib/seller-profile-details';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import type { User } from 'firebase/auth';
@@ -19,6 +20,8 @@ import { SellerCompliance } from '@/components/seller-compliance';
 import { StoreShareButton } from '@/components/store-share-button';
 
 type StoreDraft = {
+  instagramUrl: string;
+  fssaiNumber: string;
   logoUrl: string;
   description: string;
   contactPhone: string;
@@ -40,6 +43,8 @@ const version = (value: unknown) => (value as { toMillis?: () => number } | unde
 
 function initialDraft(seller: Seller): StoreDraft {
   return {
+    instagramUrl: seller.instagramUrl || '',
+    fssaiNumber: seller.fssaiNumber ?? seller.foodLicenseNumber ?? '',
     logoUrl: seller.logoUrl || '',
     description: seller.description || '',
     contactPhone: seller.contactPhone || '',
@@ -109,6 +114,9 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!active || busy || uploading || !dirty) return;
+    const instagramUrl = instagramProfileUrl(draft.instagramUrl);
+    if (instagramUrl === null) return setError('Enter an Instagram profile link, such as https://www.instagram.com/yourstudio/.');
+    if (draft.fssaiNumber && !fssaiNumberPattern.test(draft.fssaiNumber)) return setError('Enter a 14-digit FSSAI registration number.');
     const phone = draft.whatsappNumber.replace(/\D/g, '');
     const codes = draft.deliveryCoverage === 'selected-pincodes' ? [...new Set(draft.deliveryPincodes.split(/[\s,]+/).map(x => x.trim()).filter(Boolean))] : [];
     const slots = [...new Set(draft.deliverySlots.split(/\r?\n/).map(x => x.trim()).filter(Boolean))];
@@ -133,6 +141,8 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
         if (!record || record.ownerUid !== user.uid || record.status !== 'active') throw new Error('Your seller access is unavailable. Refresh and try again.');
         if (loadedVersion.current !== null && version(record.updatedAt) !== loadedVersion.current) throw new Error('Store settings changed in another window. Refresh to review those changes before saving.');
         tx.update(ref, {
+          instagramUrl,
+          ...(draft.fssaiNumber !== (record.fssaiNumber ?? record.foodLicenseNumber ?? '') && { fssaiNumber: draft.fssaiNumber }),
           logoUrl: draft.logoUrl, description: draft.description, contactPhone: draft.contactPhone,
           whatsappNumber: phone, isOpen: draft.isOpen, deliveryMethods: draft.deliveryMethods,
           businessCity: draft.businessCity.trim(), businessState: draft.businessState.trim(),
@@ -176,26 +186,30 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
     </div>
 
     <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a68a64]">Store details</p><h2 className="mt-1 text-lg font-semibold text-[#29251f]">How buyers see your business</h2></div><span className="inline-flex items-center gap-2 rounded-full border border-[#e4dbd0] bg-white px-3 py-1.5 text-xs text-[#776858]"><span className={draft.isOpen ? 'h-2 w-2 rounded-full bg-emerald-500' : 'h-2 w-2 rounded-full bg-amber-500'} />{draft.isOpen ? 'Accepting orders' : 'Store paused'}</span></div>
-    <div className="grid min-w-0 gap-4 lg:grid-cols-2 lg:gap-5">
+    <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2 lg:gap-5">
       <section className={panel}>
-        <div className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-[#9c7c52]" /><h3 className="text-lg font-semibold">Your store story</h3></div>
-        <p className="mt-2 text-xs leading-5 text-muted-foreground">Share what makes your creations special.</p>
+        <div className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-[#9c7c52]" /><h3 className="text-lg font-semibold">Store profile</h3></div>
+
         <Label htmlFor="sellerDescription" className="mt-5 block text-sm">About your store</Label>
-        <Textarea id="sellerDescription" rows={4} maxLength={2000} value={draft.description} disabled={!active} onChange={e => update('description', e.target.value)} placeholder="Tell your buyers what makes your creations special…" className="mt-2 resize-y" />
+        <Textarea id="sellerDescription" rows={3} maxLength={2000} value={draft.description} disabled={!active} onChange={e => update('description', e.target.value)} placeholder="Tell your buyers what makes your creations special…" className="mt-2 resize-y" />
         <p className="mt-1 text-right text-[11px] text-muted-foreground">{draft.description.length}/2000</p>
+        <div className="mt-3 grid min-w-0 gap-3">
+          <div><Label htmlFor="sellerInstagram">Instagram profile link (optional)</Label>
+            <Input id="sellerInstagram" inputMode="url" autoCapitalize="none" maxLength={512} placeholder="https://www.instagram.com/yourstudio/" disabled={!active} value={draft.instagramUrl} onChange={e => update('instagramUrl', e.target.value)} className="mt-2" /></div>
+          <div><Label htmlFor="sellerFssai">FSSAI registration number (optional)</Label>
+            <Input id="sellerFssai" inputMode="numeric" maxLength={14} placeholder="14-digit registration number" disabled={!active} value={draft.fssaiNumber} onChange={e => update('fssaiNumber', e.target.value)} className="mt-2" /></div>
+        </div>
       </section>
       <section className={panel}>
         <div className="flex items-center gap-2"><Store className="h-5 w-5 text-[#9c7c52]" /><h3 className="text-lg font-semibold">Store contact & availability</h3></div>
-        <p className="mt-2 text-xs leading-5 text-muted-foreground">Make it easy for buyers to reach your business.</p>
-        <div className="mt-5 space-y-5">
-          <div><Label htmlFor="sellerBusinessName">Approved business name</Label><Input id="sellerBusinessName" value={seller.businessName} disabled className="mt-2 bg-[#faf8f4]" /></div>
+        <div className="mt-5 space-y-4">
           <div><Label htmlFor="sellerPhone">Contact phone</Label><Input id="sellerPhone" type="tel" maxLength={40} disabled={!active} value={draft.contactPhone} onChange={e => update('contactPhone', e.target.value)} className="mt-2" /></div>
           <div><Label htmlFor="sellerWhatsApp">WhatsApp business number</Label><Input id="sellerWhatsApp" type="tel" inputMode="tel" maxLength={20} placeholder="919876543210" disabled={!active} value={draft.whatsappNumber} onChange={e => update('whatsappNumber', e.target.value)} className="mt-2" /><p className="mt-1 text-xs text-muted-foreground">Include country code. Leave empty to hide WhatsApp.</p></div>
           <div className="grid gap-3 sm:grid-cols-2">
              <div><Label htmlFor="sellerBusinessCity">Business city / town</Label><Input id="sellerBusinessCity" maxLength={80} value={draft.businessCity} disabled={!active} onChange={e => update('businessCity',e.target.value)} placeholder="e.g. Pune" className="mt-2" /></div>
              <div><Label htmlFor="sellerBusinessState">State / union territory</Label><Input id="sellerBusinessState" maxLength={80} value={draft.businessState} disabled={!active} onChange={e => update('businessState',e.target.value)} placeholder="e.g. Maharashtra" className="mt-2" /></div>
            </div>
-           <label className="flex min-h-14 items-center justify-between gap-4 rounded-xl bg-[#f7f4ee] px-4 py-3 text-sm"><span><strong className="block font-medium">Accepting new orders</strong><span className="block text-xs text-muted-foreground">{draft.isOpen ? 'Your shop is open to buyers' : 'Your shop is temporarily paused'}</span></span><input type="checkbox" disabled={!active} checked={draft.isOpen} onChange={e => update('isOpen', e.target.checked)} className="h-5 w-5 accent-[#29251f]" /></label>
+           <div className="flex min-h-14 items-center justify-between gap-4 rounded-xl bg-[#f7f4ee] px-4 py-3 text-sm"><span><strong id="sellerAvailabilityText" className="block font-medium">Accepting new orders</strong><span className="block text-xs text-muted-foreground">{draft.isOpen ? 'Your shop is open to buyers' : 'Your shop is temporarily paused'}</span></span><input type="checkbox" aria-labelledby="sellerAvailabilityText" disabled={!active} checked={draft.isOpen} onChange={e => update('isOpen', e.target.checked)} className="h-5 w-5 accent-[#29251f]" /></div>
         </div>
       </section>
     </div>

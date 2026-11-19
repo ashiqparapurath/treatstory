@@ -84,6 +84,8 @@ export function SellerApplications() {
                   <p className="text-xs uppercase tracking-widest text-muted-foreground">{application.businessCategory}</p>
                   {(application.businessCity || application.businessState) && <p className="text-xs text-muted-foreground">Based in {[application.businessCity,application.businessState].filter(Boolean).join(', ')}</p>}
                   <p className="text-sm text-muted-foreground">{application.description}</p>
+                  {application.fssaiRegistered && <p className="text-sm">FSSAI registered{application.fssaiNumber ? ' · ' + application.fssaiNumber : ''}</p>}
+                  {application.instagramUrl && <p className="break-all text-sm">Instagram · {application.instagramUrl}</p>}
                   <p className="text-sm">{application.contactEmail} · {application.contactPhone}</p>
                   {!application.ownerUid && <p className="text-xs font-medium text-[#796242]">Guest application · You can approve now; seller access activates after email verification</p>}
                   {reviewIssues[application.id] && <p role="alert" className="max-w-xl break-words rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950">{reviewIssues[application.id]}</p>}

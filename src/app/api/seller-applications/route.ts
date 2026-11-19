@@ -1,3 +1,4 @@
+import { instagramProfileUrl, fssaiNumberPattern } from '@/lib/seller-profile-details';
 import { createHash } from 'node:crypto';
 import { Timestamp } from 'firebase-admin/firestore';
 import { after, type NextRequest } from 'next/server';
@@ -27,9 +28,16 @@ const applicationSchema = z
       .transform((v) => v.toLowerCase()),
     contactPhone: z.string().trim().min(5).max(40),
     description: z.string().trim().min(1).max(2000),
+    instagramUrl: z.string().max(512).default('').transform(value => instagramProfileUrl(value)).pipe(z.string()),
+    fssaiRegistered: z.boolean().default(false),
+    fssaiNumber: z.union([z.literal(''), z.string().regex(fssaiNumberPattern)]).default(''),
     website: z.string().max(0).default(''),
   })
-  .strict();
+  .strict()
+  .refine(data => !data.fssaiRegistered || fssaiNumberPattern.test(data.fssaiNumber), {
+    path: ['fssaiNumber'],
+    message: 'Enter the 14-digit FSSAI registration number.',
+  });
 export async function POST(request: NextRequest) {
   try {
     const input = applicationSchema.safeParse(
@@ -80,6 +88,7 @@ export async function POST(request: NextRequest) {
       const submittedAt=Timestamp.now();
       tx.create(ref, {
         ...data,
+        fssaiNumber: data.fssaiRegistered ? data.fssaiNumber : '',
         ownerUid: uid,
         status: 'pending',
         submittedAt,

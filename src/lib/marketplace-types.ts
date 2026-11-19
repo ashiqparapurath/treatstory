@@ -4,6 +4,7 @@ export type SellerCategory = 'home-bakery' | 'art' | 'handmade' | 'other';
 import type { SellerApprovalPlan } from '@/lib/seller-policy';
 
 export interface SellerApplication {
+  fssaiRegistered?: boolean;
   id: string;
   ownerUid: string;
   businessName: string;
@@ -11,6 +12,8 @@ export interface SellerApplication {
   businessCity?: string;
   businessState?: string;
   contactEmail: string;
+  instagramUrl?: string;
+  fssaiNumber?: string;
   contactPhone: string;
   description: string;
   status: 'pending' | 'approved' | 'rejected';
@@ -32,6 +35,8 @@ export interface Seller {
   businessState?: string;
   description: string;
   contactEmail: string;
+  instagramUrl?: string;
+  fssaiNumber?: string;
   contactPhone: string;
   foodLicenseNumber?: string;
   foodLicenseVerifiedUntil?: unknown;

@@ -48,6 +48,7 @@ async function run() {
     assert.equal(current.data()?.ownerUid, uid);
     tx.update(document, {
       logoUrl: validLogo, description: 'Digital Seller', contactPhone: '9999999999',
+      fssaiNumber: '01234567890123', instagramUrl: 'https://www.instagram.com/yourstudio/',
       whatsappNumber: '919999999999', isOpen: true,
       deliveryMethods: ['delivery'], deliveryPincodes: [], deliveryFee: 0,
       pickupAddress: '', deliverySlots: [], dailyOrderCapacity: 0,
@@ -59,6 +60,10 @@ async function run() {
   assert.equal(saved?.description, 'Digital Seller');
   console.log('PASS seller may save logo plus all storefront settings transactionally');
 
+  for (const invalid of [{ fssaiNumber: '123' }, { instagramUrl: 'https://example.com/profile' }, { foodLicenseNumber: '01234567890123' }]) {
+    await assert.rejects(() => updateDoc(document, { ...invalid, updatedAt: serverTimestamp() }), denied);
+  }
+  await updateDoc(document, { fssaiNumber: '', instagramUrl: '', updatedAt: serverTimestamp() });
   await assert.rejects(
     () => updateDoc(document, { logoUrl: 'https://example.com/unsafe.png', updatedAt: serverTimestamp() }),
     denied, 'non-Cloudinary logo URL must be rejected',

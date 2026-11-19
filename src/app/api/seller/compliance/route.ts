@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
         });
         // Editing credentials withdraws the previous verification.
         tx.update(sellerRef, {
+          fssaiNumber: data.licenseNumber,
           foodLicenseNumber: data.licenseNumber,
           foodLicenseVerifiedUntil: null,
           updatedAt: now,
