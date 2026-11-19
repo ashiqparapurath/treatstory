@@ -63,7 +63,7 @@ test('seller applications collect city/state and keep older applications compati
   for(const field of ['businessName:businessName.trim()','businessCity:businessCity.trim()','businessState:businessState.trim()','contactEmail:contactEmail.trim()']) assert.ok(apply.includes(field),field);
   assert.match(api,/businessCity: z.string\(\).trim\(\).min\(2\).max\(80\).optional\(\)/);
   assert.match(api,/businessState: z.string\(\).trim\(\).min\(2\).max\(80\).optional\(\)/);
-  assert.match(api,/businessCity: application.businessCity \|\| ''/);
+  assert.match(read('src/lib/server/seller-activation.ts'),/businessCity: application.businessCity \|\| ''/);
   assert.match(model,/businessCity\?: string;/);
   assert.match(settings,/id="sellerBusinessCity"/);
   assert.match(settings,/id="sellerBusinessState"/);
