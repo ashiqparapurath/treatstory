@@ -48,3 +48,19 @@ Run `npm ci`, `npm test`, `npm run typecheck`, then `npm run build` before submi
 **Deployment:** Vercel deploys the Next.js application, not Firebase rules or indexes. Follow the [production hardening rollout](docs/production-hardening-rollout.md) for data migrations, rules, seller verification and operational checks. The Matrix chat system is not yet approved for activation.
 
 **Assets:** Do not delete generated `public/icons/`, `public/splash/` or `public/img/hero/` files based only on similar names: app installations, cached manifests and generated metadata may reference versioned paths.
+
+### Seller AI description suggestions
+
+Add and Edit listing share an optional Gemini preview. Sellers choose a language and style, review the facts and apply the text explicitly. Product saves do not call Google. Only public listing text and sizes are sent. Exclude personal or confidential information. Google's unpaid services may use prompts and responses for product improvement and human review. See [Gemini API terms](https://ai.google.dev/gemini-api/terms).
+
+Set the server-only variables in Vercel and redeploy. The route reuses the existing Firebase Admin configuration and checks the active seller document and access expiry. Use an AI Studio project without billing for free-only operation. TreatStory does not change billing, retry provider calls or select a fallback model.
+
+| Variable | Default or purpose |
+| --- | --- |
+| GEMINI_API_KEY | Required to generate. Use a server-side Gemini API key restricted to the Gemini API. |
+| GEMINI_MODEL | gemini-2.5-flash-lite. Confirm model access in your project before rollout. |
+| GEMINI_SELLER_DAILY_LIMIT | 5 attempts per authenticated seller per UTC day |
+| GEMINI_PLATFORM_DAILY_LIMIT | 100 attempts across the marketplace per UTC day |
+| GEMINI_PLATFORM_MINUTE_LIMIT | 5 attempts across the marketplace per UTC clock minute |
+
+Limits accept nonnegative integers. Zero disables that allowance. Firestore reserves each attempt in one transaction before contacting Google. Failed provider calls count because their actual usage can be uncertain. Quota lookups and invalid input consume no generations. The server overwrites fixed counter documents without storing prompts or responses. These limits are independent of Google's changing quotas. Confirm current [rate limits](https://ai.google.dev/gemini-api/docs/rate-limits) and [model availability](https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash-lite).

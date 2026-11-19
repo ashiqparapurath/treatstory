@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, type Dispatch, type FormEvent, type SetStateAction } from 'react';
-import { Plus, Trash2, X, Sparkles, ChevronDown, ImagePlus, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Plus, Trash2, X, ChevronDown, ImagePlus, ArrowLeft, ArrowRight } from 'lucide-react';
 import type { MarketplaceProduct } from '@/lib/marketplace-types';
+import type { User } from 'firebase/auth';
+import { SellerDescriptionSuggestion } from './seller-description-suggestion';
 import { ProductSkuCopy } from '@/components/product-sku-copy';
 import { parseProductImageUrls } from '@/lib/product-image-urls';
 import { Button } from '@/components/ui/button';
@@ -33,21 +35,8 @@ export const emptyDraft: ProductDraft = {
 const presets = ['Home bakery', 'Cakes', 'Cookies', 'Desserts', 'Art', 'Paintings', 'Handmade crafts', 'Gifts', 'Candles', 'Accessories'];
 const units: WeightUnit[] = ['g', 'kg', 'ml', 'l', 'pieces'];
 
-export function suggestProductDescription(d: Pick<ProductDraft, 'name' | 'category' | 'availability' | 'preparationDays' | 'careInstructions'> & Partial<Pick<ProductDraft, 'ingredients' | 'weightOptions' | 'customizationOptions' | 'storageInstructions'>>) {
-  const name = d.name.trim();
-  if (name.length < 2) return '';
-  const details = [name + '.'];
-  if (d.weightOptions?.length) details.push('Available sizes: ' + d.weightOptions.filter(w => w.value).map(w => `${w.value} ${w.unit}`).join(', ') + '.');
-  if (d.ingredients?.trim()) details.push('Ingredients: ' + d.ingredients.trim() + '.');
-  if (d.customizationOptions?.trim()) details.push('Personalization options: ' + d.customizationOptions.trim().split(/\n/).filter(Boolean).join(', ') + '.');
-  if (d.availability === 'made-to-order') details.push('Made to order.');
-  if (Number(d.preparationDays) > 0) details.push(`Preparation time: ${Number(d.preparationDays)} day(s).`);
-  if (d.careInstructions.trim()) details.push('Care: ' + d.careInstructions.trim() + '.');
-  if (d.storageInstructions?.trim()) details.push('Storage: ' + d.storageInstructions.trim() + '.');
-  return details.join(' ').slice(0, 2000);
-}
-
-export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, setDraft, categories, onClose, onSubmit, onUploadPhotos, uploading, uploadProgress, saveError }: {
+export function SellerProductEditor({ user, open, editing, sku, busy, enabled, draft, setDraft, categories, onClose, onSubmit, onUploadPhotos, uploading, uploadProgress, saveError }: {
+  user: Pick<User, 'getIdToken'> | null;
   sku?: string;
   saveError?: string;
   open: boolean;
@@ -63,7 +52,6 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
   uploading: boolean;
   uploadProgress: string;
 }) {
-  const [suggestion, setSuggestion] = useState('');
   const [newPhotoLink, setNewPhotoLink] = useState('');
   const [photoLinkError, setPhotoLinkError] = useState('');
   const [categoryOpen, setCategoryOpen] = useState(false);
@@ -142,9 +130,9 @@ export function SellerProductEditor({ open, editing, sku, busy, enabled, draft, 
               <label className="block space-y-1.5 text-xs font-semibold">{draft.weightOptions.length ? 'Single-product fallback price (₹) · not used for sized variants' : 'Price (₹)'}<Input disabled={draft.weightOptions.length > 0} required={!draft.weightOptions.length} min={0} max={10000000} step="0.01" type="number" inputMode="decimal" value={draft.price} onChange={e => set('price',e.target.value)} /><span className="block text-[11px] font-normal text-muted-foreground">{draft.weightOptions.length ? 'Enter the selling price beside EACH size below. The starting price is calculated automatically from the smallest variant price.' : 'For a single-price product, enter the selling price here. To set prices for 500 g, 1 kg, etc., use the pricing section below.'}</span></label>
             </div>
             <div className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2"><Label htmlFor="creatorDescription">Description</Label><Button type="button" size="sm" variant="outline" className="h-8 rounded-full text-[11px]" disabled={draft.name.trim().length < 2} onClick={() => setSuggestion(suggestProductDescription(draft))}><Sparkles className="mr-1 h-3.5 w-3.5" />Suggest description</Button></div>
+              <Label htmlFor="creatorDescription">Description</Label>
               <Textarea id="creatorDescription" required maxLength={2000} rows={3} placeholder="Tell buyers about the product, materials, portions and special touches…" value={draft.description} onChange={e => set('description',e.target.value)} className="resize-y" />
-              {suggestion && <div className="rounded-xl bg-[#f3eee6] p-3"><p className="text-xs leading-5 text-[#5e5040]">{suggestion}</p><div className="mt-2 flex gap-2"><Button type="button" size="sm" onClick={() => { set('description',suggestion); setSuggestion(''); }}>Use suggestion</Button><Button type="button" size="sm" variant="outline" onClick={() => setSuggestion('')}>Dismiss</Button></div><p className="mt-2 text-[10px] text-muted-foreground">Template suggestion based only on the details you've entered; review its accuracy before publishing.</p></div>}
+              {enabled && user && <SellerDescriptionSuggestion user={user} draft={draft} onUse={value => set('description', value)} />}
             </div>
             <div className="border-t border-[#eee8df] pt-4"><p className="mb-3 text-xs font-semibold text-[#786450]">Availability & publishing</p><div className="grid items-start gap-3 sm:grid-cols-2">
               <div className="flex min-w-0 flex-col gap-1.5 text-xs font-medium"><Label htmlFor="seller-editor-availability" className="text-xs leading-5">Availability</Label>

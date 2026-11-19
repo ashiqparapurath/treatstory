@@ -371,7 +371,7 @@ function SellerContent() {
       </main>
     </div>
     <ConfirmActionDialog open={!!pendingDelete} onOpenChange={open=>{if(!open)setPendingDelete(null);}} title="Delete this product?" description={`${pendingDelete?.name || 'This product'} will be removed from your shop. This cannot be undone.`} confirmLabel="Delete product" pendingLabel="Deleting…" destructive busy={busy} error={deleteError} onConfirm={()=>pendingDelete?removeProduct(pendingDelete):undefined} />
-    {formOpen && <SellerProductEditor saveError={saveError} open={formOpen} editing={!!editing} sku={editing?.sku} busy={busy} enabled={active} draft={draft} setDraft={setDraft} categories={[...new Set((products ?? []).map(p => p.category))]} onClose={() => { if (!uploadingPhotos && !busy) { setFormOpen(false); setUploadProgress(''); } }} onSubmit={saveProduct} onUploadPhotos={uploadProductPhotos} uploading={uploadingPhotos} uploadProgress={uploadProgress} />}
+    {formOpen && <SellerProductEditor key={user?.uid} user={user} saveError={saveError} open={formOpen} editing={!!editing} sku={editing?.sku} busy={busy} enabled={active} draft={draft} setDraft={setDraft} categories={[...new Set((products ?? []).map(p => p.category))]} onClose={() => { if (!uploadingPhotos && !busy) { setFormOpen(false); setUploadProgress(''); } }} onSubmit={saveProduct} onUploadPhotos={uploadProductPhotos} uploading={uploadingPhotos} uploadProgress={uploadProgress} />}
   </div>;
 }
 
