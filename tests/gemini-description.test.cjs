@@ -21,11 +21,12 @@ test('quota and generation require an ID token', async () => {
 test('SDK sends one bounded request and handles malformed, blocked and unavailable results', async t => {
   const description = 'Cocoa cookies in a 250 g size.';
   const ok = text => ({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text }] } }] });
-  for (const [body, httpStatus, expected] of [
+  for (const [body, httpStatus, expected, code] of [
     [ok(JSON.stringify({ description })), 200, 200],
     [ok('invalid JSON'), 200, 502], [ok('{"description":"<script>invalid</script>"}'), 200, 502],
     [{ candidates: [{ finishReason: 'MAX_TOKENS' }] }, 200, 502], [{}, 200, 502],
-    [{ error: { message: 'provider detail' } }, 429, 429], [{}, 404, 503], [{}, 503, 503], [{}, 504, 504],
+    [{ error: { message: 'provider detail' } }, 429, 429], [{}, 400, 503, 'AI_REQUEST_REJECTED'], [{}, 403, 503, 'AI_ACCESS_DENIED'],
+    [{}, 404, 503, 'AI_MODEL_UNAVAILABLE'], [{}, 503, 503, 'AI_PROVIDER_UNAVAILABLE'], [{}, 504, 504],
   ]) {
     const fetch = t.mock.method(globalThis, 'fetch', async (_url, init) => {
       const request = JSON.parse(init.body);
@@ -35,7 +36,7 @@ test('SDK sends one bounded request and handles malformed, blocked and unavailab
     });
     const result = generateDescription(input, 'mock-only', 4);
     if (expected === 200) assert.equal(await result, description);
-    else await assert.rejects(result, e => e.status === expected && e.details.remaining === 4 && !e.message.includes('provider detail'));
+    else await assert.rejects(result, e => e.status === expected && e.details.code === code && e.details.remaining === 4 && !e.message.includes('provider detail'));
     assert.equal(fetch.mock.callCount(), 1);
     fetch.mock.restore();
   }

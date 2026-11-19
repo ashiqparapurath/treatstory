@@ -15,11 +15,11 @@ const instructions = [
 const resultSchema = z.strictObject({ description: z.string().trim().min(10).max(2000) });
 
 export async function generateDescription(input: DescriptionRequest, apiKey: string, remaining: number) {
-  const client = new GoogleGenAI({ apiKey, vertexai: false });
+  const client = new GoogleGenAI({ apiKey: apiKey.trim(), vertexai: false });
   const signal = AbortSignal.timeout(15000);
   try {
     const result = await client.models.generateContent({
-      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite',
+      model: process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash-lite',
       contents: JSON.stringify(input),
       config: {
         systemInstruction: instructions, maxOutputTokens: 1600, temperature: 0.5,
@@ -47,6 +47,24 @@ export async function generateDescription(input: DescriptionRequest, apiKey: str
     if (status === 429) throw new ApiError(429, 'Google’s AI quota is busy. Try again later.', details);
     if (error instanceof SyntaxError)
       throw new ApiError(502, 'Google returned an unusable description. You can continue editing.', details);
-    throw new ApiError(503, 'AI suggestions are unavailable. You can still write and save your description.', details);
+    // Only fixed categories and numeric HTTP status are safe to disclose or log.
+    // Raw SDK errors can contain request content and credentials.
+    let code = 'AI_CONNECTION_FAILED';
+    let message = 'Could not reach Google AI.';
+    if (status === 401 || status === 403) {
+      code = 'AI_ACCESS_DENIED';
+      message = 'Google denied access to AI suggestions.';
+    } else if (status === 404) {
+      code = 'AI_MODEL_UNAVAILABLE';
+      message = 'The selected AI model is unavailable for this project.';
+    } else if (status === 400) {
+      code = 'AI_REQUEST_REJECTED';
+      message = 'Google rejected the AI request. Support can check the key and model settings.';
+    } else if (typeof status === 'number' && status >= 500) {
+      code = 'AI_PROVIDER_UNAVAILABLE';
+      message = 'Google AI is temporarily unavailable.';
+    }
+    console.warn('Seller description generation failed', { code, status: Number.isInteger(status) ? status : null });
+    throw new ApiError(503, message + ' You can still save your product.', { remaining, code });
   }
 }
