@@ -17,7 +17,7 @@ type Submission = {
   licenseNumber: string;
   expiresOn: string;
 };
-export function SellerCompliance({ admin = false }: { admin?: boolean }) {
+export function SellerCompliance({ admin = false, initialLicenseNumber = '' }: { admin?: boolean; initialLicenseNumber?: string }) {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -128,7 +128,7 @@ export function SellerCompliance({ admin = false }: { admin?: boolean }) {
         <form onSubmit={submit} className="mt-4 space-y-3">
           <label className="block text-xs">
             FSSAI number
-            <Input name="license" required pattern="[0-9]{14}" maxLength={14} />
+            <Input name="license" inputMode="numeric" defaultValue={initialLicenseNumber} required pattern="[0-9]{14}" maxLength={14} />
           </label>
           <label className="block text-xs">
             Expiry date

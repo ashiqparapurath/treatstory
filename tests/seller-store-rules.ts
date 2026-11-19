@@ -56,6 +56,8 @@ async function run() {
     });
   });
   const saved = (await getDoc(document)).data();
+  assert.equal(saved?.fssaiNumber, '01234567890123');
+  assert.equal(saved?.instagramUrl, 'https://www.instagram.com/yourstudio/');
   assert.equal(saved?.logoUrl, validLogo);
   assert.equal(saved?.description, 'Digital Seller');
   console.log('PASS seller may save logo plus all storefront settings transactionally');
@@ -64,6 +66,9 @@ async function run() {
     await assert.rejects(() => updateDoc(document, { ...invalid, updatedAt: serverTimestamp() }), denied);
   }
   await updateDoc(document, { fssaiNumber: '', instagramUrl: '', updatedAt: serverTimestamp() });
+  const cleared = (await getDoc(document)).data();
+  assert.equal(cleared?.fssaiNumber, '');
+  assert.equal(cleared?.instagramUrl, '');
   await assert.rejects(
     () => updateDoc(document, { logoUrl: 'https://example.com/unsafe.png', updatedAt: serverTimestamp() }),
     denied, 'non-Cloudinary logo URL must be rejected',

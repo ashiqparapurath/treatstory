@@ -168,12 +168,13 @@ test('activation persists the admin-selected access plan with existing seller fi
   };
   for (const plan of ['three_months', 'six_months', 'full']) {
     await activation.activateApprovedSeller(tx, db, {
-      businessName: 'Studio', businessCategory: 'art', contactEmail: 'guest@example.com',
+      businessName: 'Studio', businessCategory: 'home-bakery', fssaiNumber: '01234567890123', contactEmail: 'guest@example.com',
       contactPhone: '1234567890', description: 'Original artwork', approvalPlan: plan,
     }, 'seller-uid', now);
     const seller = writes.at(-1);
     assert.equal(seller.path, 'sellers/seller-uid');
     assert.equal(seller.data.status, 'active');
+    assert.equal(seller.data.fssaiNumber, '01234567890123');
     assert.equal(seller.data.approvalPlan, plan);
     assert.equal(seller.data.accessType, plan === 'full' ? 'full' : 'trial');
     assert.equal(seller.data.accessStartsAt.toMillis(), now.toMillis());
@@ -182,4 +183,31 @@ test('activation persists the admin-selected access plan with existing seller fi
   assert.equal(notices.length, 3);
   assert.equal(sets.length, 3, 'each activation reserves its store slug');
   assert.equal(writes.length, 3, 'each test activation creates one seller');
+});
+
+test('submitting the saved registration and expiry requests review for the signed-in baker', async () => {
+  const uid = 'fixture-baker';
+  const records = new Map([['sellers/' + uid, { businessName: 'Fixture Bakery', fssaiNumber: '01234567890123' }]]);
+  const db = {
+    doc: path => path,
+    runTransaction: fn => fn({
+      get: async path => ({ exists: records.has(path), data: () => records.get(path) }),
+      set: (path, data) => records.set(path, data),
+      update: (path, data) => records.set(path, { ...records.get(path), ...data }),
+    }),
+  };
+  const { POST } = load('src/app/api/seller/compliance/route.ts', {
+    '@/lib/server/firebase-admin': { verifiedUser: async () => ({ uid, db }), ApiError, safeResponse },
+    '@/lib/server/request-body': { readJsonBody: request => request.json() },
+  });
+  const response = await POST(new Request('https://shop.example.com/api/seller/compliance', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'submit', licenseNumber: records.get('sellers/' + uid).fssaiNumber, expiresOn: '2099-06-30' }),
+  }));
+  assert.equal(response.status, 200);
+  const submission = records.get('seller_compliance/' + uid);
+  assert.equal(submission.status, 'pending');
+  assert.equal(submission.licenseNumber, '01234567890123');
+  assert.equal(submission.expiresOn, '2099-06-30');
+  assert.equal(records.get('sellers/' + uid).foodLicenseVerifiedUntil, null);
 });
