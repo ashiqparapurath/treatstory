@@ -32,7 +32,7 @@ test('admin selection is required; a guest can be approved without a Firebase us
     description: 'Homemade cakes', submittedAt: now,
   };
   const deliveries = [], audits = [];
-  const ref = path => ({ path });
+  const ref = path => ({ path, get: async () => ({ exists: true, data: () => data }) });
   const db = {
     doc: ref,
     collection: name => ({ doc: id => ref(name + '/' + (id || 'audit')) }),
