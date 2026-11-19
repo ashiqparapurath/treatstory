@@ -89,6 +89,25 @@ const { chromium, firefox, webkit } = require('playwright');
             await panel.getByText(/3 generations left today/).waitFor();
             await preview.fill('Edited cocoa cookies.');
             await panel.getByText('Use Description').click();
+            await seller.getByRole('button',{name:'Close product editor'}).click();
+            const confirmation = seller.getByRole('alertdialog',{name:'Discard your changes?'});
+            await confirmation.getByRole('button',{name:'Keep editing'}).waitFor();
+            assert.equal(await confirmation.getByRole('button',{name:'Keep editing'}).evaluate(el=>el===document.activeElement),true);
+            for (const width of [320,360,375,390,430,1280]) {
+              await seller.setViewportSize({width,height:568});
+              assert.ok(await confirmation.evaluate(el=>{
+                const rect=el.getBoundingClientRect();
+                return rect.left>=0 && rect.right<=innerWidth+1 && el.scrollWidth<=el.clientWidth+1;
+              }));
+            }
+            await seller.setViewportSize({width:320,height:568});
+            await confirmation.getByRole('button',{name:'Keep editing'}).click();
+            await confirmation.waitFor({state:'hidden'});
+            assert.equal(await seller.locator('#creatorDescription').inputValue(),'Edited cocoa cookies.');
+            await seller.evaluate(()=>history.back());
+            await confirmation.waitFor();
+            await seller.keyboard.press('Escape');
+            await confirmation.waitFor({state:'hidden'});
             await panel.getByText('Suggest with AI').click();
             await panel.getByRole('alert').waitFor();
             async function checkWizardWidths() {
@@ -139,6 +158,9 @@ const { chromium, firefox, webkit } = require('playwright');
             await seller.getByRole('button',{name: mode === 'ai-edit' ? 'Save changes' : 'Save as Draft'}).click();
             assert.equal(await seller.getByTestId('saved').textContent(),(mode === 'ai-edit' ? 'published' : 'draft') + '/Edited cocoa cookies.');
             await seller.setViewportSize({width:320,height:568});
+            await seller.getByRole('button',{name:'Close product editor'}).click();
+            await confirmation.getByRole('button',{name:'Discard changes'}).click();
+            await seller.getByRole('dialog').waitFor({state:'hidden'});
             assert.equal(calls,3);
             await seller.unroute('**/api/seller/description');
           }

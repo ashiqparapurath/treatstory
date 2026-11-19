@@ -34,12 +34,9 @@ export function CartDrawer() {
   const totalAmount = itemsWithPrice.reduce((total, item) => total + item.price * item.quantity, 0);
 
   const handleSendEnquiry = () => {
-    if (!enquirySettings) {
-      alert("Enquiry service is not configured. Please contact support.");
-      return;
-    }
+    if (!enquirySettings?.whatsappNumber) return;
 
-    const businessPhoneNumber = enquirySettings.whatsappNumber || '97430147881';
+    const businessPhoneNumber = enquirySettings.whatsappNumber;
     
     const itemStrings = cartItems.map(item => {
       const priceString = item.showPrice ? ` - ${formatPrice(item.price * item.quantity)}` : '';
@@ -113,6 +110,7 @@ export function CartDrawer() {
                     <Send className="ml-2 h-4 w-4" />
                 </Button>
              )}
+            {!isLoadingSettings && !enquirySettings?.whatsappNumber && <p role="status" className="mt-2 text-sm text-muted-foreground">WhatsApp enquiries are unavailable. Please contact support.</p>}
             <Button variant="outline" onClick={clearCart} className="w-full mt-2">Clear Cart</Button>
           </div>
         </>

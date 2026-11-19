@@ -21,8 +21,12 @@ const fixtureUser = { getIdToken: async () => 'fixture-token' };
 function DescriptionEditor() {
   const [draft, setDraft] = React.useState({ ...emptyDraft, name: 'Cocoa cookies', category: 'Cookies', price: '100', description: 'Original description' });
   const [saved, setSaved] = React.useState('');
-  return <><output data-testid="saved">{saved}</output><SellerProductEditor user={fixtureUser} open editing={mode === 'ai-edit'}
-    busy={false} enabled draft={draft} setDraft={setDraft} categories={[]} onClose={() => {}}
+  const [open, setOpen] = React.useState(true);
+  React.useLayoutEffect(() => {
+    if (!history.state?.sellerWizard) history.pushState({sellerWizard:true}, '', location.href);
+  }, []);
+  return <><output data-testid="saved">{saved}</output><SellerProductEditor user={fixtureUser} open={open} editing={mode === 'ai-edit'}
+    busy={false} enabled draft={draft} setDraft={setDraft} categories={[]} onClose={() => setOpen(false)}
     onSubmit={status => setSaved(status + '/' + draft.description)} onUploadPhotos={async files => { setDraft(d => ({ ...d, imageUrls: files.map(f => 'https://images.example.com/' + f.name).join('\n') })); }} uploading={false} uploadProgress="" /></>;
 }
 const view = mode?.startsWith('ai-') ? <DescriptionEditor/> : mode === 'dropdown' ? dropdownLayout : mode === 'dialog' ? <Dialog open><DialogContent><DialogTitle>Delivery details</DialogTitle><DialogDescription>Review your contact details.</DialogDescription>{fields}</DialogContent></Dialog> : mode === 'alert' ? <AlertDialog open><AlertDialogContent><AlertDialogTitle>Account confirmation</AlertDialogTitle><AlertDialogDescription>{long}</AlertDialogDescription>{fields}</AlertDialogContent></AlertDialog> : mode === 'support' ? <SupportChatWorkspace tickets={[]} title="Your support requests" secure={false} backHref="/account" backLabel="Back to account" newConversation={fields} topNotice={<a href={'mailto:'+long}>{long}</a>} renderConversation={()=>null}/> : <main style={{maxWidth:700,margin:'auto',padding:16}}>{fields}</main>;

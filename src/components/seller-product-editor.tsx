@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, type Dispatch, type SetStateAction } from 
 import { Plus, Trash2, X, ChevronDown, ImagePlus, ArrowLeft, ArrowRight } from 'lucide-react';
 import type { MarketplaceProduct } from '@/lib/marketplace-types';
 import type { User } from 'firebase/auth';
+import { ConfirmActionDialog } from './confirm-action-dialog';
 import { SellerDescriptionSuggestion } from './seller-description-suggestion';
 import * as Dialog from '@radix-ui/react-dialog';
 import { isPublicProductImageUrl } from '@/lib/seller-product-validation';
@@ -62,6 +63,7 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [categoryActiveIndex, setCategoryActiveIndex] = useState(0);
   const [step, setStep] = useState(0);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [fieldError, setFieldError] = useState('');
   const initial = useRef(draft);
   const dirty = JSON.stringify(editing ? initial.current : emptyDraft) !== JSON.stringify(draft) || !!newPhotoLink;
@@ -99,18 +101,23 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
     const openedAt = window.location.href;
     function handleBack() {
       if (window.location.href !== openedAt || window.history.state?.sellerWizard) return;
-      if (!blocked && step === 0 && (!dirty || window.confirm('Discard your unsaved listing changes?'))) {
+      if (!blocked && step === 0 && !dirty && !confirmDiscard) {
         onClose();
         return;
       }
       window.history.pushState({ sellerWizard: true }, '', openedAt);
-      if (!blocked && step > 0) move(step - 1);
+      if (blocked) return;
+      if (confirmDiscard) setConfirmDiscard(false);
+      else if (step > 0) move(step - 1);
+      else setConfirmDiscard(true);
     }
     window.addEventListener('popstate', handleBack);
     return () => window.removeEventListener('popstate', handleBack);
-  }, [step, dirty, blocked, onClose]);
+  }, [step, dirty, blocked, confirmDiscard, onClose]);
   function close() {
-    if (!blocked && (!dirty || window.confirm('Discard your unsaved listing changes?'))) onClose();
+    if (blocked || confirmDiscard) return;
+    if (dirty) setConfirmDiscard(true);
+    else onClose();
   }
   function move(next: number) {
     setFieldError('');
@@ -356,6 +363,9 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
               </div>}
           </footer>
         </form>
+        <ConfirmActionDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}
+          title="Discard your changes?" description="Your unsaved listing changes will be lost."
+          cancelLabel="Keep editing" confirmLabel="Discard changes" destructive onConfirm={onClose}/>
       </Dialog.Content>
     </Dialog.Portal>
   </Dialog.Root>;
