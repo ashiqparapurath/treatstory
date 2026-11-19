@@ -149,3 +149,36 @@ test('approval email goes directly to original guest contact email and includes 
   assert.match(deliveries[0][3].message, /6-month free trial/);
   assert.match(deliveries[0][3].href, /become-a-seller/);
 });
+
+test('activation persists the admin-selected access plan with existing seller fields and no client-controlled expiry', async () => {
+  const notices = [], writes = [], sets = [];
+  const policy = load('src/lib/seller-policy.ts');
+  const activation = load('src/lib/server/seller-activation.ts', {
+    '@/lib/server/firebase-admin': { ApiError },
+    '@/lib/server/mail': { queueNotification: (...args) => notices.push(args) },
+    '@/lib/server/store-slug': { storeSlug: (name, uid) => 'studio-' + uid },
+    '@/lib/seller-policy': policy,
+  });
+  const db = { doc: path => ({ path }) };
+  const tx = {
+    get: async () => ({ exists: false }),
+    set: (ref, data) => sets.push({ path: ref.path, data }),
+    create: (ref, data) => writes.push({ path: ref.path, data }),
+  };
+  for (const plan of ['three_months', 'six_months', 'full']) {
+    await activation.activateApprovedSeller(tx, db, {
+      businessName: 'Studio', businessCategory: 'art', contactEmail: 'guest@example.com',
+      contactPhone: '1234567890', description: 'Original artwork', approvalPlan: plan,
+    }, 'seller-uid', now);
+    const seller = writes.at(-1);
+    assert.equal(seller.path, 'sellers/seller-uid');
+    assert.equal(seller.data.status, 'active');
+    assert.equal(seller.data.approvalPlan, plan);
+    assert.equal(seller.data.accessType, plan === 'full' ? 'full' : 'trial');
+    assert.equal(seller.data.accessStartsAt.toMillis(), now.toMillis());
+    assert.equal(seller.data.accessEndsAt.toDate().toISOString(), policy.sellerApprovalEnd(now.toDate(), plan).toISOString());
+  }
+  assert.equal(notices.length, 3);
+  assert.equal(sets.length, 3, 'each activation reserves its store slug');
+  assert.equal(writes.length, 3, 'each test activation creates one seller');
+});
