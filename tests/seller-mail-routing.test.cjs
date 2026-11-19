@@ -13,7 +13,7 @@ function load(file,mocks,globals={}) {
 }
 
 test('seller submission queues receipt and admin email inside transaction for guest, password and Google',async()=>{
-  let currentUid='',processCount=0;
+  let currentUid='',currentEmail='',processCount=0;
   const receipts=[],writes=[],afterTasks=[];
   class ApiError extends Error{constructor(status,message){super(message);this.status=status;}}
   const tx={
@@ -26,7 +26,7 @@ test('seller submission queues receipt and admin email inside transaction for gu
     doc:path=>({path}),
     runTransaction:async fn=>fn(tx),
   };
-  const auth={};
+  const auth={getUser:async()=>({email:currentEmail,emailVerified:true,disabled:false})};
   const mocks={
     'next/server':{after:cb=>afterTasks.push(cb)},
     '@/lib/server/firebase-admin':{
@@ -35,8 +35,7 @@ test('seller submission queues receipt and admin email inside transaction for gu
       safeResponse:error=>Response.json({error:error.message},{status:error.status||503}),
     },
     '@/lib/server/request-body':{readJsonBody:async r=>r.json()},
-    '@/lib/seller-policy':{sellerTrialEnd:()=>new Date()},
-    '@/lib/server/store-slug':{storeSlug:()=> 'sample'},
+    '@/lib/server/seller-activation':{activateApprovedSeller:async()=>{}},
     '@/lib/server/mail':{queueNotification(){},processMailQueue:async()=>{processCount++;return {configured:true,processed:2};}},
     '@/lib/server/seller-application-email':{
       sellerAdminMailRecipient:()=> 'admin@example.com',
@@ -46,6 +45,7 @@ test('seller submission queues receipt and admin email inside transaction for gu
         receipts.push({application,adminEmail});
       },
       queueRejectedSellerApplicationMail(){},
+      queueApprovedSellerApplicationMail(){},
     },
   };
   const {POST}=load('src/app/api/seller-applications/route.ts',mocks);
@@ -56,6 +56,7 @@ test('seller submission queues receipt and admin email inside transaction for gu
   };
   for(const [method,uid] of [['guest',''],['email-password','password-user'],['google','google-user']]){
     currentUid=uid;
+    currentEmail=method+'@example.com';
     const request=new Request('https://treatstory.vercel.app/api/seller-applications',{
       method:'POST',headers:{'content-type':'application/json',...(uid?{authorization:'Bearer fixture-token'}:{})},
       body:JSON.stringify({...body,contactEmail:method+'@example.com'}),
@@ -77,10 +78,10 @@ test('seller submission queues receipt and admin email inside transaction for gu
 test('seller review queue is server-driven; browser cannot duplicate a review email',()=>{
   const api=read('src/app/api/seller-applications/route.ts');
   const ui=read('src/components/admin/seller-applications.tsx');
-  assert.ok(api.includes('queueRejectedSellerApplicationMail(tx,db,{'))
-  assert.ok(api.includes('contactEmail:String(application.contactEmail)'))
-  assert.match(api,/template: 'seller_application_approved'/);
-  assert.match(api,/processMailQueue\(db,auth,3\)/);
+  assert.match(api,/queueRejectedSellerApplicationMail\(tx, db, \{/)
+  assert.match(api,/contactEmail: String\(application\.contactEmail\)/)
+  assert.match(api,/queueApprovedSellerApplicationMail\(tx, db/);
+  assert.match(api,/processMailQueue\(db, auth, 3\)/);
   assert.match(api,/queueNewSellerApplicationMails\(tx,db,\{id,\.\.\.data,submittedAt\},adminEmail\)/);
   assert.doesNotMatch(ui,/requestSellerMail\(user,'application'/);
   assert.match(ui,/retryLoad\(\)/);

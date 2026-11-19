@@ -1,6 +1,7 @@
 export type SellerStatus = 'pending' | 'active' | 'suspended' | 'expired' | 'rejected';
 export type SellerAccessType = 'trial' | 'full';
 export type SellerCategory = 'home-bakery' | 'art' | 'handmade' | 'other';
+import type { SellerApprovalPlan } from '@/lib/seller-policy';
 
 export interface SellerApplication {
   id: string;
@@ -16,6 +17,9 @@ export interface SellerApplication {
   submittedAt: unknown;
   reviewedAt?: unknown;
   reviewedBy?: string;
+  approvalPlan?: SellerApprovalPlan;
+  /** Absent until a verified account has claimed the approval. */
+  activatedAt?: unknown;
 }
 
 export interface Seller {
@@ -45,6 +49,7 @@ export interface Seller {
   acceptanceHours?: number;
   status: SellerStatus;
   accessType: SellerAccessType;
+  approvalPlan?: SellerApprovalPlan;
   accessStartsAt: unknown;
   accessEndsAt: unknown;
   createdAt: unknown;

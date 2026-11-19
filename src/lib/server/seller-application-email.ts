@@ -1,5 +1,6 @@
 import type { Firestore, Timestamp, Transaction } from 'firebase-admin/firestore';
 import { mailId, queueMail } from '@/lib/server/mail';
+import type { SellerApprovalPlan } from '@/lib/seller-policy';
 
 /** Business events are written to the private outbox in the same transaction as the application. */
 type SellerMailApplication = {
@@ -65,5 +66,21 @@ export function queueRejectedSellerApplicationMail(
     message:`${application.businessName}: your seller application was not approved. Contact TreatStory support if you need help.`,
     href:'/become-a-seller',
     details:[{label:'Business',value:application.businessName.slice(0,120)}],
+  },id,false,application.contactEmail);
+}
+
+/** Send a single approval invitation to the applicant email, including guests with no Firebase UID. */
+export function queueApprovedSellerApplicationMail(
+  tx:Transaction, db:Firestore, application:SellerMailApplication, reviewedAt:Timestamp, plan:SellerApprovalPlan,
+) {
+  const label = plan === 'full' ? 'full seller access' : plan === 'three_months' ? 'a 3-month free trial' : 'a 6-month free trial';
+  const id = mailId(`application/${application.id}/approved/${reviewedAt.toMillis()}`);
+  queueMail(tx,db,'',{
+    template:'seller_application_approved',
+    title:'Your TreatStory seller application is approved',
+    message:`Congratulations! Your application for ${application.businessName} has been approved for ${label}. Create a TreatStory account with this email address, or sign in if you already have one. Verify the email address, then activate your seller profile from the Become a Seller page. ${plan === 'full' ? 'Your access starts when you activate your profile.' : 'Your trial begins only when you activate your profile; there is no automatic renewal or charge.'}`,
+    href:'/register?next=%2Fbecome-a-seller%3Factivate%3D1',
+    label:'Create an account to activate',
+    details:[{label:'Business',value:application.businessName.slice(0,120)},{label:'Approved access',value:label}],
   },id,false,application.contactEmail);
 }

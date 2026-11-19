@@ -9,10 +9,9 @@ import {
   safeResponse,
 } from '@/lib/server/firebase-admin';
 import { readJsonBody } from '@/lib/server/request-body';
-import { sellerTrialEnd } from '@/lib/seller-policy';
-import { storeSlug } from '@/lib/server/store-slug';
-import { processMailQueue, queueNotification } from '@/lib/server/mail';
-import { queueNewSellerApplicationMails, queueRejectedSellerApplicationMail, sellerAdminMailRecipient } from '@/lib/server/seller-application-email';
+import { activateApprovedSeller } from '@/lib/server/seller-activation';
+import { processMailQueue } from '@/lib/server/mail';
+import { queueNewSellerApplicationMails, queueRejectedSellerApplicationMail, queueApprovedSellerApplicationMail, sellerAdminMailRecipient } from '@/lib/server/seller-application-email';
 export const runtime = 'nodejs';
 const applicationSchema = z
   .object({
@@ -45,6 +44,11 @@ export async function POST(request: NextRequest) {
       ? (await verifiedUser(request)).uid
       : '';
     const hash = (v: string) => createHash('sha256').update(v).digest('hex');
+    if (uid) {
+      const account = await auth.getUser(uid);
+      if (account.email?.trim().toLowerCase() !== data.contactEmail)
+        throw new ApiError(400, 'Use your signed-in account email for your seller application.');
+    }
     const id = uid || 'guest_' + hash(data.contactEmail);
     const ip =
       request.headers.get('x-vercel-forwarded-for') ||
@@ -55,14 +59,15 @@ export async function POST(request: NextRequest) {
       .doc(hash(ip) + '_' + new Date().toISOString().slice(0, 10));
     await db.runTransaction(async (tx) => {
       const ref = db.collection('seller_applications').doc(id);
-      const [limit, prior, seller] = await Promise.all([
+      const [limit, prior, seller, guestPrior] = await Promise.all([
         tx.get(rate),
         tx.get(ref),
         uid ? tx.get(db.doc('sellers/' + uid)) : Promise.resolve(null),
+        uid ? tx.get(db.collection('seller_applications').doc('guest_' + hash(data.contactEmail))) : Promise.resolve(null),
       ]);
       if (seller?.exists)
         throw new ApiError(409, 'You already have a seller account.');
-      if (prior.exists)
+      if (prior.exists || guestPrior?.exists)
         throw new ApiError(
           409,
           'An application already exists. Contact support for an update.',
@@ -104,115 +109,67 @@ export async function PATCH(request: NextRequest) {
     const { db, auth, uid } = await verifiedUser(request);
     if (!(await db.doc('roles_admin/' + uid).get()).exists)
       throw new ApiError(403, 'Administrator access required.');
-    const parsed = z
-      .object({
-        id: z.string().regex(/^[a-zA-Z0-9_-]{1,160}$/),
-        approved: z.boolean(),
-      })
-      .strict()
-      .safeParse(await readJsonBody(request, 1024));
-    if (!parsed.success) throw new ApiError(400, 'Invalid review.');
-    const { id, approved } = parsed.data;
+
+    const parsed = z.object({
+      id: z.string().regex(/^[a-zA-Z0-9_-]{1,160}$/),
+      approved: z.boolean(),
+      plan: z.enum(['three_months', 'six_months', 'full']).optional(),
+    }).strict().safeParse(await readJsonBody(request, 1024));
+    if (!parsed.success || (parsed.data?.approved && !parsed.data.plan))
+      throw new ApiError(400, 'Choose a 3-month trial, 6-month trial or full access before approving.');
+
+    const { id, approved, plan } = parsed.data!;
     const ref = db.doc('seller_applications/' + id);
     const initial = await ref.get();
     if (!initial.exists) throw new ApiError(404, 'Application not found.');
     const application = initial.data()!;
-    let ownerUid = application.ownerUid;
-    if (approved && !ownerUid) {
-      const account = await auth
-        .getUserByEmail(application.contactEmail)
-        .catch(() => null);
-      if (!account?.emailVerified || account.disabled)
-        throw new ApiError(
-          409,
-          'Ask this applicant to register and verify their contact email, then approve again.',
-        );
-      ownerUid = account.uid;
+
+    // A registered, verified applicant can activate immediately. Guest and
+    // unverified applicants can be approved WITHOUT creating a seller record.
+    // A verified account with the application contact email claims it later.
+    let activeUid = '';
+    if (approved && application.ownerUid) {
+      const account = await auth.getUser(application.ownerUid).catch(() => null);
+      if (account && !account.disabled && account.emailVerified &&
+          account.email?.trim().toLowerCase() === application.contactEmail)
+        activeUid = account.uid;
     }
-    if (approved) {
-      const account = await auth.getUser(ownerUid);
-      if (!account.emailVerified || account.disabled)
-        throw new ApiError(
-          409,
-          'The seller must verify their account email before activation.',
-        );
-    }
+
     await db.runTransaction(async (tx) => {
       const current = await tx.get(ref);
       if (current.data()?.status !== 'pending')
         throw new ApiError(409, 'This application was already reviewed.');
-      if (
-        current.data()?.contactEmail !== application.contactEmail ||
-        current.data()?.ownerUid !== application.ownerUid
-      )
-        throw new ApiError(
-          409,
-          'Application changed; refresh before reviewing.',
-        );
+      if (current.data()?.contactEmail !== application.contactEmail ||
+          current.data()?.ownerUid !== application.ownerUid)
+        throw new ApiError(409, 'Application changed; refresh before reviewing.');
+
       const now = Timestamp.now();
       if (approved) {
-        const sellerRef = db.doc('sellers/' + ownerUid);
-        const slug = storeSlug(application.businessName, ownerUid);
-        const slugRef = db.doc('store_slugs/' + slug);
-        const [seller, reserved, deleting] = await Promise.all([
-          tx.get(sellerRef),
-          tx.get(slugRef),
-          tx.get(db.doc('account_deletions/' + ownerUid)),
-        ]);
-        if (seller.exists || deleting.exists)
-          throw new ApiError(
-            409,
-            'Account already has seller access or is closing.',
-          );
-        if (reserved.exists && reserved.data()?.sellerId !== ownerUid)
-          throw new ApiError(409, 'Store address unavailable.');
-        tx.set(slugRef, { sellerId: ownerUid });
-        tx.create(sellerRef, {
-          ownerUid,
-          slug,
-          businessName: application.businessName,
-          businessCategory: application.businessCategory,
-          businessCity: application.businessCity || '',
-          businessState: application.businessState || '',
-          contactEmail: application.contactEmail,
-          contactPhone: application.contactPhone,
-          description: application.description,
-          logoUrl: '',
-          coverUrl: '',
-          isOpen: true,
-          status: 'active',
-          accessType: 'trial',
-          accessStartsAt: now,
-          accessEndsAt: Timestamp.fromDate(sellerTrialEnd(now.toDate())),
-          createdAt: now,
-          updatedAt: now,
-        });
-        queueNotification(tx, db, ownerUid, {
-          template: 'seller_application_approved',
-          details: [{label:'Business',value:String(application.businessName).slice(0,120)}],
-          title: 'Your six-month trial is ready',
-          message:
-            'Your free trial starts today. No automatic renewal or charge. Contact support if you choose to continue.',
-          href: '/seller/dashboard',
-          createdAt: now,
-          read: false,
-        });
+        if (activeUid) {
+          await activateApprovedSeller(tx, db, { ...application, approvalPlan: plan }, activeUid, now);
+        } else {
+          queueApprovedSellerApplicationMail(tx, db, {
+            id, businessName: String(application.businessName),
+            businessCategory: String(application.businessCategory),
+            businessCity: application.businessCity, businessState: application.businessState,
+            contactEmail: String(application.contactEmail),
+            submittedAt: application.submittedAt,
+          }, now, plan!);
+        }
+      } else {
+        queueRejectedSellerApplicationMail(tx, db, {
+          id, businessName: String(application.businessName),
+          businessCategory: String(application.businessCategory),
+          businessCity: application.businessCity, businessState: application.businessState,
+          contactEmail: String(application.contactEmail),
+          submittedAt: application.submittedAt,
+        }, now);
       }
-      if(!approved) {
-        // Rejected guest applicants still receive an email even with no account.
-        queueRejectedSellerApplicationMail(tx,db,{
-          id,
-          businessName:String(application.businessName),
-          businessCategory:String(application.businessCategory),
-          businessCity:application.businessCity,
-          businessState:application.businessState,
-          contactEmail:String(application.contactEmail),
-          submittedAt:application.submittedAt,
-        },now);
-      }
+
       tx.update(ref, {
         status: approved ? 'approved' : 'rejected',
-        ...(ownerUid ? { ownerUid } : {}),
+        ...(approved ? { approvalPlan: plan } : {}),
+        ...(activeUid ? { ownerUid: activeUid, activatedAt: now } : {}),
         reviewedAt: now,
         reviewedBy: uid,
       });
@@ -220,14 +177,20 @@ export async function PATCH(request: NextRequest) {
         actorUid: uid,
         action: approved ? 'seller_approved' : 'seller_rejected',
         applicationId: id,
+        ...(approved ? { approvalPlan: plan, awaitingActivation: !activeUid } : {}),
         createdAt: now,
       });
     });
-    after(async()=>{try{
-      const result=await processMailQueue(db,auth,3);
-      if(!result.configured)console.error('Seller review mail queue is not configured.');
-    }catch{console.error('Seller review mail worker unavailable; queued messages remain retryable.');}});
-    return Response.json({ reviewed: true });
+
+    after(async () => {
+      try {
+        const result = await processMailQueue(db, auth, 3);
+        if (!result.configured) console.error('Seller review mail queue is not configured.');
+      } catch {
+        console.error('Seller review mail worker unavailable; queued messages remain retryable.');
+      }
+    });
+    return Response.json({ reviewed: true, awaitingActivation: !!approved && !activeUid });
   } catch (error) {
     return safeResponse(error);
   }

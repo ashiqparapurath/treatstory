@@ -107,84 +107,66 @@ test('store slugs are readable, stable, collision separated and do not reveal UI
   assert.notEqual(a, storeSlug('Little Bloom Bakery', 'different'));
   assert.ok(!a.includes('private-buyer-uid'));
 });
-test('guest submissions cannot set privileges; approval requires admin and verified email; trial is not reset', async () => {
+test('guest submissions cannot set privileges; admin chooses plan before verified seller activation', async () => {
   const { db, records } = memoryDb();
-  let uid = 'visitor',
-    verified = false;
+  let uid = 'visitor', verified = false;
   const auth = {
-    getUser: async () => ({ emailVerified: verified, disabled: false }),
-    getUserByEmail: async () => ({
-      uid: 'new-seller',
-      emailVerified: verified,
-      disabled: false,
+    getUser: async () => ({
+      uid: 'new-seller', email: 'person@example.test', emailVerified: verified, disabled: false,
     }),
   };
   const mocks = {
-    'next/server': {after(){}},
+    'next/server': { after() {} },
     '@/lib/server/firebase-admin': {
       getServerFirebase: () => ({ db, auth }),
       verifiedUser: async () => ({ db, auth, uid }),
       ApiError,
-      safeResponse: (e) =>
-        Response.json({ error: e.message }, { status: e.status || 500 }),
+      safeResponse: e => Response.json({ error: e.message }, { status: e.status || 500 }),
     },
   };
-  const { POST, PATCH } = load(
-    'src/app/api/seller-applications/route.ts',
-    mocks,
-  );
-  const request = (body, method = 'POST') =>
-    new Request('https://test/api/seller-applications', {
-      method,
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+  const { POST, PATCH } = load('src/app/api/seller-applications/route.ts', mocks);
+  const request = (body, method = 'POST') => new Request('https://test/api/seller-applications', {
+    method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+  });
   const data = {
-    businessName: 'A Bakery',
-    businessCategory: 'home-bakery',
-    contactEmail: 'person@example.test',
-    contactPhone: '12345678',
-    description: 'Handmade cakes',
+    businessName: 'A Bakery', businessCategory: 'home-bakery',
+    contactEmail: 'person@example.test', contactPhone: '12345678', description: 'Handmade cakes',
   };
-  assert.equal(
-    (await POST(request({ ...data, ownerUid: 'victim' }))).status,
-    400,
-  );
+  assert.equal((await POST(request({ ...data, ownerUid: 'victim' }))).status, 400);
   assert.equal((await POST(request({ ...data, website: 'spam' }))).status, 400);
   assert.equal((await POST(request(data))).status, 200);
-  const entry = [...records.entries()].find(([k]) =>
-    k.startsWith('seller_applications/'),
-  );
+  const entry = [...records.entries()].find(([k]) => k.startsWith('seller_applications/'));
   assert.equal(entry[1].ownerUid, '');
   const id = entry[0].split('/')[1];
   assert.equal((await POST(request(data))).status, 409);
-  assert.equal(
-    (await PATCH(request({ id, approved: true }, 'PATCH'))).status,
-    403,
-  );
+  assert.equal((await PATCH(request({ id, approved: true, plan: 'six_months' }, 'PATCH'))).status, 403);
   uid = 'admin';
   records.set('roles_admin/admin', {});
-  assert.equal(
-    (await PATCH(request({ id, approved: true }, 'PATCH'))).status,
-    409,
-  );
+  assert.equal((await PATCH(request({ id, approved: true }, 'PATCH'))).status, 400,
+    'review cannot default to six months');
+  assert.equal((await PATCH(request({ id, approved: true, plan: 'six_months' }, 'PATCH'))).status, 200,
+    'guest can be approved without a verified account');
+  assert.equal(records.get(entry[0]).approvalPlan, 'six_months');
+  assert.equal(records.get(entry[0]).activatedAt, undefined);
+  assert.equal(records.has('sellers/new-seller'), false, 'approval must not create seller prematurely');
+
+  const { POST: activate } = load('src/app/api/seller-applications/activate/route.ts', mocks);
+  uid = 'new-seller';
+  const activationRequest = () => new Request('https://test/api/seller-applications/activate', { method: 'POST' });
+  assert.equal((await activate(activationRequest())).status, 403, 'unverified email cannot claim approval');
   verified = true;
-  assert.equal(
-    (await PATCH(request({ id, approved: true }, 'PATCH'))).status,
-    200,
-  );
+  assert.equal((await activate(activationRequest())).status, 200);
   const seller = records.get('sellers/new-seller');
   assert.equal(seller.accessType, 'trial');
+  assert.equal(seller.approvalPlan, 'six_months');
   assert.match(seller.slug, /^a-bakery-/);
   const { sellerTrialEnd } = load('src/lib/seller-policy.ts');
-  assert.equal(
-    seller.accessEndsAt.toMillis(),
-    sellerTrialEnd(seller.accessStartsAt.toDate()).getTime(),
-  );
-  assert.equal(
-    (await PATCH(request({ id, approved: true }, 'PATCH'))).status,
-    409,
-  );
+  assert.equal(seller.accessEndsAt.toMillis(), sellerTrialEnd(seller.accessStartsAt.toDate()).getTime());
+  assert.equal(records.get(entry[0]).ownerUid, 'new-seller');
+  assert.ok(records.get(entry[0]).activatedAt);
+  assert.equal((await activate(activationRequest())).status, 409, 'second claim must not restart trial');
+  uid = 'admin';
+  assert.equal((await PATCH(request({ id, approved: true, plan: 'six_months' }, 'PATCH'))).status, 409);
 });
 test('private photos require ownership or the assigned quote seller and never fetch arbitrary URLs', async () => {
   const { db } = memoryDb({

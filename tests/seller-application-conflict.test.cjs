@@ -6,16 +6,21 @@ const read=path=>fs.readFileSync(path,'utf8');
 test('seller review retains server-side conflict safeguards',()=>{
   const api=read('src/app/api/seller-applications/route.ts');
   for(const message of [
-    'Ask this applicant to register and verify their contact email, then approve again.',
-    'The seller must verify their account email before activation.',
     'This application was already reviewed.',
     'Application changed; refresh before reviewing.',
-    'Account already has seller access or is closing.',
-    'Store address unavailable.',
+    'Choose a 3-month trial, 6-month trial or full access before approving.',
   ])assert.ok(api.includes(message),message);
   assert.match(api,/await db\.runTransaction\(async \(tx\) => \{/);
   assert.match(api,/current\.data\(\)\?\.status !== 'pending'/);
   assert.match(api,/emailVerified/);
+  assert.match(api,/queueApprovedSellerApplicationMail/);
+  const activation=read('src/app/api/seller-applications/activate/route.ts');
+  assert.match(activation,/account\.emailVerified/);
+  assert.match(activation,/data\.contactEmail !== email/);
+  assert.match(activation,/activatedAt/);
+  const helper=read('src/lib/server/seller-activation.ts');
+  assert.match(helper,/Account already has seller access or is closing/);
+  assert.match(helper,/Store address unavailable/);
 });
 
 test('admin review shows the real conflict message, refreshes data and does not retry mutation',()=>{
@@ -24,7 +29,9 @@ test('admin review shows the real conflict message, refreshes data and does not 
   assert.match(ui,/if\(response\.status === 409\) \{/);
   assert.match(ui,/setReviewIssues\(current => \(\{\.\.\.current,\[application\.id\]:message\}\)\)/);
   assert.match(ui,/retryLoad\(\)/);
-  assert.match(ui,/Applicant needs a verified account/);
+  assert.match(ui,/Application needs attention/);
+  assert.match(ui,/Select a plan before approval/);
+  assert.match(ui,/Review & approve/);
   assert.match(ui,/description:message/);
   assert.match(ui,/return;/);
   assert.match(ui,/new ActionError\(message,response\.status\)/);
