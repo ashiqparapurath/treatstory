@@ -50,7 +50,8 @@ test('guest seller application retains server verification, honeypot and step va
   assert.match(page,/setSubmitted\(true\)/);
   assert.doesNotMatch(page,/await setDoc/);
   assert.match(route,/emailVerified/);
-  assert.match(route,/sellerTrialEnd/);
+  assert.match(route,/activateApprovedSeller/);
+  assert.match(route,/queueApprovedSellerApplicationMail/);
   assert.match(route,/roles_admin/);
 });
 
