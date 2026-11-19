@@ -61,7 +61,7 @@ function CreatorHero() {
           </div>
         </div>
         <div className="relative min-h-[235px] overflow-hidden bg-[#dac4ad] sm:min-h-[360px] lg:min-h-[550px]">
-          <Image src="/img/our-story-creators.svg" alt="Illustration of cakes, ceramics, embroidery and handmade gifts displayed together" width={1400} height={790} priority
+          <Image src="/img/creator-hero-editorial-20261119.webp" alt="Artisan berry cake, pastries, handmade ceramics and embroidered linen in warm natural light" width={820} height={1093} priority
             className="absolute inset-0 h-full w-full object-cover object-center" sizes="(max-width: 1023px) 100vw, 45vw" />
           <div className="absolute inset-x-4 bottom-4 flex items-center justify-between gap-3 rounded-[15px] border border-white/70 bg-[#fffdf6]/95 px-4 py-3 text-[#44372b] shadow-[0_10px_22px_rgba(44,29,17,0.10)] sm:bottom-7 sm:left-7 sm:right-7">
             <div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#9c7653]">Your own creator space</p>
