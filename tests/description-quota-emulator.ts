@@ -12,7 +12,10 @@ async function main() {
   const global = db.doc('ai_description_usage/platform');
   try {
     await global.delete();
-    const access = (seller: string, reserve = true) => descriptionQuota(db, seller, reserve);
+    // Keep time fixed across transaction retries and several reservations.
+    // Otherwise a UTC minute rollover mid-test can legitimately reset RPM.
+    const testedAt = Date.now();
+    const access = (seller: string, reserve = true) => descriptionQuota(db, seller, reserve, testedAt);
     await assert.rejects(access(uid), { status: 403 });
     const activeSeller = { status: 'active', accessEndsAt: Timestamp.fromMillis(Date.now() + 86400000) };
     await db.doc('sellers/' + uid).set(activeSeller);

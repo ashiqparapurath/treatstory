@@ -161,7 +161,14 @@ async function main() {
     expectedUpdatedAt: stored.updatedAt.toMillis(),
     product: { ...input.product, name: "Edited maximum cake" },
   };
+  const retryable = { ...input, product: { ...input.product, price: 1 }, requestId: randomUUID() };
+  const [first, replay] = await Promise.all([saveSellerProduct(db, uid, retryable), saveSellerProduct(db, uid, retryable)]);
+  assert.equal((await db.doc('marketplace_products/' + first.productId).get()).get('price'), 450, 'Size prices determine the displayed price');
+  assert.deepEqual(first, replay, 'Duplicate requests create one product and reserve one SKU');
+  await assert.rejects(() => saveSellerProduct(db, uid, { ...retryable, product: { ...input.product, name: 'Changed' } }), { status: 409 });
+  await ref.update({ workflowMetadata: 'keep' });
   const edited = await saveSellerProduct(db, uid, edit);
+  assert.equal((await ref.get()).get('workflowMetadata'), 'keep');
   assert.equal(edited.sku, created.sku, "SKU is immutable across edits");
   assert.equal((await ref.get()).data()?.sku, created.sku);
   await assert.rejects(

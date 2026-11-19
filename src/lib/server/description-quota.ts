@@ -9,7 +9,7 @@ function limit(value: string | undefined, fallback: number) {
   return parsed;
 }
 
-export async function descriptionQuota(db: Firestore, uid: string, reserve: boolean) {
+export async function descriptionQuota(db: Firestore, uid: string, reserve: boolean, atMillis: number = Date.now()) {
   const personal = limit(process.env.GEMINI_SELLER_DAILY_LIMIT, 5);
   const platform = limit(process.env.GEMINI_PLATFORM_DAILY_LIMIT, 100);
   const perMinute = limit(process.env.GEMINI_PLATFORM_MINUTE_LIMIT, 5);
@@ -17,7 +17,7 @@ export async function descriptionQuota(db: Firestore, uid: string, reserve: bool
   const platformCounter = db.doc('ai_description_usage/platform');
   return db.runTransaction(async tx => {
     const seller = (await tx.get(db.collection('sellers').doc(uid))).data();
-    const now = Date.now();
+    const now = atMillis;
     if (seller?.status !== 'active' || !(seller.accessEndsAt?.toMillis?.() > now))
       throw new ApiError(403, 'Active seller access is required.');
     const day = Math.floor(now / 86400000);

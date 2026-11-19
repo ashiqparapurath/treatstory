@@ -86,7 +86,9 @@ export function SellerDescriptionSuggestion({ draft, user, onUse }: {
   }
 
   return <section aria-label="AI description suggestion" className="min-w-0 space-y-3 rounded-xl bg-[#f7f3ed] p-3">
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+    <details className="group">
+      <summary className="flex cursor-pointer items-center justify-between gap-2 text-xs"><span className="font-semibold">Writing preferences</span><span>{style} · {language}</span></summary>
+      <div className="grid grid-cols-1 gap-2 pb-2 sm:grid-cols-2">
       {([{ label: 'Style', value: style, options: styles, change: (v: string) => setStyle(v as typeof style) },
          { label: 'Language', value: language, options: languages, change: (v: string) => setLanguage(v as typeof language) }]).map(field =>
         <div key={field.label} className="min-w-0 space-y-1">
@@ -97,7 +99,8 @@ export function SellerDescriptionSuggestion({ draft, user, onUse }: {
           </Select>
         </div>)}
     </div>
-    <p className="text-xs leading-5 text-muted-foreground">Suggesting sends the product name, category, description, sizes, ingredients and feature notes to Google AI. On the free tier, Google may use inputs and outputs to improve its products, and human reviewers may read them. Include only public product details. <a className="underline" href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noreferrer">Google’s terms</a></p>
+    </details>
+    <p className="text-xs leading-5 text-muted-foreground">Google AI receives your product details. Free-tier inputs and suggestions may be reviewed by people and used to improve Google products. Use public listing details only. <a className="underline" href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noreferrer">Google’s terms</a></p>
     {preview !== null && <div className="space-y-1">
       <Label htmlFor="ai-preview">Review and edit your suggestion</Label>
       <Textarea id="ai-preview" rows={5} maxLength={2000} value={preview} onChange={e => setPreview(e.target.value)} className="text-base"/>

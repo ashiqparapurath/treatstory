@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, type Dispatch, type FormEvent, type SetStateAction } from 'react';
+import { useState, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { Plus, Trash2, X, ChevronDown, ImagePlus, ArrowLeft, ArrowRight } from 'lucide-react';
 import type { MarketplaceProduct } from '@/lib/marketplace-types';
 import type { User } from 'firebase/auth';
+import { ConfirmActionDialog } from './confirm-action-dialog';
 import { SellerDescriptionSuggestion } from './seller-description-suggestion';
+import * as Dialog from '@radix-ui/react-dialog';
+import { isPublicProductImageUrl } from '@/lib/seller-product-validation';
 import { ProductSkuCopy } from '@/components/product-sku-copy';
 import { parseProductImageUrls } from '@/lib/product-image-urls';
 import { Button } from '@/components/ui/button';
@@ -35,7 +38,9 @@ export const emptyDraft: ProductDraft = {
 const presets = ['Home bakery', 'Cakes', 'Cookies', 'Desserts', 'Art', 'Paintings', 'Handmade crafts', 'Gifts', 'Candles', 'Accessories'];
 const units: WeightUnit[] = ['g', 'kg', 'ml', 'l', 'pieces'];
 
-export function SellerProductEditor({ user, open, editing, sku, busy, enabled, draft, setDraft, categories, onClose, onSubmit, onUploadPhotos, uploading, uploadProgress, saveError }: {
+const stepNames = ['Product basics', 'Product photos', 'Pricing and availability', 'Review and publish'];
+
+export function SellerProductEditor({ user, open, editing, sku, busy, enabled, draft, setDraft, categories, storeName, onClose, onSubmit, onUploadPhotos, uploading, uploadProgress, saveError }: {
   user: Pick<User, 'getIdToken'> | null;
   sku?: string;
   saveError?: string;
@@ -46,8 +51,9 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
   draft: ProductDraft;
   setDraft: Dispatch<SetStateAction<ProductDraft>>;
   categories: string[];
+  storeName?: string;
   onClose: () => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (status: ProductDraft['status']) => void;
   onUploadPhotos: (files: File[]) => Promise<void>;
   uploading: boolean;
   uploadProgress: string;
@@ -56,6 +62,121 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
   const [photoLinkError, setPhotoLinkError] = useState('');
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [categoryActiveIndex, setCategoryActiveIndex] = useState(0);
+  const [step, setStep] = useState(0);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [fieldError, setFieldError] = useState('');
+  const initial = useRef(draft);
+  const dirty = JSON.stringify(editing ? initial.current : emptyDraft) !== JSON.stringify(draft) || !!newPhotoLink;
+  const heading = useRef<HTMLHeadingElement>(null);
+  const content = useRef<HTMLDivElement>(null);
+  const blocked = busy || uploading;
+  useEffect(() => {
+    content.current?.scrollTo(0, 0);
+    heading.current?.focus({ preventScroll: true });
+  }, [step]);
+  useEffect(() => {
+    if (!dirty && !blocked) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty, blocked]);
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const dialog = heading.current?.closest<HTMLElement>('[role="dialog"]');
+    if (!viewport || !dialog) return;
+    function resize() {
+      dialog!.style.setProperty('--wizard-height', viewport!.height + 'px');
+      dialog!.style.setProperty('--wizard-top', viewport!.offsetTop + 'px');
+    }
+    resize();
+    viewport.addEventListener('resize', resize);
+    viewport.addEventListener('scroll', resize);
+    return () => {
+      viewport.removeEventListener('resize', resize);
+      viewport.removeEventListener('scroll', resize);
+    };
+  }, []);
+  useEffect(() => {
+    if (!window.history.state?.sellerWizard) return;
+    const openedAt = window.location.href;
+    function handleBack() {
+      if (window.location.href !== openedAt || window.history.state?.sellerWizard) return;
+      if (!blocked && step === 0 && !dirty && !confirmDiscard) {
+        onClose();
+        return;
+      }
+      window.history.pushState({ sellerWizard: true }, '', openedAt);
+      if (blocked) return;
+      if (confirmDiscard) setConfirmDiscard(false);
+      else if (step > 0) move(step - 1);
+      else setConfirmDiscard(true);
+    }
+    window.addEventListener('popstate', handleBack);
+    return () => window.removeEventListener('popstate', handleBack);
+  }, [step, dirty, blocked, confirmDiscard, onClose]);
+  function close() {
+    if (blocked || confirmDiscard) return;
+    if (dirty) setConfirmDiscard(true);
+    else onClose();
+  }
+  function move(next: number) {
+    setFieldError('');
+    setStep(next);
+  }
+  function nextStep() {
+    if (blocked) return;
+    const panel = content.current?.querySelector<HTMLElement>('[data-step]:not([hidden])');
+    for (const field of panel?.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input,textarea') ?? []) {
+      if (!field.validity.valid || (field.required && !field.value.trim())
+          || (field.minLength > 0 && field.value.trim().length < field.minLength)) {
+        field.closest('details')?.setAttribute('open', '');
+        field.focus();
+        field.reportValidity();
+        setFieldError((field.labels?.[0]?.textContent?.split(' · ')[0] || 'Field') + ' — ' + (field.validationMessage || 'Enter a valid value.'));
+        return;
+      }
+    }
+    if (step === 0) {
+      const groups = [
+        { id: 'listing-customization', value: draft.customizationOptions, separator: '\n', max: 6, length: 80 },
+        { id: 'listing-allergens', value: draft.allergens, separator: ',', max: 12, length: 40 },
+        { id: 'listing-diet', value: draft.dietaryTags, separator: ',', max: 12, length: 40 },
+      ];
+      for (const group of groups) {
+        const items = group.value.split(group.separator).map(value => value.trim()).filter(Boolean);
+        if (items.length > group.max || items.some(item => item.length > group.length)) {
+          const field = document.getElementById(group.id);
+          field?.closest('details')?.setAttribute('open', '');
+          field?.focus();
+          setFieldError('Use up to ' + group.max + ' entries of ' + group.length + ' characters each.');
+          return;
+        }
+      }
+    }
+    if (step === 1 && newPhotoLink.trim()) {
+      setPhotoLinkError('Add this image link or clear it to continue.');
+      document.getElementById('creatorImageLink')?.focus();
+      return;
+    }
+    if (step === 2) {
+      const seen = new Set<string>();
+      for (const [index, size] of draft.weightOptions.entries()) {
+        const key = Number(size.value) + ':' + size.unit;
+        if (seen.has(key)) {
+          setFieldError('Size ' + (index + 1) + ' duplicates another weight and unit. Choose a different size.');
+          document.getElementById('size-value-' + index)?.focus();
+          return;
+        }
+        seen.add(key);
+      }
+      if (draft.availability === 'available' && Number(draft.stockQuantity) === 0 && draft.weightOptions.some(size => !size.stockQuantity)) {
+        setFieldError('Enter shared stock or a stock quantity for every size.');
+        document.getElementById('seller-editor-stock')?.focus();
+        return;
+      }
+    }
+    move(step + 1);
+  }
   if (!open) return null;
   const set = <K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) => setDraft(d => ({ ...d, [key]: value }));
   const allCategories = [...new Set([...presets, ...categories])].filter(Boolean).sort((a,b) => a.localeCompare(b));
@@ -66,10 +187,8 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
   const arrangePhotos = (next: string[]) => set('imageUrls', next.join('\n'));
   const addPhotoLink = () => {
     const link = newPhotoLink.trim();
-    let parsed: URL;
-    try { parsed = new URL(link); } catch { setPhotoLinkError('Enter a complete HTTPS image URL.'); return; }
-    if (parsed.protocol !== 'https:' || !parsed.hostname || parsed.username || parsed.password) {
-      setPhotoLinkError('Use a secure HTTPS image URL without credentials.');
+    if (!isPublicProductImageUrl(link) || link.length > 2048) {
+      setPhotoLinkError('Enter a public HTTPS image URL, up to 2,048 characters.');
       return;
     }
     if (photos.length >= 10) { setPhotoLinkError('You can add a maximum of 10 product photos.'); return; }
@@ -85,24 +204,32 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
     [next[index], next[target]] = [next[target], next[index]];
     arrangePhotos(next);
   };
-  return <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" role="presentation" onMouseDown={e => { if(e.target === e.currentTarget) onClose(); }}>
-    <div role="dialog" aria-modal="true" aria-label={editing ? 'Edit listing' : 'New listing'} className="flex h-[min(96dvh,920px)] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl bg-[#fbf9f6] shadow-2xl sm:h-[min(94dvh,940px)] sm:rounded-3xl">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#e8e0d5] bg-white px-4 py-3 sm:px-7 sm:py-5">
-        <div><p className="text-[10px] font-semibold uppercase tracking-widest text-[#a68a64]">Seller studio · Catalog</p><h2 className="mt-0.5 text-xl font-semibold sm:text-2xl">{editing ? 'Edit your creation' : 'Add a creation'}</h2><div className="mt-2">{sku ? <ProductSkuCopy sku={sku} /> : <p className="text-[11px] text-muted-foreground">A unique product SKU will be generated when you save.</p>}</div></div>
-        <button type="button" onClick={onClose} aria-label="Close product editor" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f5f1eb]"><X className="h-5 w-5" /></button>
-      </div>
-      <form id="sellerProductForm" onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4 sm:space-y-4 sm:px-7 sm:py-5">
-          <p className="text-xs leading-5 text-[#776a5d]">Start with the essentials. Add sizes, photos and advanced details only when needed.</p>
-          {saveError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{saveError}</p>}
-          <section className="space-y-3 rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6">
-            <h3 className="text-sm font-semibold">Essential details</h3>
+  return <Dialog.Root open={open} onOpenChange={value => { if (!value) close(); }}>
+    <Dialog.Portal>
+      <Dialog.Overlay className="fixed inset-0 z-50 bg-black/45" />
+      <Dialog.Content aria-describedby={undefined} onOpenAutoFocus={event => { event.preventDefault(); heading.current?.focus(); }}
+        className="seller-wizard fixed inset-0 z-50 mx-auto flex h-dvh max-w-3xl flex-col overflow-hidden bg-[#fbf9f6] text-[#302b25] sm:inset-y-[4dvh] sm:h-[92dvh] sm:w-[calc(100%-3rem)] sm:rounded-3xl sm:shadow-2xl">
+        <header className="shrink-0 bg-white px-4 pb-3 pt-[max(.75rem,env(safe-area-inset-top))] sm:px-7">
+          <div className="flex items-center justify-between gap-3">
+            <Dialog.Title className="text-sm font-medium">{editing ? 'Edit product' : 'Add product'}</Dialog.Title>
+            <button type="button" disabled={blocked} onClick={close} aria-label="Close product editor" className="grid size-11 place-items-center rounded-full hover:bg-[#f5f1eb]"><X size={18}/></button>
+          </div>
+          <p className="text-xs text-[#736554]">Step {step + 1} of 4</p>
+          <h2 ref={heading} tabIndex={-1} className="mt-1 font-serif text-2xl leading-tight outline-none sm:text-3xl">{stepNames[step]}</h2>
+          <div aria-hidden className="mt-3 flex gap-1">{stepNames.map((name,i) => <span key={name} className={'h-1 flex-1 rounded-full ' + (i <= step ? 'bg-[#836847]' : 'bg-[#eee9e2]')}/>)}</div>
+        </header>
+        <form id="sellerProductForm" noValidate className="flex min-h-0 flex-1 flex-col" onSubmit={event => {
+          event.preventDefault();
+          if (step < 3) nextStep();
+        }}>
+          <div ref={content} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7">
+            <section data-step hidden={step !== 0} className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block space-y-1.5 text-xs font-semibold sm:col-span-2">Product name<Input required minLength={2} maxLength={120} placeholder="e.g. Red velvet birthday cake" value={draft.name} onChange={e => set('name',e.target.value)} /></label>
               <div className="block space-y-1.5 text-xs font-semibold">
                 <Label htmlFor="seller-category-name" className="text-xs font-semibold">Category</Label>
                 <div className="relative" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setCategoryOpen(false); }}>
-                  <Input id="seller-category-name" required maxLength={80} value={draft.category}
+                  <Input id="seller-category-name" required minLength={2} maxLength={80} value={draft.category}
                     role="combobox" aria-autocomplete="list" aria-expanded={categoryOpen && categorySuggestions.length>0}
                     aria-controls="seller-category-suggestions"
                     onFocus={() => { setCategoryOpen(true); setCategoryActiveIndex(0); }}
@@ -127,44 +254,41 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
                 </div>
                 <span className="block text-[11px] font-normal text-muted-foreground">New categories are saved with this listing and appear next time.</span>
               </div>
-              <label className="block space-y-1.5 text-xs font-semibold">{draft.weightOptions.length ? 'Single-product fallback price (₹) · not used for sized variants' : 'Price (₹)'}<Input disabled={draft.weightOptions.length > 0} required={!draft.weightOptions.length} min={0} max={10000000} step="0.01" type="number" inputMode="decimal" value={draft.price} onChange={e => set('price',e.target.value)} /><span className="block text-[11px] font-normal text-muted-foreground">{draft.weightOptions.length ? 'Enter the selling price beside EACH size below. The starting price is calculated automatically from the smallest variant price.' : 'For a single-price product, enter the selling price here. To set prices for 500 g, 1 kg, etc., use the pricing section below.'}</span></label>
             </div>
             <div className="space-y-2">
               <Label htmlFor="creatorDescription">Description</Label>
               <Textarea id="creatorDescription" required maxLength={2000} rows={3} placeholder="Tell buyers about the product, materials, portions and special touches…" value={draft.description} onChange={e => set('description',e.target.value)} className="resize-y" />
               {enabled && user && <SellerDescriptionSuggestion user={user} draft={draft} onUse={value => set('description', value)} />}
             </div>
-            <div className="border-t border-[#eee8df] pt-4"><p className="mb-3 text-xs font-semibold text-[#786450]">Availability & publishing</p><div className="grid items-start gap-3 sm:grid-cols-2">
-              <div className="flex min-w-0 flex-col gap-1.5 text-xs font-medium"><Label htmlFor="seller-editor-availability" className="text-xs leading-5">Availability</Label>
-                  <Select value={draft.availability} onValueChange={value=>set('availability',value as ProductDraft['availability'])}>
-                    <SelectTrigger id="seller-editor-availability" className="min-h-11"><SelectValue /></SelectTrigger>
-                    <SelectContent position="popper" sideOffset={6}><SelectItem value="available">Available</SelectItem><SelectItem value="made-to-order">Made to order</SelectItem><SelectItem value="unavailable">Unavailable</SelectItem></SelectContent>
-                  </Select>
-                </div>
-
-              <div className="flex min-w-0 flex-col gap-1.5"><Label htmlFor="seller-editor-preparation" className="text-xs leading-5">Preparation days</Label><Input id="seller-editor-preparation" className="min-h-11" type="number" min={0} max={365} value={draft.preparationDays} onChange={e=>set('preparationDays',e.target.value)} /></div>
-              <div className="flex min-w-0 flex-col gap-1.5"><Label htmlFor="seller-editor-stock" className="text-xs leading-5">Stock quantity</Label><Input id="seller-editor-stock" className="min-h-11" type="number" min={0} max={1000000} value={draft.stockQuantity} onChange={e=>set('stockQuantity',e.target.value)} /></div>
-              <div className="flex min-w-0 flex-col gap-1.5 text-xs font-medium"><Label htmlFor="seller-editor-status" className="text-xs leading-5">Listing status</Label>
-                  <Select value={draft.status} onValueChange={value=>set('status',value as ProductDraft['status'])}>
-                    <SelectTrigger id="seller-editor-status" className="min-h-11"><SelectValue /></SelectTrigger>
-                    <SelectContent position="popper" sideOffset={6}><SelectItem value="draft">Draft</SelectItem><SelectItem value="published">Published</SelectItem></SelectContent>
-                  </Select>
-                </div>
-            </div></div>
-          </section>
-          <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-5"><summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold [&::-webkit-details-marker]:hidden">Payment requirements <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180"/></summary><div className="mt-3">
-              <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={draft.advancePaymentRequired} onChange={e => set('advancePaymentRequired', e.target.checked)} />Advance payment required before preparation</label><p className="text-xs text-muted-foreground sm:col-span-2">Arrange the advance directly with the buyer. TreatStory does not collect online payments.</p></div>
+          <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-5">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Advanced listing details <ChevronDown className="h-4 w-4 transition group-open:rotate-180"/></summary>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="space-y-1 text-xs font-medium sm:col-span-2">Customization prompts (one per line)<Textarea id="listing-customization" rows={3} maxLength={500} placeholder={"Cake message\nColour preference\nGift note"} value={draft.customizationOptions} onChange={e=>set('customizationOptions',e.target.value)} /><span className="block text-[11px] text-muted-foreground">Up to six prompts (80 characters each). Requests do not change pricing.</span></label>
+              <label className="space-y-1 text-xs font-medium sm:col-span-2">Ingredients, care or handling notes<Textarea rows={2} maxLength={500} value={draft.careInstructions} onChange={e=>set('careInstructions',e.target.value)} /></label>
+              <div className="space-y-3 rounded-xl border border-[#eee7dd] p-4 sm:col-span-2"><h4 className="text-sm font-semibold">Food safety & ingredient details (for bakers)</h4><p className="text-xs text-muted-foreground">Enter accurate information for customers with food sensitivities. These claims are supplied by the seller and aren't independently certified by TreatStory.</p><label className="block space-y-1 text-xs font-medium">Ingredients <Textarea rows={2} maxLength={1000} value={draft.ingredients} onChange={e=>set('ingredients',e.target.value)} placeholder="Flour, milk, eggs, cocoa…"/></label><div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-medium">Allergens (comma separated)<Input id="listing-allergens" maxLength={300} value={draft.allergens} onChange={e=>set('allergens',e.target.value)} placeholder="Milk, eggs, wheat"/></label><label className="block space-y-1 text-xs font-medium">Dietary claims (comma separated)<Input id="listing-diet" maxLength={300} value={draft.dietaryTags} onChange={e=>set('dietaryTags',e.target.value)} placeholder="Vegetarian, eggless"/></label></div><div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-medium">Shelf life (days)<Input type="number" inputMode="numeric" min={0} max={365} value={draft.shelfLifeDays} onChange={e=>set('shelfLifeDays',e.target.value)} placeholder="e.g. 2"/></label><label className="block space-y-1 text-xs font-medium">Storage instructions<Input maxLength={500} value={draft.storageInstructions} onChange={e=>set('storageInstructions',e.target.value)} placeholder="Refrigerate; consume within 2 days"/></label></div></div>
+            </div>
           </details>
-          <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-6">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Photos & gallery <span className="flex items-center gap-2 text-xs font-normal text-[#8b795e]">{photoCount} photo(s)<ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></span></summary>
-            <div className="mt-4 space-y-3">
-              <p className="text-xs leading-5 text-muted-foreground">Choose images straight from your phone or computer. Upload up to ten photos securely; the first photo becomes the cover.</p>
+            </section>
+            <section data-step hidden={step !== 1} className="space-y-4">
+              <p className="text-xs leading-5 text-muted-foreground">Add up to 10 photos. Choose JPG, PNG or WebP files up to 2 MB each.</p>
               <div className="flex flex-wrap items-center gap-3">
-                <label htmlFor="sellerPhotoFiles" className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-[#bfae95] bg-[#f8f5f0] px-5 text-xs font-semibold text-[#594b39] ${uploading || busy || !enabled || photoCount >= 10 ? 'pointer-events-none opacity-50' : ''}`}><ImagePlus className="h-4 w-4" />{uploading ? 'Uploading photos…' : 'Upload product photos'}</label>
+                <label htmlFor="sellerPhotoFiles" className={`flex min-h-28 w-full justify-center cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-[#bfae95] bg-[#f8f5f0] px-5 text-xs font-semibold text-[#594b39] ${uploading || busy || !enabled || photoCount >= 10 ? 'pointer-events-none opacity-50' : ''}`}><ImagePlus className="h-4 w-4" />{uploading ? 'Uploading photos…' : 'Upload product photos'}</label>
                 <input id="sellerPhotoFiles" className="sr-only" type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={uploading || busy || !enabled || photoCount >= 10} onChange={e => { const files = [...(e.target.files ?? [])]; e.target.value = ''; if (files.length) void onUploadPhotos(files); }} />
                 <span role="status" aria-live="polite" className="text-xs text-muted-foreground">{uploadProgress || `${photoCount} / 10 photos`}</span>
               </div>
-              {photoCount > 0 && <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{photos.map((url, i) => <div key={url + i} className="space-y-1 overflow-hidden rounded-xl border border-[#e8e0d5] bg-[#f7f4ef] p-2"><div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-[#ebe3d8]"><img src={url} alt={`Product photo ${i + 1}`} className="h-full w-full object-cover" loading="lazy" /></div><div className="flex flex-wrap items-center justify-between gap-1"><span className="truncate text-[10px] text-muted-foreground">{i === 0 ? 'Cover' : `Photo ${i + 1}`}</span><div className="flex gap-1"><button type="button" onClick={() => shiftPhoto(i,-1)} disabled={i===0||uploading} aria-label={`Move photo ${i+1} left`} className="grid h-7 w-7 place-items-center rounded-md border bg-white disabled:opacity-30"><ArrowLeft className="h-3.5 w-3.5" /></button><button type="button" onClick={() => shiftPhoto(i,1)} disabled={i===photos.length-1||uploading} aria-label={`Move photo ${i+1} right`} className="grid h-7 w-7 place-items-center rounded-md border bg-white disabled:opacity-30"><ArrowRight className="h-3.5 w-3.5" /></button><button type="button" onClick={() => arrangePhotos(photos.filter((_, n) => n !== i))} disabled={uploading} aria-label={`Remove photo ${i+1}`} className="grid h-7 w-7 place-items-center rounded-md border bg-white text-red-600 disabled:opacity-30"><X className="h-3.5 w-3.5" /></button></div></div></div>)}</div>}
+              {photos.length > 0 && <ul className="grid gap-2 sm:grid-cols-2">{photos.map((url,i) =>
+                <li key={url} className={'min-w-0 overflow-hidden rounded-xl bg-white ' + (i ? 'flex items-center gap-2 px-2 sm:block sm:px-0' : 'sm:col-span-2')}>
+                  <img src={url} alt={i === 0 ? 'Cover photo' : 'Product photo ' + (i + 1)} className={i ? 'size-16 shrink-0 rounded-lg object-cover sm:aspect-[2/1] sm:h-auto sm:w-full' : 'max-h-56 w-full aspect-[2/1] object-cover'}/>
+                  <div className="flex flex-1 flex-wrap items-center justify-between gap-1 px-2">
+                    {i === 0 ? <span className="text-xs font-semibold">Cover photo</span> :
+                      <button type="button" disabled={uploading} className="min-h-11 text-xs underline" onClick={() => arrangePhotos([url, ...photos.filter(photo => photo !== url)])}>Set as cover</button>}
+                    <div className="flex">
+                      <button type="button" className="grid size-11 place-items-center" disabled={i===0||uploading} aria-label={`Move photo ${i+1} left`} onClick={() => shiftPhoto(i,-1)}><ArrowLeft size={16}/></button>
+                      <button type="button" className="grid size-11 place-items-center" disabled={i===photoCount-1||uploading} aria-label={`Move photo ${i+1} right`} onClick={() => shiftPhoto(i,1)}><ArrowRight size={16}/></button>
+                      <button type="button" className="grid size-11 place-items-center text-red-700" disabled={uploading} aria-label={`Remove photo ${i+1}`} onClick={() => arrangePhotos(photos.filter((_,n) => n !== i))}><Trash2 size={16}/></button>
+                    </div>
+                  </div>
+                </li>)}</ul>}
               <div className="rounded-xl border border-[#e8e0d5] bg-[#faf8f5] p-3 sm:p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-semibold text-[#352c23]">Add image by link</p><p className="mt-1 text-[11px] text-[#87786a]">Add one HTTPS image link at a time. Repeat for more photos.</p></div><span className="text-[11px] tabular-nums text-[#87786a]">{photoCount} / 10</span></div>
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -172,17 +296,17 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
                   <Button type="button" variant="outline" className="h-11 shrink-0 rounded-xl border-[#cbb89e] bg-white" onClick={addPhotoLink} disabled={uploading || busy || !enabled || photoCount >= 10 || !newPhotoLink.trim()}><Plus className="mr-2 h-4 w-4" />Add link</Button>
                 </div>
                 {photoLinkError && <p id="creatorImageLinkError" role="alert" className="mt-2 text-xs text-red-700">{photoLinkError}</p>}
-                <p className="mt-2 text-[11px] leading-5 text-[#87786a]">New links appear in the gallery above. Reorder photos with the arrow controls; the first becomes the cover.</p>
               </div>
-            </div>
-          </details>
+            </section>
+            <section data-step hidden={step !== 2} className="space-y-4">
+              {!draft.weightOptions.length && <label className="block space-y-1 text-sm">Price (₹)<Input required={!draft.weightOptions.length} type="number" inputMode="decimal" min={0} max={10000000} step="0.01" value={draft.price} onChange={e=>set('price',e.target.value)}/></label>}
           <details className="group rounded-2xl border border-[#e4d6c5] bg-white p-4 sm:p-5" open={draft.weightOptions.length > 0 ? true : undefined} aria-labelledby="variant-pricing-title">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden"><span id="variant-pricing-title">Weight, size & variant pricing</span><span className="flex items-center gap-2 text-xs font-normal text-[#8b795e]">{draft.weightOptions.length} sizes <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180"/></span></summary><div className="mt-4 space-y-4">
             <p className="text-xs leading-5 text-[#6d6050]">Example: add <strong>500 g at ₹450</strong> and <strong>1 kg at ₹800</strong> under the same cake product. Enter a price for each size. Each size can also have its own stock; leaving stock blank uses the product's shared stock.</p>
             <div className="space-y-3">
-              {draft.weightOptions.map((option,i) => <div key={i} className="grid grid-cols-2 items-end gap-3 rounded-xl border border-[#e3d1ba] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_100px_120px_120px_36px]">
+              {draft.weightOptions.map((option,i) => <div key={i} className="grid grid-cols-2 items-end gap-3 rounded-xl border border-[#e3d1ba] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_80px_100px_95px_44px]">
                 <p className="col-span-2 text-[11px] font-semibold text-[#82623e] sm:hidden">Size {i+1} · set its selling price</p>
-                <label className="space-y-1 text-xs font-medium">Weight / count<Input type="number" inputMode="decimal" min="0.01" max="100000" step="any" value={option.value} placeholder="500" onChange={e => set('weightOptions', draft.weightOptions.map((v,n)=>n===i?{...v,value:e.target.value}:v))}/></label>
+                <label className="space-y-1 text-xs font-medium">Weight / count<Input id={'size-value-' + i} required type="number" inputMode="decimal" min="0.01" max="100000" step="any" value={option.value} placeholder="500" onChange={e => set('weightOptions', draft.weightOptions.map((v,n)=>n===i?{...v,value:e.target.value}:v))}/></label>
                 <div className="space-y-1 text-xs font-medium"><Label htmlFor={`seller-unit-${i}`} className="text-xs">Unit</Label>
                   <Select value={option.unit} onValueChange={value=>set('weightOptions',draft.weightOptions.map((v,n)=>n===i?{...v,unit:value as WeightUnit}:v))}>
                     <SelectTrigger id={`seller-unit-${i}`} className="min-h-10 px-3"><SelectValue /></SelectTrigger>
@@ -195,24 +319,54 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
               </div>)}
               <Button type="button" variant="outline" className="h-10 rounded-full" disabled={draft.weightOptions.length>=8} onClick={()=>set('weightOptions',[...draft.weightOptions,{value:'',unit:'g',price:'',stockQuantity:''}])}><Plus className="mr-2 h-4 w-4"/>Add another size & price</Button>
               {!!draft.weightOptions.length && <div role="status" className="rounded-xl bg-[#f5ede2] p-3 text-xs leading-6 text-[#5e503f]"><strong>Price preview:</strong> {draft.weightOptions.map((option,i) => `${option.value || 'Size '+(i+1)} ${option.unit}: ₹${option.price.trim() === '' ? 'set price' : option.price}`).join(' · ')}. Each size is saved under this single product.</div>}
-              <label className="block max-w-xs space-y-1 text-xs font-medium">Minimum order quantity (units)<Input type="number" min={1} max={99} value={draft.minimumOrderQuantity} onChange={e=>set('minimumOrderQuantity',e.target.value)}/></label>
+              <label className="block max-w-xs space-y-1 text-xs font-medium">Minimum order quantity (units)<Input required type="number" inputMode="numeric" min={1} max={99} value={draft.minimumOrderQuantity} onChange={e=>set('minimumOrderQuantity',e.target.value)}/></label>
             </div>
           </div></details>
-          <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-5">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Advanced listing details <ChevronDown className="h-4 w-4 transition group-open:rotate-180"/></summary>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <label className="space-y-1 text-xs font-medium sm:col-span-2">Customization prompts (one per line)<Textarea rows={3} maxLength={500} placeholder={"Cake message\nColour preference\nGift note"} value={draft.customizationOptions} onChange={e=>set('customizationOptions',e.target.value)} /><span className="block text-[11px] text-muted-foreground">Up to six prompts (80 characters each). Requests do not change pricing.</span></label>
-              <label className="space-y-1 text-xs font-medium sm:col-span-2">Ingredients, care or handling notes<Textarea rows={2} maxLength={500} value={draft.careInstructions} onChange={e=>set('careInstructions',e.target.value)} /></label>
-              <div className="space-y-3 rounded-xl border border-[#eee7dd] p-4 sm:col-span-2"><h4 className="text-sm font-semibold">Food safety & ingredient details (for bakers)</h4><p className="text-xs text-muted-foreground">Enter accurate information for customers with food sensitivities. These claims are supplied by the seller and aren't independently certified by TreatStory.</p><label className="block space-y-1 text-xs font-medium">Ingredients <Textarea rows={2} maxLength={1000} value={draft.ingredients} onChange={e=>set('ingredients',e.target.value)} placeholder="Flour, milk, eggs, cocoa…"/></label><div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-medium">Allergens (comma separated)<Input maxLength={300} value={draft.allergens} onChange={e=>set('allergens',e.target.value)} placeholder="Milk, eggs, wheat"/></label><label className="block space-y-1 text-xs font-medium">Dietary claims (comma separated)<Input maxLength={300} value={draft.dietaryTags} onChange={e=>set('dietaryTags',e.target.value)} placeholder="Vegetarian, eggless"/></label></div><div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-medium">Shelf life (days)<Input type="number" min={0} max={365} value={draft.shelfLifeDays} onChange={e=>set('shelfLifeDays',e.target.value)} placeholder="e.g. 2"/></label><label className="block space-y-1 text-xs font-medium">Storage instructions<Input maxLength={500} value={draft.storageInstructions} onChange={e=>set('storageInstructions',e.target.value)} placeholder="Refrigerate; consume within 2 days"/></label></div></div>
               <label className="flex items-center gap-2 text-xs font-medium sm:col-span-2"><input type="checkbox" checked={draft.showPrice} onChange={e=>set('showPrice',e.target.checked)} />Show price publicly</label>
-            </div>
+              <div className="grid items-start gap-3 sm:grid-cols-2">
+              <div className="flex min-w-0 flex-col gap-1.5 text-xs font-medium"><Label htmlFor="seller-editor-availability" className="text-xs leading-5">Availability</Label>
+                  <Select value={draft.availability} onValueChange={value=>set('availability',value as ProductDraft['availability'])}>
+                    <SelectTrigger id="seller-editor-availability" className="min-h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent position="popper" sideOffset={6}><SelectItem value="available">Available</SelectItem><SelectItem value="made-to-order">Made to order</SelectItem><SelectItem value="unavailable">Unavailable</SelectItem></SelectContent>
+                  </Select>
+                </div>
+
+              <div className="flex min-w-0 flex-col gap-1.5"><Label htmlFor="seller-editor-preparation" className="text-xs leading-5">Preparation days</Label><Input id="seller-editor-preparation" className="min-h-11" type="number" inputMode="numeric" min={0} max={365} value={draft.preparationDays} onChange={e=>set('preparationDays',e.target.value)} /></div>
+              <div className="flex min-w-0 flex-col gap-1.5"><Label htmlFor="seller-editor-stock" className="text-xs leading-5">Stock quantity</Label><Input id="seller-editor-stock" className="min-h-11" type="number" inputMode="numeric" min={0} max={1000000} value={draft.stockQuantity} onChange={e=>set('stockQuantity',e.target.value)} /></div>
+              </div>
+          <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-5"><summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold [&::-webkit-details-marker]:hidden">Payment requirements <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180"/></summary><div className="mt-3">
+              <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={draft.advancePaymentRequired} onChange={e => set('advancePaymentRequired', e.target.checked)} />Advance payment required before preparation</label><p className="text-xs text-muted-foreground sm:col-span-2">Arrange the advance directly with the buyer. TreatStory does not collect online payments.</p></div>
           </details>
-        </div>
-        <div className="flex shrink-0 items-center gap-3 border-t border-[#e8e0d5] bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:justify-end sm:px-7 sm:py-4">
-          <Button type="button" variant="outline" onClick={onClose} className="h-11 flex-1 rounded-full sm:flex-none">Cancel</Button>
-          <Button type="submit" disabled={busy||uploading||!enabled} className="h-11 flex-[2] rounded-full bg-[#29251f] text-white sm:flex-none sm:px-8">{busy ? 'Saving…' : editing ? 'Save changes' : 'Create product'}</Button>
-        </div>
-      </form>
-    </div>
-  </div>;
+            </section>
+            <section data-step hidden={step !== 3} className="space-y-4 break-words">
+              {photos[0] && <img src={photos[0]} alt="Listing cover" className="aspect-[2/1] max-h-64 w-full rounded-2xl object-contain bg-[#eee9e2]"/>}
+              <div><p className="text-xs text-muted-foreground">{[storeName,draft.category].filter(Boolean).join(' · ')}</p>
+                <h3 className="mt-1 text-xl font-semibold">{draft.name}</h3>
+                <p className="mt-2 whitespace-pre-line text-sm">{draft.description}</p></div>
+              <div className="rounded-xl bg-white p-4 text-sm">
+                {draft.weightOptions.length ? <ul>{draft.weightOptions.map((w,i) => <li key={i} className="flex flex-wrap justify-between gap-2 py-1">
+                  <span>{w.value} {w.unit}</span><span>₹{w.price} · {w.stockQuantity || draft.stockQuantity || '0'} in stock</span></li>)}</ul> : <p>₹{draft.price}</p>}
+                <p className="mt-2 capitalize">{draft.availability.replaceAll('-', ' ')}{(!draft.weightOptions.length || draft.weightOptions.some(size => !size.stockQuantity)) && ` · ${draft.stockQuantity || '0'} in stock`}</p>
+                {editing && <p className="mt-2">Current listing status: {draft.status}</p>}
+                {sku && <ProductSkuCopy sku={sku}/>}
+              </div>
+            </section>
+            {fieldError && <p role="alert" className="mt-3 text-sm text-red-800">{fieldError}</p>}
+            {saveError && <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">{saveError}</p>}
+          </div>
+          <footer className="flex shrink-0 items-center gap-2 border-t border-[#e8e0d5] bg-white px-4 pt-2 pb-[max(.5rem,env(safe-area-inset-bottom))] sm:px-7">
+            {step > 0 && <Button type="button" variant="ghost" aria-label="Back" className={step === 3 ? 'size-11 shrink-0 p-0' : ''} disabled={blocked} onClick={() => move(step-1)}>{step === 3 ? <ArrowLeft size={18}/> : 'Back'}</Button>}
+            {step < 3 ? <Button type="submit" disabled={blocked} className="ml-auto rounded-full px-6">Continue</Button> :
+              <div className="ml-auto grid min-w-0 grid-cols-2 gap-2 [&_button]:px-2 sm:[&_button]:px-4">
+                <Button type="button" variant="outline" disabled={blocked || !enabled} onClick={() => onSubmit('draft')}>Save as Draft</Button>
+                <Button type="button" disabled={blocked || !enabled} onClick={() => onSubmit('published')}>{busy ? 'Saving…' : editing && draft.status === 'published' ? 'Save changes' : 'Publish Product'}</Button>
+              </div>}
+          </footer>
+        </form>
+        <ConfirmActionDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}
+          title="Discard your changes?" description="Your unsaved listing changes will be lost."
+          cancelLabel="Keep editing" confirmLabel="Discard changes" destructive onConfirm={onClose}/>
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>;
 }

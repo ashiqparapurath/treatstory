@@ -56,6 +56,9 @@ const { chromium, firefox, webkit } = require('playwright');
         }
         const seller = await browser.newPage({viewport:{width:320,height:568}});
         try {
+          await seller.route('https://images.example.com/**', route => route.fulfill({
+            contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAIAAAA7ljmRAAAAFElEQVR4nGPct3oSAwwwMSABFA4ASg8CAQx4gxcAAAAASUVORK5CYII=','base64')
+          }));
           for (const mode of ['ai-add','ai-edit']) {
             let calls = 0;
             await seller.route('**/api/seller/description', route => {
@@ -86,10 +89,88 @@ const { chromium, firefox, webkit } = require('playwright');
             await panel.getByText(/3 generations left today/).waitFor();
             await preview.fill('Edited cocoa cookies.');
             await panel.getByText('Use Description').click();
+            await seller.getByRole('button',{name:'Close product editor'}).click();
+            const confirmation = seller.getByRole('alertdialog',{name:'Discard your changes?'});
+            await confirmation.getByRole('button',{name:'Keep editing'}).waitFor();
+            assert.equal(await confirmation.getByRole('button',{name:'Keep editing'}).evaluate(el=>el===document.activeElement),true);
+            // Radix animates the alert dialog for 200ms; measure settled
+            // geometry across viewport changes, not an intermediate zoom frame.
+            for (const width of [320,360,375,390,430,1280]) {
+              await seller.setViewportSize({width,height:568});
+              await seller.waitForTimeout(250);
+              const layout = await confirmation.evaluate(el => {
+                const rect=el.getBoundingClientRect();
+                const controls=[...el.querySelectorAll('button')].map(button=>{
+                  const bounds=button.getBoundingClientRect();
+                  return {name:button.textContent?.trim(),left:bounds.left,right:bounds.right};
+                });
+                return {left:rect.left,right:rect.right,width:innerWidth,scrollWidth:el.scrollWidth,
+                  clientWidth:el.clientWidth,controls,
+                  fits:rect.left>=-1 && rect.right<=innerWidth+1 && el.scrollWidth<=el.clientWidth+1};
+              });
+              assert.ok(layout.fits,engine+' discard dialog '+width+'px: '+JSON.stringify(layout));
+            }
+            await seller.setViewportSize({width:320,height:568});
+            await confirmation.getByRole('button',{name:'Keep editing'}).click();
+            await confirmation.waitFor({state:'hidden'});
+            assert.equal(await seller.locator('#creatorDescription').inputValue(),'Edited cocoa cookies.');
+            await seller.evaluate(()=>history.back());
+            await confirmation.waitFor();
+            await seller.keyboard.press('Escape');
+            await confirmation.waitFor({state:'hidden'});
             await panel.getByText('Suggest with AI').click();
             await panel.getByRole('alert').waitFor();
-            await seller.getByRole('button',{name: mode === 'ai-edit' ? 'Save changes' : 'Create product'}).click();
-            assert.equal(await seller.getByTestId('saved').textContent(),'Edited cocoa cookies.');
+            async function checkWizardWidths() {
+              for (const width of [320,360,375,390,430,768,1280]) {
+                await seller.setViewportSize({width,height:700});
+                assert.ok(await seller.getByRole('dialog').evaluate(el => {
+                  const visible = [...el.querySelectorAll('input,textarea,button,summary')].filter(control=> control.getBoundingClientRect().width > 1);
+                  return el.scrollWidth <= el.clientWidth + 1 && visible.every(control => {
+                    const rect=control.getBoundingClientRect();
+                    return rect.left >= -1 && rect.right <= innerWidth + 1;
+                  });
+                }),engine+' wizard controls fit '+width);
+              }
+              await seller.setViewportSize({width:320,height:568});
+            }
+            await checkWizardWidths();
+            const next = seller.getByRole('button',{name:'Continue'});
+            await seller.getByLabel('Product name').fill('');
+            await next.click();
+            await seller.getByText('Step 1 of 4').waitFor();
+            await seller.getByLabel('Product name').fill('Cocoa cookies');
+            await next.click();
+            await seller.locator('#sellerPhotoFiles').setInputFiles([
+              {name:'first.png',mimeType:'image/png',buffer:Buffer.from('fixture')},
+              {name:'second.png',mimeType:'image/png',buffer:Buffer.from('fixture')}
+            ]);
+            await checkWizardWidths();
+            await seller.getByRole('button',{name:'Set as cover'}).click();
+            assert.match(await seller.getByAltText('Cover photo',{exact:true}).getAttribute('src'),/second.png$/);
+            await seller.getByRole('button',{name:'Remove photo 2'}).click();
+            await next.click();
+            await seller.getByRole('button',{name:'Back',exact:true}).click();
+            assert.match(await seller.getByAltText('Cover photo',{exact:true}).getAttribute('src'),/second.png$/);
+            await next.click();
+            if (mode === 'ai-edit') {
+              await seller.getByText('Weight, size & variant pricing',{exact:true}).click();
+              await seller.getByRole('button',{name:'Add another size & price'}).click();
+              await seller.getByLabel('Weight / count').fill('250');
+              await seller.getByLabel('Price for this size').fill('95');
+              await seller.getByLabel('Size stock').fill('4');
+              assert.equal(await seller.getByText('Price (₹)',{exact:true}).isVisible(),false);
+            }
+            await checkWizardWidths();
+            await next.click();
+            await seller.getByText('Step 4 of 4').waitFor();
+            await seller.getByAltText('Listing cover').evaluate(img => img.decode());
+            await checkWizardWidths();
+            await seller.getByRole('button',{name: mode === 'ai-edit' ? 'Save changes' : 'Save as Draft'}).click();
+            assert.equal(await seller.getByTestId('saved').textContent(),(mode === 'ai-edit' ? 'published' : 'draft') + '/Edited cocoa cookies.');
+            await seller.setViewportSize({width:320,height:568});
+            await seller.getByRole('button',{name:'Close product editor'}).click();
+            await confirmation.getByRole('button',{name:'Discard changes'}).click();
+            await seller.getByRole('dialog').waitFor({state:'hidden'});
             assert.equal(calls,3);
             await seller.unroute('**/api/seller/description');
           }

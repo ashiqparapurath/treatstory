@@ -6,10 +6,10 @@ import { ConfirmActionDialog } from '@/components/confirm-action-dialog';
 import { Suspense } from 'react';
 import { DashboardShellSkeleton, SectionSkeleton } from '@/components/loading-states';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { collection, doc, addDoc, deleteDoc, updateDoc, query, where, serverTimestamp, getCountFromServer, Timestamp, deleteField } from 'firebase/firestore';
+import { collection, doc, getDoc, addDoc, deleteDoc, updateDoc, query, where, serverTimestamp, getCountFromServer, Timestamp, deleteField } from 'firebase/firestore';
 import { useFirestore, useUser, useAccountRole, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { Header } from '@/components/header';
 import { OrderManagement } from '@/components/order-management';
@@ -26,6 +26,9 @@ import { saveProductRequest, invalidProductMessage } from '@/lib/seller-product-
 import { ProductSkuCopy } from '@/components/product-sku-copy';
 import { SellerStoreSettings } from '@/components/seller-store-settings';
 import { uploadTreatStoryPhoto } from '@/lib/cloudinary-upload';
+
+// Survives client-side navigation only; no browser storage, tokens or file blobs.
+const unfinishedListings = new WeakMap<object, { draft: ProductDraft; requestId: string }>();
 
 type Section = 'overview' | 'products' | 'orders' | 'store';
 const dateText = (value: unknown) => { const d = (value as { toDate?: () => Date } | null)?.toDate?.(); return d ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not set'; };
@@ -61,6 +64,10 @@ function SellerContent() {
   const setSection = (next: Section) => router.push(`/seller/dashboard?section=${next}`, { scroll: false });
   const [editing, setEditing] = useState<MarketplaceProduct | null>(null);
   const [draft, setDraft] = useState<ProductDraft>(emptyDraft);
+  const savingListing = useRef(false);
+  const createRequest = useRef('');
+  const [savedListing, setSavedListing] = useState<{ id: string; name: string; sku: string; status: ProductDraft['status'] } | null>(null);
+  const editingUser = useRef<typeof user>(null);
   const [pendingDelete,setPendingDelete] = useState<MarketplaceProduct|null>(null);
   const [deleteError,setDeleteError] = useState('');
   const [saveError, setSaveError] = useState('');
@@ -118,6 +125,10 @@ function SellerContent() {
   const loadedDrafts = (products ?? []).length - loadedPublished;
 
   function openForm(product?: MarketplaceProduct & { status?: string }) {
+    editingUser.current = user;
+    const recovered = !product && user ? unfinishedListings.get(user) : undefined;
+    createRequest.current = recovered?.requestId || crypto.randomUUID();
+    setSavedListing(null);
     setEditing(product ?? null);
     setUploadProgress('');
     setDraft(product ? {
@@ -136,20 +147,33 @@ function SellerContent() {
       storageInstructions: product.storageInstructions ?? '',
       weightOptions: (product.weightOptions?.length ? product.weightOptions : product.weightValue && product.weightUnit ? [{ value: product.weightValue, unit: product.weightUnit }] : []).map(w => ({ value: String(w.value), unit: w.unit, price: 'price' in w && typeof w.price === 'number' ? String(w.price) : String(product.price), stockQuantity: 'stockQuantity' in w && typeof w.stockQuantity === 'number' ? String(w.stockQuantity) : '' })),
       showPrice: product.showPrice, status: product.status === 'published' ? 'published' : 'draft'
-    } : emptyDraft);
+    } : recovered?.draft ?? emptyDraft);
     setSaveError('');
+    if (!window.history.state?.sellerWizard) window.history.pushState({ sellerWizard: true }, '', window.location.href);
     setFormOpen(true);
+  }
+
+  useEffect(() => {
+    if (user && user === editingUser.current && formOpen && !editing && draft !== emptyDraft)
+      unfinishedListings.set(user, { draft, requestId: createRequest.current });
+  }, [user, formOpen, editing, draft]);
+
+  function closeListing() {
+    setFormOpen(false);
+    if (window.history.state?.sellerWizard) window.history.back();
   }
 
   async function uploadProductPhotos(files: File[]) {
     if (!user || !active || uploadingPhotos || busy || !files.length) return;
     const currentCount = parseProductImageUrls(draft.imageUrls).length;
     if (currentCount + files.length > 10) {
+      setUploadProgress('Remove photos before adding more than ten.');
       toast({ variant: 'destructive', title: 'Maximum 10 photos', description: 'Remove some photos before adding more.' });
       return;
     }
     for (const file of files) {
       if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 2_000_000 || file.size === 0) {
+        setUploadProgress('Choose JPG, PNG or WebP files under 2 MB each.');
         toast({ variant: 'destructive', title: 'Unsupported photo', description: 'Select JPG, PNG or WebP images under 2 MB each.' });
         return;
       }
@@ -169,18 +193,17 @@ function SellerContent() {
       setUploadProgress(`${files.length} photo(s) uploaded`);
       toast({ title: 'Photos uploaded', description: 'Save the product to publish these images.' });
     } catch (error) {
-      setUploadProgress('');
       const notice=errorToast(error,'upload-photo');
+      setUploadProgress(notice.description);
       toast({...notice,...(uploaded?{title:`${uploaded} of ${files.length} photos uploaded`,description:`Uploaded photos are kept in your draft. ${notice.description}`}:{})});
     } finally { setUploadingPhotos(false); }
   }
 
-  async function saveProduct(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!db || !user || !active || busy || uploadingPhotos) return;
+  async function saveProduct(status: ProductDraft['status']) {
+    if (!db || !user || !active || busy || uploadingPhotos || savingListing.current || user !== editingUser.current) return;
     // Size-specific prices are stored on the same listing. Its base price
     // is the lowest effective variant price for catalog previews.
-    const baseEntered = draft.price.trim() !== '';
+    const baseEntered = !draft.weightOptions.length && draft.price.trim() !== '';
     const basePrice = baseEntered ? Number(draft.price) : null;
     if (baseEntered && (!Number.isFinite(basePrice) || basePrice! < 0 || basePrice! > 10000000))
       return toast({ variant: 'destructive', title: 'Enter a valid base price' });
@@ -227,6 +250,7 @@ function SellerContent() {
     if (!Number.isInteger(preparationDays) || preparationDays < 0 || preparationDays > 365)
       return toast({ variant: 'destructive', title: 'Preparation days must be a whole number between 0 and 365' });
     setSaveError('');
+    savingListing.current = true;
     setBusy(true);
     try {
       const data = {
@@ -243,12 +267,12 @@ function SellerContent() {
         storageInstructions: draft.storageInstructions.trim(),
         weightOptions: weights,
 
-        status: draft.status
+        status
       };
       const payload = { product: data, ...(editing ? {
         productId: editing.id,
         expectedUpdatedAt: (editing.updatedAt as {toMillis?:()=>number}|undefined)?.toMillis?.() ?? null,
-      } : {}) };
+      } : { requestId: createRequest.current }) };
       const validation = saveProductRequest.safeParse(payload);
       if (!validation.success) {
         const message = invalidProductMessage(validation.error.issues);
@@ -260,13 +284,27 @@ function SellerContent() {
       const response=await fetch('/api/seller/products',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(validation.data)});
       const result=await response.json();if(!response.ok)throw new ActionError(result.error||'Could not save product.',response.status);
       setCountVersion(v => v + 1);
-      toast({title:draft.status==='draft'?'Product draft saved':editing?'Product updated':'Product published',description:draft.status==='draft'?`Your draft is saved with SKU ${result.sku}. Publish it when you are ready.`:`${draft.name.trim()} is saved. Share SKU ${result.sku} in your Instagram reel so buyers can find it.`});
-      setFormOpen(false);
+      if (!editing) unfinishedListings.delete(user);
+      setSavedListing({ id: result.productId, sku: result.sku, name: data.name, status });
+      closeListing();
     } catch (error) {
       // Expected validation responses are shown in the form; don't log them as opaque SDK failures.
       const notice=errorToast(error,'save-product');
       setSaveError(`${notice.title}. ${notice.description}`);toast(notice);
     }
+    finally { savingListing.current = false; setBusy(false); }
+  }
+
+  async function openSavedDraft() {
+    if (!db || !savedListing || busy || !user) return;
+    setBusy(true);
+    try {
+      const snapshot = await getDoc(doc(db, 'marketplace_products', savedListing.id));
+      if (!snapshot.exists()) throw new ActionError('This listing is unavailable.', 404);
+      const product = snapshot.data() as MarketplaceProduct;
+      if (product.sellerId !== user.uid) throw new ActionError('Seller access required.', 403);
+      openForm({ ...product, id: snapshot.id });
+    } catch (error) { toast(errorToast(error, 'save-product')); }
     finally { setBusy(false); }
   }
 
@@ -300,6 +338,16 @@ function SellerContent() {
       <main className="min-w-0 space-y-5 sm:space-y-7">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e7ded2] pb-5 sm:pb-7"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a68a64]">Seller studio / {section}</p><h1 className="mt-2 text-[28px] font-semibold leading-tight tracking-tight text-[#29251f] sm:text-[36px]">{section === 'products' ? 'Your catalog' : menu.find(m => m.key === section)?.label}</h1><p className="mt-1 text-sm text-[#817568]">{section === 'products' ? 'Organize listings, update prices and manage what shoppers see.' : section === 'orders' ? 'Stay on top of every customer order.' : section === 'store' ? 'Keep your storefront ready for shoppers.' : 'Your business at a glance.'}</p></div>{section === 'products' && <Button onClick={() => openForm()} disabled={!active} className="h-11 rounded-xl bg-[#29251f] px-5 text-white hover:bg-[#443b31]"><Plus className="mr-2 h-4 w-4" />Add product</Button>}</div>
         {!active && <div role="alert" className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950"><AlertCircle className="h-5 w-5 shrink-0" /><span>Your seller access is suspended, expired or not yet active. Editing and publishing are disabled. Contact TreatStory administration to renew access.</span></div>}
+          {savedListing && user === editingUser.current && <section role="status" className="rounded-2xl border border-[#e4dccf] bg-white p-5">
+            <CheckCircle2 className="mb-2 size-5 text-emerald-700" aria-hidden />
+            <h2 className="text-lg font-semibold">{savedListing.status === 'draft' ? 'Draft saved' : 'Listing published'}</h2>
+            <p className="mt-1 break-words text-sm">{savedListing.name} · {savedListing.sku}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {savedListing.status === 'published' ? <Button asChild><Link href={'/product/seller:' + encodeURIComponent(savedListing.id)}>View product</Link></Button>
+                : <Button disabled={busy} onClick={openSavedDraft}>View saved draft</Button>}
+              <Button variant="outline" onClick={() => { setSavedListing(null); setSection('overview'); }}>Return to dashboard</Button>
+            </div>
+          </section>}
         {section === 'overview' && <div className="space-y-5 sm:space-y-6">
           <section className="relative overflow-hidden rounded-2xl bg-[#29251f] p-5 text-white sm:p-7">
             <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10 sm:h-80 sm:w-80" />
@@ -337,6 +385,7 @@ function SellerContent() {
           {((seller.accessEndsAt as { toMillis?: () => number } | null)?.toMillis?.() ?? 0) < Date.now() + 7 * 86400000 && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">Seller access expires {dateText(seller.accessEndsAt)}. Contact TreatStory administration to renew.</p>}
         </div>}
         {section === 'products' && <div className="space-y-4">
+
           <div className="grid grid-cols-3 overflow-hidden rounded-2xl border border-[#e6dfd5] bg-white">
             {[
               {label:'Loaded listings', value:(products ?? []).length},
@@ -371,7 +420,7 @@ function SellerContent() {
       </main>
     </div>
     <ConfirmActionDialog open={!!pendingDelete} onOpenChange={open=>{if(!open)setPendingDelete(null);}} title="Delete this product?" description={`${pendingDelete?.name || 'This product'} will be removed from your shop. This cannot be undone.`} confirmLabel="Delete product" pendingLabel="Deleting…" destructive busy={busy} error={deleteError} onConfirm={()=>pendingDelete?removeProduct(pendingDelete):undefined} />
-    {formOpen && <SellerProductEditor key={user?.uid} user={user} saveError={saveError} open={formOpen} editing={!!editing} sku={editing?.sku} busy={busy} enabled={active} draft={draft} setDraft={setDraft} categories={[...new Set((products ?? []).map(p => p.category))]} onClose={() => { if (!uploadingPhotos && !busy) { setFormOpen(false); setUploadProgress(''); } }} onSubmit={saveProduct} onUploadPhotos={uploadProductPhotos} uploading={uploadingPhotos} uploadProgress={uploadProgress} />}
+    {formOpen && user === editingUser.current && <SellerProductEditor key={user?.uid} user={user} storeName={seller.businessName} saveError={saveError} open={formOpen} editing={!!editing} sku={editing?.sku} busy={busy} enabled={active} draft={draft} setDraft={setDraft} categories={[...new Set((products ?? []).map(p => p.category))]} onClose={() => { if (!uploadingPhotos && !busy) { if (!editing && user) unfinishedListings.delete(user); closeListing(); setUploadProgress(''); } }} onSubmit={saveProduct} onUploadPhotos={uploadProductPhotos} uploading={uploadingPhotos} uploadProgress={uploadProgress} />}
   </div>;
 }
 

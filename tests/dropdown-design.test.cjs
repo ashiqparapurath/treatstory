@@ -69,7 +69,7 @@ test('buyer, seller and admin dropdowns use styled opened menus, not native pick
   const checkout=read(paths[1]);
   assert.match(checkout, /setFulfillment\(value as typeof fulfillment\)/);
   const editor=read(paths[2]);
-  for (const code of ['available','made-to-order','unavailable','draft','published']) assert.ok(editor.includes('<SelectItem value="'+code+'">'));
+  for (const code of ['available','made-to-order','unavailable']) assert.ok(editor.includes('<SelectItem value="'+code+'">'));
   assert.match(editor, /role="combobox" aria-autocomplete="list"/);
   assert.match(editor, /role="listbox"/);
   const admin=read(paths[3]);

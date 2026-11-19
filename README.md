@@ -64,3 +64,11 @@ Set the server-only variables in Vercel and redeploy. The route reuses the exist
 | GEMINI_PLATFORM_MINUTE_LIMIT | 5 attempts across the marketplace per UTC clock minute |
 
 Limits accept nonnegative integers. Zero disables that allowance. Firestore reserves each attempt in one transaction before contacting Google. Failed provider calls count because their actual usage can be uncertain. Quota lookups and invalid input consume no generations. The server overwrites fixed counter documents without storing prompts or responses. These limits are independent of Google's changing quotas. Confirm current [rate limits](https://ai.google.dev/gemini-api/docs/rate-limits) and [model availability](https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash-lite).
+
+### Seller product wizard
+
+The seller dashboard uses the same four steps on phones, tablets and desktop. Product basics includes the optional Gemini preview described above. Photos upload to the existing Cloudinary service and the first image is the cover. Pricing uses either one INR price or a price for each size. Review offers explicit draft and publish actions. Published products link to their storefront page. Drafts are visible in the seller catalog.
+
+An unfinished new listing can be recovered when the same seller reopens the editor after navigating within the app. Closing and confirming discard clears it. Reloading or closing the tab clears in-memory recovery. No listing data, credentials or upload tokens are written to browser storage by the wizard. Product creation accepts an optional request ID so retries return the original listing and SKU. Edits retain the existing version check. The wizard shares the existing Firebase, Cloudinary and Gemini environment variables and requires no database migration.
+
+Closing an edited listing in the app opens a TreatStory confirmation with **Keep editing** and **Discard changes**. Refreshing or closing the browser tab may show the browser’s own unsaved-changes warning.

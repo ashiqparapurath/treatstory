@@ -83,6 +83,7 @@ export const sellerProductSchema = z
   );
 export const saveProductRequest = z
   .object({
+    requestId: z.uuid().optional(),
     productId: z
       .string()
       .regex(/^[A-Za-z0-9_-]{1,128}$/)
