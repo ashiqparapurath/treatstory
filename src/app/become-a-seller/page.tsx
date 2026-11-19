@@ -360,13 +360,13 @@ export default function BecomeSellerPage() {
                       <Label htmlFor="instagramUrl">Instagram profile link (optional)</Label>
                       <Input id="instagramUrl" inputMode="url" autoCapitalize="none" maxLength={512} value={instagramUrl} onChange={e => setInstagramUrl(e.target.value)} placeholder="https://www.instagram.com/yourstudio/" className={fieldClass} />
                     </div>
-                    <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
-                      <input type="checkbox" checked={fssaiRegistered} onChange={e => { setFssaiRegistered(e.target.checked); if (!e.target.checked) setFssaiNumber(''); }} className="h-5 w-5 accent-[#293029]" />
-                      My business is FSSAI registered
-                    </label>
+                    <div className="flex min-h-11 items-center gap-3 text-sm font-medium">
+                      <input type="checkbox" aria-labelledby="fssaiRegisteredText" checked={fssaiRegistered} onChange={e => { setFssaiRegistered(e.target.checked); if (!e.target.checked) setFssaiNumber(''); }} className="h-5 w-5 accent-[#293029]" />
+                      <span id="fssaiRegisteredText">My business is FSSAI registered</span>
+                    </div>
                     {fssaiRegistered && <div className="space-y-2">
-                      <Label htmlFor="fssaiNumber">FSSAI registration number (optional)</Label>
-                      <Input id="fssaiNumber" inputMode="numeric" pattern={fssaiNumberPattern.source} maxLength={14} value={fssaiNumber} onChange={e => setFssaiNumber(e.target.value)} placeholder="14-digit registration number" title="Enter a 14-digit registration number" className={fieldClass} />
+                      <Label htmlFor="fssaiNumber">FSSAI registration number (required)</Label>
+                      <Input id="fssaiNumber" required inputMode="numeric" pattern={fssaiNumberPattern.source} maxLength={14} value={fssaiNumber} onChange={e => setFssaiNumber(e.target.value)} placeholder="14-digit registration number" title="Enter a 14-digit registration number" className={fieldClass} />
                     </div>}
                     <div className="grid gap-5 sm:grid-cols-2">
                       <div className="min-w-0 space-y-2"><Label htmlFor="businessCity">City or town</Label>

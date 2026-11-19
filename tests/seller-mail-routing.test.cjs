@@ -75,6 +75,12 @@ test('seller submission queues receipt and admin email inside transaction for gu
     assert.equal(receipts.at(-1).adminEmail,'admin@example.com');
     assert.equal(receipts.at(-1).application.submittedAt.toMillis instanceof Function,true);
   }
+  for (const fssaiNumber of [undefined, '', '123']) {
+    const response = await POST(new Request('https://shop.example.com/api/seller-applications', {
+      method: 'POST', body: JSON.stringify({ ...body, fssaiRegistered: true, fssaiNumber }),
+    }));
+    assert.equal(response.status, 400);
+  }
   assert.equal(receipts.length,3);
   assert.equal(afterTasks.length,3);
   assert.equal(writes.filter(item=>item.path.startsWith('seller_applications/')).length,3);

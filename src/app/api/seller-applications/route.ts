@@ -33,7 +33,11 @@ const applicationSchema = z
     fssaiNumber: z.union([z.literal(''), z.string().regex(fssaiNumberPattern)]).default(''),
     website: z.string().max(0).default(''),
   })
-  .strict();
+  .strict()
+  .refine(data => !data.fssaiRegistered || fssaiNumberPattern.test(data.fssaiNumber), {
+    path: ['fssaiNumber'],
+    message: 'Enter the 14-digit FSSAI registration number.',
+  });
 export async function POST(request: NextRequest) {
   try {
     const input = applicationSchema.safeParse(
