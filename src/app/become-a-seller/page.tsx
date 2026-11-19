@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { reload } from 'firebase/auth';
 import { ArrowDownRight, ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, Heart, PackageCheck, ShieldCheck, Sparkles, Store } from 'lucide-react';
 import { Header } from '@/components/header';
 import { useAccountRole, useUser } from '@/firebase';
@@ -131,8 +132,8 @@ function HowItWorks() {
 
 function SellerFaq() {
   const questions = [
-    { q: 'How does the six-month free trial work?', a: SELLER_TRIAL_MESSAGE },
-    { q: 'Do I need to create an account first?', a: 'No. Apply first if you like. Before activation, you will need to register and verify an account using the same email address.' },
+    { q: 'How is my seller access decided?', a: SELLER_TRIAL_MESSAGE },
+    { q: 'Do I need to create an account first?', a: 'No. Apply as a guest. After approval, we will email you a link to create an account (or sign in), verify the same email and activate your seller profile.' },
     { q: 'Can sellers join from anywhere in India?', a: 'Yes. Sellers across India can apply. Each seller chooses pickup and delivery coverage; shipping to every PIN code is not guaranteed.' },
     { q: 'What about food and home bakes?', a: 'Home bakers must provide current FSSAI registration or licence details for review before listing food products.' },
     { q: 'Is seller approval automatic?', a: 'No. TreatStory reviews each application before granting seller access.' },
@@ -174,10 +175,36 @@ export default function BecomeSellerPage() {
   const [submitted,setSubmitted] = useState(false);
   const [submitting,setSubmitting] = useState(false);
   const [applicationVisible,setApplicationVisible] = useState(false);
+  const [activationRequested,setActivationRequested] = useState(false);
+  const [activationBusy,setActivationBusy] = useState(false);
+  const [activationMessage,setActivationMessage] = useState('');
   const stepHeading=useRef<HTMLHeadingElement>(null);
   const firstStep=useRef(true);
 
   useEffect(() => { if(user?.email) setContactEmail(value => value || user.email || ''); }, [user?.email]);
+  useEffect(() => { setActivationRequested(new URLSearchParams(window.location.search).get('activate') === '1'); }, []);
+
+  async function activateApprovedApplication() {
+    if (!user || activationBusy || seller) return;
+    setActivationBusy(true);
+    setActivationMessage('');
+    try {
+      await reload(user);
+      await user.getIdToken(true);
+      const response=await fetch('/api/seller-applications/activate',{
+        method:'POST',headers:{Authorization:'Bearer '+await user.getIdToken(true)},
+      });
+      const result=await response.json();
+      if (!response.ok) {
+        setActivationMessage(result?.error || 'Could not activate this application.');
+        return;
+      }
+      toast({title:'Seller profile activated',description:'Your approved TreatStory store is ready.'});
+      window.location.assign('/seller/dashboard');
+    } catch(error) {
+      setActivationMessage(error instanceof Error ? error.message : 'Unable to activate your seller profile. Try again.');
+    } finally { setActivationBusy(false); }
+  }
 
   useEffect(() => {
     const target=document.getElementById('seller-application');
@@ -242,7 +269,7 @@ export default function BecomeSellerPage() {
               <p className="mt-4 max-w-sm text-[13px] leading-7 text-[#7b7064]">Three short steps, and your application is ready for review. Nothing is published automatically.</p>
               <div className="mt-7 flex max-w-sm items-start gap-3 border-t border-[#ded6c9] pt-5 text-[12px] leading-6 text-[#76685a]">
                 <ShieldCheck aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-[#95734e]"/>
-                <p>Six months free from approval, with no automatic charge or renewal. Continue only if you are satisfied.</p>
+                <p>Approved sellers receive an individual 3-month, 6-month or full-access plan. Free trials start after account activation, with no automatic charge.</p>
               </div>
             </div>
             {isUserLoading || (user && isRoleLoading) ? (
@@ -265,11 +292,26 @@ export default function BecomeSellerPage() {
                 <CheckCircle2 aria-hidden="true" className="h-10 w-10 text-[#688259]"/>
                 <h3 className="mt-4 font-serif text-[32px] tracking-[-0.03em]">Your story is on its way.</h3>
                 <p className="mt-3 max-w-lg text-[13px] leading-7 text-[#686d5c]">Your application was received. TreatStory will review it and contact you with the details provided.</p>
-                {!user && <p className="mt-4 max-w-lg text-sm leading-7 text-[#6e6559]"><Link href="/register?next=%2Fbecome-a-seller" className="font-semibold underline underline-offset-4">Create your account</Link> using the same email and verify it before activation. <Link href="/login?next=%2Fbecome-a-seller" className="underline underline-offset-4">Already registered? Sign in.</Link></p>}
+                {!user && <p className="mt-4 max-w-lg text-sm leading-7 text-[#6e6559]">After approval, <Link href="/register?next=%2Fbecome-a-seller%3Factivate%3D1" className="font-semibold underline underline-offset-4">create an account</Link> with the same email, or <Link href="/login?next=%2Fbecome-a-seller%3Factivate%3D1" className="underline underline-offset-4">sign in</Link> and verify it to activate your approved seller profile.</p>}
                 <Link href="/" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#4a5840] underline underline-offset-4">Return to TreatStory <ArrowRight aria-hidden="true" className="h-4 w-4"/></Link>
               </section>
             ) : (
               <div className="min-w-0 sm:rounded-[24px] sm:border sm:border-[#e5ddd0] sm:bg-white sm:px-8 sm:py-8 lg:px-10">
+                {activationRequested ? <section aria-label="Activate approved seller profile" className="mb-6 space-y-3 rounded-2xl bg-[#f5f0e8] p-4 sm:p-5">
+                  <h3 className="font-serif text-xl">Your seller application was approved?</h3>
+                  <p className="text-sm leading-6 text-[#74695b]">Activate using the same email address from your application. Your selected access period starts only after activation.</p>
+                  {user ? <>
+                    <p className="break-all text-xs text-[#736657]">Signed in as: {user.email}</p>
+                    <p className="text-xs text-[#736657]">If you registered with a password, open the verification email first, then return here. Google accounts can activate once their email is verified.</p>
+                    <Button type="button" className="min-h-11 rounded-full" disabled={activationBusy} onClick={() => void activateApprovedApplication()}>
+                      {activationBusy ? 'Checking approval…' : 'Activate my seller profile'}
+                    </Button>
+                  </> : <div className="flex flex-wrap gap-2">
+                    <Button asChild className="min-h-11 rounded-full"><Link href="/register?next=%2Fbecome-a-seller%3Factivate%3D1">Create account</Link></Button>
+                    <Button asChild variant="outline" className="min-h-11 rounded-full"><Link href="/login?next=%2Fbecome-a-seller%3Factivate%3D1">Sign in</Link></Button>
+                  </div>}
+                  {activationMessage && <p role="alert" className="break-words rounded-lg bg-red-50 p-3 text-xs text-red-800">{activationMessage}</p>}
+                </section> : user && <button type="button" className="mb-5 min-h-11 text-xs font-semibold text-[#80684c] underline underline-offset-4" onClick={() => setActivationRequested(true)}>Already approved? Activate your seller profile</button>}
                 <ol aria-label="Application progress" className="grid grid-cols-3 gap-2 sm:gap-3">
                   {steps.map((label,index)=>{
                     const current=(index+1) as ApplicationStep;
@@ -344,7 +386,7 @@ export default function BecomeSellerPage() {
                       {!submitting&&<ArrowRight aria-hidden="true" className="ml-2 h-4 w-4"/>}
                     </Button>
                   </div>
-                  {step===3&&<p className="text-[12px] leading-6 text-[#827568]">No account is needed to apply. Register and verify the same email before activation. Approval is subject to review.</p>}
+                  {step===3&&<p className="text-[12px] leading-6 text-[#827568]">No account is needed to apply. Once approved, you'll receive an email invitation. Register or sign in with the same verified email to activate your admin-selected plan.</p>}
                 </form>
               </div>
             )}
