@@ -49,3 +49,5 @@ firestore-debug.log
 # Local IDE / transient marker files (no longer used for this Vercel project)
 .idx/
 .modified
+
+!.env.example

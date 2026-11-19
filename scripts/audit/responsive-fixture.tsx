@@ -1,5 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { SellerProductEditor, emptyDraft } from '@/components/seller-product-editor';
 import { LegalContact } from '@/components/legal-contact';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogTitle, AlertDialogDescription } from '@/components/ui/alert-dialog';
@@ -16,5 +17,13 @@ const dropdownLayout = <div style={{minHeight:'190vh',padding:'20px 0'}}>
     <p>Keep the centred page position stable when a select menu opens.</p>
   </main>
 </div>;
-const view = mode === 'dropdown' ? dropdownLayout : mode === 'dialog' ? <Dialog open><DialogContent><DialogTitle>Delivery details</DialogTitle><DialogDescription>Review your contact details.</DialogDescription>{fields}</DialogContent></Dialog> : mode === 'alert' ? <AlertDialog open><AlertDialogContent><AlertDialogTitle>Account confirmation</AlertDialogTitle><AlertDialogDescription>{long}</AlertDialogDescription>{fields}</AlertDialogContent></AlertDialog> : mode === 'support' ? <SupportChatWorkspace tickets={[]} title="Your support requests" secure={false} backHref="/account" backLabel="Back to account" newConversation={fields} topNotice={<a href={'mailto:'+long}>{long}</a>} renderConversation={()=>null}/> : <main style={{maxWidth:700,margin:'auto',padding:16}}>{fields}</main>;
+const fixtureUser = { getIdToken: async () => 'fixture-token' };
+function DescriptionEditor() {
+  const [draft, setDraft] = React.useState({ ...emptyDraft, name: 'Cocoa cookies', category: 'Cookies', price: '100', description: 'Original description' });
+  const [saved, setSaved] = React.useState('');
+  return <><output data-testid="saved">{saved}</output><SellerProductEditor user={fixtureUser} open editing={mode === 'ai-edit'}
+    busy={false} enabled draft={draft} setDraft={setDraft} categories={[]} onClose={() => {}}
+    onSubmit={e => { e.preventDefault(); setSaved(draft.description); }} onUploadPhotos={async () => {}} uploading={false} uploadProgress="" /></>;
+}
+const view = mode?.startsWith('ai-') ? <DescriptionEditor/> : mode === 'dropdown' ? dropdownLayout : mode === 'dialog' ? <Dialog open><DialogContent><DialogTitle>Delivery details</DialogTitle><DialogDescription>Review your contact details.</DialogDescription>{fields}</DialogContent></Dialog> : mode === 'alert' ? <AlertDialog open><AlertDialogContent><AlertDialogTitle>Account confirmation</AlertDialogTitle><AlertDialogDescription>{long}</AlertDialogDescription>{fields}</AlertDialogContent></AlertDialog> : mode === 'support' ? <SupportChatWorkspace tickets={[]} title="Your support requests" secure={false} backHref="/account" backLabel="Back to account" newConversation={fields} topNotice={<a href={'mailto:'+long}>{long}</a>} renderConversation={()=>null}/> : <main style={{maxWidth:700,margin:'auto',padding:16}}>{fields}</main>;
 createRoot(document.getElementById('app')!).render(view);

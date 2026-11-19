@@ -54,6 +54,46 @@ const { chromium, firefox, webkit } = require('playwright');
           console.log(`PASS ${engine}: Shop All dropdown did not shift centered content or sidebar`);
           continue;
         }
+        const seller = await browser.newPage({viewport:{width:320,height:568}});
+        try {
+          for (const mode of ['ai-add','ai-edit']) {
+            let calls = 0;
+            await seller.route('**/api/seller/description', route => {
+              if (route.request().method() === 'GET') return route.fulfill({json:{remaining:5}});
+              calls++;
+              return calls <= 2 ? route.fulfill({json:{description:'Suggested cocoa cookies.',remaining:5-calls}})
+                : route.fulfill({status:503,json:{error:'Suggestions are unavailable.'}});
+            });
+            await seller.goto(`http://127.0.0.1:${server.address().port}/?mode=${mode}`);
+            const panel = seller.getByRole('region',{name:'AI description suggestion'});
+            await panel.getByText('5 generations left today.').waitFor();
+            await panel.getByText('Suggest with AI').click();
+            const preview = panel.getByLabel('Review and edit your suggestion');
+            await preview.fill('Edited cocoa cookies.');
+            assert.equal(await seller.locator('#creatorDescription').inputValue(),'Original description');
+            const fits = await panel.locator('button,textarea').evaluateAll(els=>els.every(el=>{
+              const rect=el.getBoundingClientRect();
+              return rect.left >= 0 && rect.right <= document.documentElement.clientWidth + 1;
+            }));
+            assert.ok(fits,engine+' '+mode+' AI controls fit at 320px');
+            if (mode === 'ai-add') {
+              await panel.getByText('Cancel',{exact:true}).click();
+              assert.equal(await seller.locator('#creatorDescription').inputValue(),'Original description');
+              await panel.getByText('Suggest with AI').click();
+            } else {
+              await panel.getByText('Regenerate').click();
+            }
+            await panel.getByText(/3 generations left today/).waitFor();
+            await preview.fill('Edited cocoa cookies.');
+            await panel.getByText('Use Description').click();
+            await panel.getByText('Suggest with AI').click();
+            await panel.getByRole('alert').waitFor();
+            await seller.getByRole('button',{name: mode === 'ai-edit' ? 'Save changes' : 'Create product'}).click();
+            assert.equal(await seller.getByTestId('saved').textContent(),'Edited cocoa cookies.');
+            assert.equal(calls,3);
+            await seller.unroute('**/api/seller/description');
+          }
+        } finally { await seller.close(); }
         for(const [width,height] of [[320,568],[360,640],[390,844],[568,320],[768,1024],[1440,900]]) {
           const page=await browser.newPage({viewport:{width,height},reducedMotion:'reduce'});
           for(const mode of ['contact','dialog','alert','support']) {
