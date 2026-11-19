@@ -28,6 +28,7 @@ test('seller submission queues receipt and admin email inside transaction for gu
   };
   const auth={getUser:async()=>({email:currentEmail,emailVerified:true,disabled:false})};
   const mocks={
+    '@/lib/seller-profile-details': load('src/lib/seller-profile-details.ts', {}),
     'next/server':{after:cb=>afterTasks.push(cb)},
     '@/lib/server/firebase-admin':{
       ApiError,getServerFirebase:()=>({db,auth}),
@@ -57,14 +58,20 @@ test('seller submission queues receipt and admin email inside transaction for gu
   for(const [method,uid] of [['guest',''],['email-password','password-user'],['google','google-user']]){
     currentUid=uid;
     currentEmail=method+'@example.com';
+    const details = method === 'guest'
+      ? { fssaiRegistered: true, fssaiNumber: '01234567890123', instagramUrl: 'https://instagram.com/yourstudio/?igsh=share' }
+      : method === 'google' ? { fssaiRegistered: false, fssaiNumber: '01234567890123' } : {};
     const request=new Request('https://treatstory.vercel.app/api/seller-applications',{
       method:'POST',headers:{'content-type':'application/json',...(uid?{authorization:'Bearer fixture-token'}:{})},
-      body:JSON.stringify({...body,contactEmail:method+'@example.com'}),
+      body:JSON.stringify({...body,...details,contactEmail:method+'@example.com'}),
     });
     const result=await POST(request);
     assert.equal(result.status,200,method);
     assert.equal((await result.json()).submitted,true);
     assert.equal(receipts.at(-1).application.contactEmail,method+'@example.com');
+    const saved = writes.find(item => item.path.startsWith('seller_applications/') && item.data.contactEmail === currentEmail).data;
+    assert.equal(saved.fssaiNumber, method === 'guest' ? '01234567890123' : '');
+    assert.equal(saved.instagramUrl, method === 'guest' ? 'https://www.instagram.com/yourstudio/' : '');
     assert.equal(receipts.at(-1).adminEmail,'admin@example.com');
     assert.equal(receipts.at(-1).application.submittedAt.toMillis instanceof Function,true);
   }

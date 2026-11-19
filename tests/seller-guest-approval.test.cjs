@@ -44,6 +44,7 @@ test('admin selection is required; a guest can be approved without a Firebase us
     }),
   };
   const mocks = {
+    '@/lib/seller-profile-details': load('src/lib/seller-profile-details.ts', {}),
     'next/server': { after() {} },
     '@/lib/server/firebase-admin': { verifiedUser: async () => ({ db, uid: 'admin', auth: { getUser: () => { throw Error('Guest approval must not require an account'); } } }), ApiError, safeResponse },
     '@/lib/server/request-body': { readJsonBody: request => request.json() },

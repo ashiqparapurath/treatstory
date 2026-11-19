@@ -1,5 +1,6 @@
 'use client';
 
+import { instagramProfileUrl, fssaiNumberPattern } from '@/lib/seller-profile-details';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -164,6 +165,9 @@ export default function BecomeSellerPage() {
   const { seller, isRoleLoading, roleError } = useAccountRole();
   const { toast } = useToast();
 
+  const [fssaiRegistered, setFssaiRegistered] = useState(false);
+  const [fssaiNumber, setFssaiNumber] = useState('');
+  const [instagramUrl, setInstagramUrl] = useState('');
   const [businessName,setBusinessName] = useState('');
   const [businessCategory,setBusinessCategory] = useState<SellerCategory>('home-bakery');
   const [businessCity,setBusinessCity] = useState('');
@@ -223,6 +227,10 @@ export default function BecomeSellerPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if(submitting || seller || (user && (isRoleLoading || roleError)))return;
+    if (step === 1 && instagramProfileUrl(instagramUrl) === null) {
+      toast({ variant: 'destructive', title: 'Enter an Instagram profile link', description: 'For example, https://www.instagram.com/yourstudio/' });
+      return;
+    }
     if(step !== 3) {
       setStep(current => (current + 1) as ApplicationStep);
       return;
@@ -241,6 +249,7 @@ export default function BecomeSellerPage() {
           businessCity:businessCity.trim(),businessState:businessState.trim(),
           contactEmail:contactEmail.trim(),contactPhone:contactPhone.trim(),
           description:description.trim(),website,
+          fssaiRegistered, fssaiNumber: fssaiRegistered ? fssaiNumber : '', instagramUrl,
         }),
       });
       const result=await response.json();
@@ -347,6 +356,18 @@ export default function BecomeSellerPage() {
                           {categories.map(category => <SelectItem key={category.value} value={category.value}>{category.label}</SelectItem>)}
                         </SelectContent>
                       </Select></div>
+                    <div className="space-y-2">
+                      <Label htmlFor="instagramUrl">Instagram profile link (optional)</Label>
+                      <Input id="instagramUrl" inputMode="url" autoCapitalize="none" maxLength={512} value={instagramUrl} onChange={e => setInstagramUrl(e.target.value)} placeholder="https://www.instagram.com/yourstudio/" className={fieldClass} />
+                    </div>
+                    <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
+                      <input type="checkbox" checked={fssaiRegistered} onChange={e => { setFssaiRegistered(e.target.checked); if (!e.target.checked) setFssaiNumber(''); }} className="h-5 w-5 accent-[#293029]" />
+                      My business is FSSAI registered
+                    </label>
+                    {fssaiRegistered && <div className="space-y-2">
+                      <Label htmlFor="fssaiNumber">FSSAI registration number (optional)</Label>
+                      <Input id="fssaiNumber" inputMode="numeric" pattern={fssaiNumberPattern.source} maxLength={14} value={fssaiNumber} onChange={e => setFssaiNumber(e.target.value)} placeholder="14-digit registration number" title="Enter a 14-digit registration number" className={fieldClass} />
+                    </div>}
                     <div className="grid gap-5 sm:grid-cols-2">
                       <div className="min-w-0 space-y-2"><Label htmlFor="businessCity">City or town</Label>
                         <Input id="businessCity" required minLength={2} maxLength={80} value={businessCity} onChange={e=>setBusinessCity(e.target.value)} placeholder="e.g. Pune" className={fieldClass} disabled={submitting}/></div>

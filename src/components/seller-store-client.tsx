@@ -1,5 +1,6 @@
 'use client';
 
+import { instagramProfileUrl } from '@/lib/seller-profile-details';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { collection, doc, query, where } from 'firebase/firestore';
@@ -24,6 +25,8 @@ export default function SellerStoreClient({ initialSeller = null, initialProduct
     : null, [db,id]);
   const { data: products, isLoading: loadingProducts } = useCollection<MarketplaceProduct>(productsRef);
   const visibleSeller = seller ?? initialSeller;
+  const instagramUrl = instagramProfileUrl(visibleSeller?.instagramUrl || '');
+  const fssaiNumber = visibleSeller?.fssaiNumber ?? visibleSeller?.foodLicenseNumber;
   const visibleProducts = products ?? initialProducts;
   const visible = visibleSeller?.status === 'active';
   return <div className="min-h-screen bg-[#f8f6f2]"><Header /><main className="section-shell pb-24 pt-8 sm:pt-12">
@@ -44,9 +47,10 @@ export default function SellerStoreClient({ initialSeller = null, initialProduct
         </p>
         <div className="mt-5 flex min-w-0 flex-wrap items-center gap-3">
           <span className={`inline-flex min-h-10 items-center rounded-full px-4 py-2 text-xs font-medium ${visibleSeller!.isOpen?'bg-[#edf3e8] text-[#416836]':'bg-amber-50 text-amber-800'}`}>{visibleSeller!.isOpen?'Accepting new orders':'On a break'}</span>
+          {instagramUrl && <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm underline underline-offset-4">Instagram</a>}
           <StoreShareButton sellerId={visibleSeller!.slug || id} storeName={visibleSeller!.businessName}/>
         </div>
-        {visibleSeller!.foodLicenseNumber&&<p className="mt-4 text-xs">FSSAI registration / license: {visibleSeller!.foodLicenseNumber}</p>}
+        {fssaiNumber&&<p className="mt-4 text-xs">FSSAI registration / license: {fssaiNumber}</p>}
         <p className="mt-6 max-w-2xl whitespace-pre-wrap break-words text-sm leading-7 text-[#6f655a]">{visibleSeller!.description}</p>
         <div className="mt-5 flex min-w-0 flex-wrap gap-3 text-xs text-muted-foreground">
           <span className="rounded-full bg-[#f7f4ef] px-4 py-2">{visibleSeller!.businessCategory.replaceAll('-', ' ')}</span>

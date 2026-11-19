@@ -1,5 +1,6 @@
 'use client';
 
+import { instagramProfileUrl, fssaiNumberPattern } from '@/lib/seller-profile-details';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import type { User } from 'firebase/auth';
@@ -19,6 +20,8 @@ import { SellerCompliance } from '@/components/seller-compliance';
 import { StoreShareButton } from '@/components/store-share-button';
 
 type StoreDraft = {
+  instagramUrl: string;
+  fssaiNumber: string;
   logoUrl: string;
   description: string;
   contactPhone: string;
@@ -40,6 +43,8 @@ const version = (value: unknown) => (value as { toMillis?: () => number } | unde
 
 function initialDraft(seller: Seller): StoreDraft {
   return {
+    instagramUrl: seller.instagramUrl || '',
+    fssaiNumber: seller.fssaiNumber ?? seller.foodLicenseNumber ?? '',
     logoUrl: seller.logoUrl || '',
     description: seller.description || '',
     contactPhone: seller.contactPhone || '',
@@ -109,6 +114,9 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!active || busy || uploading || !dirty) return;
+    const instagramUrl = instagramProfileUrl(draft.instagramUrl);
+    if (instagramUrl === null) return setError('Enter an Instagram profile link, such as https://www.instagram.com/yourstudio/.');
+    if (draft.fssaiNumber && !fssaiNumberPattern.test(draft.fssaiNumber)) return setError('Enter a 14-digit FSSAI registration number.');
     const phone = draft.whatsappNumber.replace(/\D/g, '');
     const codes = draft.deliveryCoverage === 'selected-pincodes' ? [...new Set(draft.deliveryPincodes.split(/[\s,]+/).map(x => x.trim()).filter(Boolean))] : [];
     const slots = [...new Set(draft.deliverySlots.split(/\r?\n/).map(x => x.trim()).filter(Boolean))];
@@ -133,6 +141,8 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
         if (!record || record.ownerUid !== user.uid || record.status !== 'active') throw new Error('Your seller access is unavailable. Refresh and try again.');
         if (loadedVersion.current !== null && version(record.updatedAt) !== loadedVersion.current) throw new Error('Store settings changed in another window. Refresh to review those changes before saving.');
         tx.update(ref, {
+          instagramUrl,
+          ...(draft.fssaiNumber !== (record.fssaiNumber ?? record.foodLicenseNumber ?? '') && { fssaiNumber: draft.fssaiNumber }),
           logoUrl: draft.logoUrl, description: draft.description, contactPhone: draft.contactPhone,
           whatsappNumber: phone, isOpen: draft.isOpen, deliveryMethods: draft.deliveryMethods,
           businessCity: draft.businessCity.trim(), businessState: draft.businessState.trim(),
@@ -189,6 +199,10 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
         <p className="mt-2 text-xs leading-5 text-muted-foreground">Make it easy for buyers to reach your business.</p>
         <div className="mt-5 space-y-5">
           <div><Label htmlFor="sellerBusinessName">Approved business name</Label><Input id="sellerBusinessName" value={seller.businessName} disabled className="mt-2 bg-[#faf8f4]" /></div>
+          <div><Label htmlFor="sellerInstagram">Instagram profile link (optional)</Label>
+            <Input id="sellerInstagram" inputMode="url" autoCapitalize="none" maxLength={512} placeholder="https://www.instagram.com/yourstudio/" disabled={!active} value={draft.instagramUrl} onChange={e => update('instagramUrl', e.target.value)} className="mt-2" /></div>
+          <div><Label htmlFor="sellerFssai">FSSAI registration number (optional)</Label>
+            <Input id="sellerFssai" inputMode="numeric" maxLength={14} placeholder="14-digit registration number" disabled={!active} value={draft.fssaiNumber} onChange={e => update('fssaiNumber', e.target.value)} className="mt-2" /></div>
           <div><Label htmlFor="sellerPhone">Contact phone</Label><Input id="sellerPhone" type="tel" maxLength={40} disabled={!active} value={draft.contactPhone} onChange={e => update('contactPhone', e.target.value)} className="mt-2" /></div>
           <div><Label htmlFor="sellerWhatsApp">WhatsApp business number</Label><Input id="sellerWhatsApp" type="tel" inputMode="tel" maxLength={20} placeholder="919876543210" disabled={!active} value={draft.whatsappNumber} onChange={e => update('whatsappNumber', e.target.value)} className="mt-2" /><p className="mt-1 text-xs text-muted-foreground">Include country code. Leave empty to hide WhatsApp.</p></div>
           <div className="grid gap-3 sm:grid-cols-2">
