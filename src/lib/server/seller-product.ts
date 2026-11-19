@@ -3,7 +3,7 @@ import type { z } from "zod";
 import { withCheckoutKeys } from "@/lib/server/checkout-lock";
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import { ApiError } from "@/lib/server/firebase-admin";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { SKU_ALPHABET } from "@/lib/product-sku";
 import { saveProductRequest } from "@/lib/seller-product-validation";
 export { saveProductRequest, sellerProductSchema } from "@/lib/seller-product-validation";
@@ -19,9 +19,12 @@ export async function saveSellerProduct(
 ) {
   if (input.product.sellerId !== uid)
     throw new ApiError(403, "You can only manage your own products.");
-  const ref = input.productId
-    ? db.collection("marketplace_products").doc(input.productId)
-    : db.collection("marketplace_products").doc();
+  const products = db.collection("marketplace_products");
+  const createId = input.requestId && !input.productId
+    ? createHash("sha256").update(JSON.stringify([uid, input.requestId])).digest("hex") : undefined;
+  const fingerprint = createId ? createHash("sha256").update(JSON.stringify(input.product)).digest("hex") : undefined;
+  const id = input.productId || createId;
+  const ref = id ? products.doc(id) : products.doc();
   const quotaRef = db.doc("product_write_limits/" + uid + "_" + Math.floor(Date.now() / 3600000));
 
   // Every SKU is reserved atomically and never reused after a product is deleted.
@@ -41,6 +44,12 @@ export async function saveSellerProduct(
           if (store?.status !== "active" || !store.accessEndsAt?.toMillis ||
               store.accessEndsAt.toMillis() <= Date.now())
             throw new ApiError(403, "Active seller access is required to save products.");
+          if (createId && existing.exists) {
+            if (existing.data()?.sellerId !== uid || existing.data()?.creationFingerprint !== fingerprint)
+              throw new ApiError(409, "A previous save created this listing. Reopen it from your catalog to make changes.");
+            assignedSku = existing.get("sku");
+            return;
+          }
           if(input.product.status==='published'&&store?.businessCategory==='home-bakery'){
             if(!store.foodLicenseVerifiedUntil?.toMillis||store.foodLicenseVerifiedUntil.toMillis()<=Date.now())throw new ApiError(409,'Submit your current food license in Store settings and wait for verification before publishing.');
             if(!input.product.ingredients?.trim()||!input.product.storageInstructions?.trim())throw new ApiError(400,'Food products need ingredients and storage instructions. Declare applicable allergens before publishing.');
@@ -69,7 +78,18 @@ export async function saveSellerProduct(
             sku = candidate;
           }
           const now = Timestamp.now();
-          tx.set(ref, { ...input.product, sku, searchPrefixes:productSearchPrefixes({...input.product,sku}), createdAt: existing.data()?.createdAt || now, updatedAt: now });
+          // Keep metadata belonging to other workflows during edits. These optional
+          // listing fields are intentionally cleared when absent from the editor.
+          const previous = existing.data() || {};
+          delete previous.shelfLifeDays;
+          if (!input.product.weightOptions.some(option =>
+            option.value === previous.weightValue && option.unit === previous.weightUnit)) {
+            delete previous.weightValue;
+            delete previous.weightUnit;
+          }
+          const price = input.product.weightOptions.length
+            ? Math.min(...input.product.weightOptions.map(option => option.price)) : input.product.price;
+          tx.set(ref, { ...previous, ...input.product, price, ...(fingerprint ? { creationFingerprint: fingerprint } : {}), sku, searchPrefixes:productSearchPrefixes({...input.product,sku}), createdAt: existing.data()?.createdAt || now, updatedAt: now });
           if (!oldSku) tx.create(reservation, { productId: ref.id, createdAt: now });
           tx.set(quota.ref, {
             sellerId: uid,

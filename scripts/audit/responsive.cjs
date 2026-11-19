@@ -88,8 +88,53 @@ const { chromium, firefox, webkit } = require('playwright');
             await panel.getByText('Use Description').click();
             await panel.getByText('Suggest with AI').click();
             await panel.getByRole('alert').waitFor();
-            await seller.getByRole('button',{name: mode === 'ai-edit' ? 'Save changes' : 'Create product'}).click();
-            assert.equal(await seller.getByTestId('saved').textContent(),'Edited cocoa cookies.');
+            async function checkWizardWidths() {
+              for (const width of [320,360,375,390,430,768,1280]) {
+                await seller.setViewportSize({width,height:700});
+                assert.ok(await seller.getByRole('dialog').evaluate(el => {
+                  const visible = [...el.querySelectorAll('input,textarea,button,summary')].filter(control=> control.getBoundingClientRect().width > 1);
+                  return el.scrollWidth <= el.clientWidth + 1 && visible.every(control => {
+                    const rect=control.getBoundingClientRect();
+                    return rect.left >= -1 && rect.right <= innerWidth + 1;
+                  });
+                }),engine+' wizard controls fit '+width);
+              }
+              await seller.setViewportSize({width:320,height:568});
+            }
+            await checkWizardWidths();
+            const next = seller.getByRole('button',{name:'Continue'});
+            await seller.getByLabel('Product name').fill('');
+            await next.click();
+            await seller.getByText('Step 1 of 4').waitFor();
+            await seller.getByLabel('Product name').fill('Cocoa cookies');
+            await next.click();
+            await seller.locator('#sellerPhotoFiles').setInputFiles([
+              {name:'first.png',mimeType:'image/png',buffer:Buffer.from('fixture')},
+              {name:'second.png',mimeType:'image/png',buffer:Buffer.from('fixture')}
+            ]);
+            await checkWizardWidths();
+            await seller.getByRole('button',{name:'Set as cover'}).click();
+            assert.match(await seller.getByAltText('Cover photo',{exact:true}).getAttribute('src'),/second.png$/);
+            await seller.getByRole('button',{name:'Remove photo 2'}).click();
+            await next.click();
+            await seller.getByRole('button',{name:'Back',exact:true}).click();
+            assert.match(await seller.getByAltText('Cover photo',{exact:true}).getAttribute('src'),/second.png$/);
+            await next.click();
+            if (mode === 'ai-edit') {
+              await seller.getByText('Weight, size & variant pricing',{exact:true}).click();
+              await seller.getByRole('button',{name:'Add another size & price'}).click();
+              await seller.getByLabel('Weight / count').fill('250');
+              await seller.getByLabel('Price for this size').fill('95');
+              await seller.getByLabel('Size stock').fill('4');
+              assert.equal(await seller.getByText('Price (₹)',{exact:true}).isVisible(),false);
+            }
+            await checkWizardWidths();
+            await next.click();
+            await seller.getByText('Step 4 of 4').waitFor();
+            await checkWizardWidths();
+            await seller.getByRole('button',{name: mode === 'ai-edit' ? 'Save changes' : 'Save as Draft'}).click();
+            assert.equal(await seller.getByTestId('saved').textContent(),(mode === 'ai-edit' ? 'published' : 'draft') + '/Edited cocoa cookies.');
+            await seller.setViewportSize({width:320,height:568});
             assert.equal(calls,3);
             await seller.unroute('**/api/seller/description');
           }

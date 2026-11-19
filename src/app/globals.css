@@ -183,3 +183,15 @@ select option { background-color: #fffdfa; color: #352c23; }
   .pwa-bottom-nav { -webkit-tap-highlight-color: transparent; }
   input[type="search"] { -webkit-appearance: none; appearance: none; }
 }
+
+.seller-wizard [data-step][hidden] { display: none; }
+.seller-wizard :is(button, summary, input:not([type=checkbox]):not([type=file])) { min-height: 44px; }
+.seller-wizard :is(input, textarea) { font-size: 1rem; }
+.seller-wizard :is(label, [data-step], .grid > *) { min-width: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .seller-wizard [data-step]:not([hidden]) { animation: seller-step-in 150ms ease-out; }
+  @keyframes seller-step-in { from { opacity: .6; transform: translateY(3px); } }
+}
+@media (max-width: 639px) {
+  .seller-wizard { top: var(--wizard-top, 0px); height: var(--wizard-height, 100dvh); }
+}
