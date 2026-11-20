@@ -187,7 +187,9 @@ export function BannerHotspotEditor({
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
         <p className="text-sm font-semibold">{label} live preview</p>
-        <p className="text-xs text-muted-foreground">{mobile ? 'Mobile · 390 × 210 reference' : 'Desktop · 1360 × 340 reference'}</p>
+        <p className="text-xs text-muted-foreground">{artworkMode
+          ? 'Full original artwork · no padding'
+          : mobile ? 'Actual mobile frame · 390 × 210' : 'Actual desktop frame · 1360 × 340'}</p>
       </div>
       {canPositionHotspot && <div className="flex gap-1 rounded-full bg-[#f2ece5] p-1" aria-label={`${label} editor mode`}>
         <Button type="button" size="sm" variant={editTarget === 'image' ? 'default' : 'ghost'}
@@ -199,10 +201,10 @@ export function BannerHotspotEditor({
     {!isStandard && <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="inline-flex rounded-lg border border-[#e5dcd1] bg-white p-1" role="group" aria-label={`${label} preview view`}>
         <Button type="button" size="sm" className="h-8 rounded-md px-3 text-xs"
-          variant={artworkMode ? 'default' : 'ghost'} aria-pressed={artworkMode}
+          variant={artworkMode ? 'default' : 'ghost'} aria-pressed={artworkMode} disabled={disabled}
           onClick={() => setViewMode('artwork')}>Full artwork</Button>
         <Button type="button" size="sm" className="h-8 rounded-md px-3 text-xs"
-          variant={!artworkMode ? 'default' : 'ghost'} aria-pressed={!artworkMode}
+          variant={!artworkMode ? 'default' : 'ghost'} aria-pressed={!artworkMode} disabled={disabled}
           onClick={() => setViewMode('website')}>Website view</Button>
       </div>
       <span className="text-[11px] text-muted-foreground">{artworkMode ? 'No unused preview space' : 'Actual storefront proportions'}</span>
