@@ -33,6 +33,8 @@ export type Banner = {
   mobileAspectRatio?: number;
   desktopHotspot?: import('@/lib/banner-layout').BannerHotspot;
   mobileHotspot?: import('@/lib/banner-layout').BannerHotspot;
+  desktopPlacement?: import('@/lib/banner-layout').BannerImagePlacement;
+  mobilePlacement?: import('@/lib/banner-layout').BannerImagePlacement;
   isActive: boolean;
   createdAt?: any;
   updatedAt?: any;

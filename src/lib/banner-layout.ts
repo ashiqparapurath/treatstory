@@ -73,3 +73,51 @@ export function bannerContainRect(frameWidth: number, frameHeight: number, image
   const height = width / ratio;
   return { left: (frameWidth - width) / 2, top: (frameHeight - height) / 2, width, height };
 }
+
+/** Placement is persisted per device; center/100% preserves existing banners. */
+export type BannerImagePlacement = { x: number; y: number; zoom: number };
+export const DEFAULT_BANNER_PLACEMENT: BannerImagePlacement = { x: 50, y: 50, zoom: 100 };
+
+export function normalizeBannerPlacement(value?: Partial<BannerImagePlacement> | null): BannerImagePlacement {
+  return {
+    x: clamp(value?.x ?? 50, 0, 100),
+    y: clamp(value?.y ?? 50, 0, 100),
+    zoom: clamp(value?.zoom ?? 100, 100, 250),
+  };
+}
+
+/** The single layout calculation for both the admin's preview and actual storefront.
+ * Image placement is an alignment within available free space, or a crop offset
+ * when the zoomed image extends beyond the frame.
+ */
+export function bannerImageRect(
+  frameWidth: number, frameHeight: number, imageRatio: number,
+  fit: 'cover' | 'contain', value?: Partial<BannerImagePlacement> | null,
+): BannerCoverRect {
+  const base = fit === 'contain'
+    ? bannerContainRect(frameWidth, frameHeight, imageRatio)
+    : bannerCoverRect(frameWidth, frameHeight, imageRatio);
+  const placement = normalizeBannerPlacement(value);
+  const width = base.width * placement.zoom / 100;
+  const height = base.height * placement.zoom / 100;
+  return {
+    left: (frameWidth - width) * placement.x / 100,
+    top: (frameHeight - height) * placement.y / 100,
+    width, height,
+  };
+}
+
+/** Convert a drag in pixels to a new image position without changing its size. */
+export function panBannerImage(
+  value: BannerImagePlacement, frameWidth: number, frameHeight: number,
+  rect: BannerCoverRect, deltaX: number, deltaY: number,
+): BannerImagePlacement {
+  const current = normalizeBannerPlacement(value);
+  const xSpace = frameWidth - rect.width;
+  const ySpace = frameHeight - rect.height;
+  return normalizeBannerPlacement({
+    ...current,
+    x: Math.abs(xSpace) < 0.01 ? current.x : current.x + deltaX / xSpace * 100,
+    y: Math.abs(ySpace) < 0.01 ? current.y : current.y + deltaY / ySpace * 100,
+  });
+}
