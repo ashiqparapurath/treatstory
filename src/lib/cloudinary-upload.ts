@@ -9,7 +9,7 @@ export type ImageKind = 'banner' | 'product' | 'reference' | 'logo';
 export async function uploadTreatStoryPhoto(user: User, file: File, kind: ImageKind): Promise<string> {
   if (!file.size) throw new ActionError('The selected file is empty. Choose a different photo.',400,'app/empty-photo');
   if (!['image/jpeg','image/png','image/webp'].includes(file.type)) throw new ActionError('Choose a JPG, PNG or WebP photo.',415,'app/photo-type');
-  if (file.size > 2_000_000) throw new ActionError('Choose a photo up to 2 MB, or resize it before uploading.',413);
+  if (file.size > (kind === 'banner' ? 4_000_000 : 2_000_000)) throw new ActionError(kind === 'banner' ? 'Choose a banner image up to 4 MB.' : 'Choose a photo up to 2 MB, or resize it before uploading.',413);
   const authToken = await user.getIdToken();
   const form = new FormData();
   form.append('kind', kind);

@@ -14,7 +14,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
-const MAX_BANNER_BYTES = 1_000_000;
+const MAX_BANNER_BYTES = 4_000_000;
 const MAX_PRODUCT_BYTES = 2_000_000;
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
   } catch { return json({ error: 'Unable to check account status. Try again later.' }, 503); }
 
   const contentLength = Number(request.headers.get('content-length') || 0);
-  if (contentLength > MAX_PRODUCT_BYTES + 50_000) return json({ error: 'Image upload is too large.' }, 413);
+  if (contentLength > MAX_BANNER_BYTES + 50_000) return json({ error: 'Image upload is too large.' }, 413);
   let form: FormData;
   try {
     const bounded=await readBodyBytes(request,MAX_PRODUCT_BYTES+50_000);
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
   if (!file.size) return json({error:'The selected file is empty. Choose a different photo.'},400);
   if (!ALLOWED_TYPES.has(file.type)) return json({error:'Choose a JPG, PNG or WebP photo.'},415);
   if (file.size > maxSize)
-    return json({ error: `Choose a JPG, PNG or WebP image under ${kind === 'banner' ? '1' : '2'} MB.` }, 413);
+    return json({ error: `Choose a JPG, PNG or WebP image under ${kind === 'banner' ? '4' : '2'} MB.` }, 413);
 
   try {
     let allowed = kind === 'reference' || await canUpload(projectId, uid, idToken, kind);

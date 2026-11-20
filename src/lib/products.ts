@@ -23,6 +23,16 @@ export type Banner = {
   imageUrl: string;
   buttonText: string;
   buttonLink: string;
+  /** Missing on old banners: standard text-and-button display. */
+  displayMode?: 'standard' | 'image-only';
+  imageLinkMode?: 'none' | 'full' | 'hotspot';
+  linkLabel?: string;
+  imageAlt?: string;
+  imageAspectRatio?: number;
+  mobileImageUrl?: string;
+  mobileAspectRatio?: number;
+  desktopHotspot?: import('@/lib/banner-layout').BannerHotspot;
+  mobileHotspot?: import('@/lib/banner-layout').BannerHotspot;
   isActive: boolean;
   createdAt?: any;
   updatedAt?: any;

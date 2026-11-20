@@ -83,7 +83,7 @@ export function BannerList() {
       await updateDoc(doc(firestore, 'banners', banner.id), {
         isActive: !banner.isActive, updatedAt: serverTimestamp(),
       });
-      toast({ title: 'Banner status updated', description: `"${banner.title}" is now ${!banner.isActive ? 'active' : 'inactive'}.` });
+      toast({ title: 'Banner status updated', description: `"${banner.title || 'Image-only banner'}" is now ${!banner.isActive ? 'active' : 'inactive'}.` });
     } catch (error) {
       console.error('Banner status change failed', error);
       toast(errorToast(error, 'save'));
@@ -121,7 +121,7 @@ export function BannerList() {
                       <OptimizedImage src={banner.imageUrl} alt={banner.title} fill className="object-cover" />
                   </div>
                   <div className="flex-1">
-                     <CardTitle className="text-lg leading-tight">{banner.title}</CardTitle>
+                     <CardTitle className="text-lg leading-tight">{banner.title || 'Image-only banner'}</CardTitle>
                       <div className="flex items-center gap-2 mt-2">
                         <Switch
                             checked={banner.isActive}
@@ -176,7 +176,7 @@ export function BannerList() {
                         <OptimizedImage src={banner.imageUrl} alt={banner.title} fill className="object-cover" />
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium">{banner.title}</TableCell>
+                  <TableCell className="font-medium">{banner.title || 'Image-only banner'}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                         <Switch

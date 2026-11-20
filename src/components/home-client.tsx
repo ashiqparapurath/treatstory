@@ -9,6 +9,7 @@ import Link from 'next/link';
 import {HeroImage}from'@/components/hero-image';
 import{BANNER_IMAGE_SIZES}from'@/lib/image-source';
 import { OptimizedImage } from '@/components/optimized-image';
+import { ImageOnlyBannerSlide } from '@/components/banner-image-slide';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { FooterInstagramLink } from '@/components/footer-instagram-link';
 import { MobileCategoryRail } from '@/components/mobile-category-rail';
@@ -60,6 +61,9 @@ function BannerCarousel() {
         {banners.map((banner,index) => (
           <CarouselItem key={banner.id}>
             <Card className="overflow-hidden rounded-[22px] border-0 bg-[#f7f0e8] shadow-none">
+              {banner.displayMode === 'image-only' ? <ImageOnlyBannerSlide banner={banner}
+                shouldLoad={requested.has(index) || index === active} active={index === active}
+                onLoad={() => { if (index === active) setFirstLoaded(true); }} /> : <>
               <CardContent className="relative isolate min-h-[210px] overflow-hidden bg-[#f9f3eb] p-0 md:hidden">
                 <div className="absolute inset-y-0 right-0 w-[56%] bg-[#e9d9c6]">{(requested.has(index)||index===active)&&<OptimizedImage src={banner.imageUrl} alt={banner.title} fill sizes="(max-width: 767px) 60vw, 0px" quality={75} loading="lazy" onLoad={()=>{if(index===active)setFirstLoaded(true);}} className="object-cover object-center"/>}</div>
                 <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,#f9f3eb_0%,#f9f3eb_45%,rgba(249,243,235,0.98)_65%,rgba(249,243,235,0.58)_83%,rgba(249,243,235,0.06)_100%)]"/>
@@ -84,6 +88,7 @@ function BannerCarousel() {
                   </Button>
                 </div>
               </CardContent>
+              </>}
             </Card>
           </CarouselItem>
         ))}
