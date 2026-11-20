@@ -64,3 +64,19 @@ test('banner upload respects banner-sized request bodies and prepares larger ima
   assert.ok(helper.includes('MAX_ORIGINAL_BANNER_BYTES = 16_000_000'));
   assert.ok(helper.includes('BANNER_UPLOAD_TARGET_BYTES = 3_400_000'));
 });
+
+test('image-only artwork uses the same fixed carousel heights as standard banners', () => {
+  const home = fs.readFileSync(path.join(root, 'src/components/home-client.tsx'), 'utf8');
+  const slide = fs.readFileSync(path.join(root, 'src/components/banner-image-slide.tsx'), 'utf8');
+  assert.ok(home.includes('min-h-[210px]'));
+  assert.ok(slide.includes('h-[210px]'));
+  for (const size of ['h-[clamp(200px,54vw,236px)]', 'sm:h-64', 'md:h-72', 'lg:h-[340px]']) {
+    assert.ok(home.includes(size), 'standard slide missing ' + size);
+    assert.ok(slide.includes(size), 'image-only slide missing ' + size);
+  }
+  assert.ok(!slide.includes('style={{ aspectRatio:'), 'image-only slide should not change its frame height by ratio');
+  assert.match(slide, /Math\.min\(frameSize\.width, frameSize\.height \* aspectRatio\)/);
+  assert.match(slide, /mode === 'hotspot'/);
+  assert.match(slide, /mode === 'full'/);
+  assert.ok(slide.includes('ResizeObserver'));
+});
