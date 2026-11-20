@@ -55,13 +55,32 @@ export function BannerHotspotEditor({
   const preview = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState<Dimensions | null>(null);
   const [editTarget, setEditTarget] = useState<'image' | 'button'>('image');
+  const [viewMode, setViewMode] = useState<'artwork' | 'website'>(
+    displayMode === 'image-only' ? 'artwork' : 'website',
+  );
+  const [sourceRatio, setSourceRatio] = useState<number | null>(null);
+
+  useEffect(() => {
+    setViewMode(displayMode === 'image-only' ? 'artwork' : 'website');
+  }, [displayMode]);
+
+  useEffect(() => { setSourceRatio(null); }, [src]);
+
+  const measureImage = (image: HTMLImageElement) => {
+    const ratio = image.naturalWidth / image.naturalHeight;
+    if (Number.isFinite(ratio) && ratio > 0) setSourceRatio(old => old === ratio ? old : ratio);
+  };
   const hotspot = normalizeBannerHotspot(value);
   const position = normalizeBannerPlacement(placement);
   const mobile = label === 'Mobile';
   const isStandard = displayMode === 'standard';
   const canPositionHotspot = !isStandard && imageLinkMode === 'hotspot';
   const editingHotspot = canPositionHotspot && editTarget === 'button';
-  const previewRatio = Number.isFinite(frameAspectRatio) && frameAspectRatio > 0 ? frameAspectRatio : 4;
+  const imageRatio = sourceRatio || (Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : 16 / 9);
+  const artworkMode = !isStandard && viewMode === 'artwork';
+  const previewRatio = artworkMode ? imageRatio
+    : Number.isFinite(frameAspectRatio) && frameAspectRatio > 0 ? frameAspectRatio : 4;
+  const previewFit = artworkMode ? 'contain' : fit;
 
   useEffect(() => {
     const el = preview.current;
@@ -86,7 +105,7 @@ export function BannerHotspotEditor({
   const areaLeft = dimensions && isStandard && mobile ? dimensions.width - areaWidth : 0;
   const areaHeight = dimensions?.height || 0;
   const imageRect = dimensions
-    ? bannerImageRect(areaWidth, areaHeight, aspectRatio, fit, position)
+    ? bannerImageRect(areaWidth, areaHeight, imageRatio, previewFit, position)
     : null;
   const fractionVisible = dimensions && imageRect
     ? bannerHotspotVisibility(imageRect, hotspot, areaWidth, areaHeight) : 1;
@@ -177,18 +196,30 @@ export function BannerHotspotEditor({
           className="rounded-full text-xs" disabled={disabled} onClick={() => setEditTarget('button')}>Move button</Button>
       </div>}
     </div>
-    <div ref={preview} className={`relative w-full overflow-hidden rounded-xl bg-[#f7f0e8] touch-none select-none ${mobile ? 'max-w-[390px]' : ''}`}
-      role="group" aria-label={`${label} banner preview`}
+    {!isStandard && <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="inline-flex rounded-lg border border-[#e5dcd1] bg-white p-1" role="group" aria-label={`${label} preview view`}>
+        <Button type="button" size="sm" className="h-8 rounded-md px-3 text-xs"
+          variant={artworkMode ? 'default' : 'ghost'} aria-pressed={artworkMode}
+          onClick={() => setViewMode('artwork')}>Full artwork</Button>
+        <Button type="button" size="sm" className="h-8 rounded-md px-3 text-xs"
+          variant={!artworkMode ? 'default' : 'ghost'} aria-pressed={!artworkMode}
+          onClick={() => setViewMode('website')}>Website view</Button>
+      </div>
+      <span className="text-[11px] text-muted-foreground">{artworkMode ? 'No unused preview space' : 'Actual storefront proportions'}</span>
+    </div>}
+    <div ref={preview} className={`relative w-full overflow-hidden rounded-xl border border-[#e7d9ca] touch-none select-none ${mobile && !artworkMode ? 'mx-auto max-w-[390px]' : ''} bg-[#f7f0e8]`}
+      role="group" aria-label={`${label} ${artworkMode ? 'full artwork editor' : 'website banner preview'}`}
       style={{ aspectRatio: previewRatio, cursor: disabled ? 'default' : editingHotspot ? 'crosshair' : 'grab' }}
       onPointerDown={start} onPointerMove={move} onPointerUp={stop} onPointerCancel={stop}>
       {src && !imageRect && <Image src={src} alt="" fill unoptimized
-        className={fit === 'contain' ? 'pointer-events-none object-contain' : 'pointer-events-none object-cover'} />}
+        onLoad={event => measureImage(event.currentTarget)}
+        className={previewFit === 'contain' ? 'pointer-events-none object-contain' : 'pointer-events-none object-cover'} />}
       {src && imageRect && <div className="pointer-events-none absolute overflow-hidden"
         style={{ left: areaLeft, top: 0, width: areaWidth, height: areaHeight }}>
         <div className="absolute" style={{
           left: imageRect.left, top: imageRect.top, width: imageRect.width, height: imageRect.height,
         }}>
-          <Image src={src} alt="" fill unoptimized className="object-cover" />
+          <Image src={src} alt="" fill unoptimized onLoad={event => measureImage(event.currentTarget)} className="object-cover" />
           {canPositionHotspot && <div data-banner-hotspot className={`pointer-events-auto absolute z-10 rounded border-2 border-sky-600 bg-sky-400/25 ${editingHotspot ? 'cursor-move' : 'pointer-events-none'}`}
             style={{
               left: `${hotspot.x}%`, top: `${hotspot.y}%`,
@@ -221,7 +252,9 @@ export function BannerHotspotEditor({
     </div>
     <p className="text-xs text-muted-foreground">{editingHotspot
       ? 'Drag the blue button area, resize its corner, or tap the new position.'
-      : 'Drag the picture to adjust its position. Use Zoom to create room for left/right movement if the image already fits exactly.'}</p>
+      : artworkMode
+        ? 'The full image is shown without empty bands. Zoom in to move it, then check Website view to confirm the real mobile/desktop crop.'
+        : 'This shows the actual website frame. Space around a wide image is intentional in no-crop mode; switch to Full artwork for easier editing.'}</p>
     {canPositionHotspot && fractionVisible < 0.9 && <p role="status" className="text-xs text-amber-700">
       The clickable button area is partly or fully outside the visible image crop. Reposition it before saving.
     </p>}
