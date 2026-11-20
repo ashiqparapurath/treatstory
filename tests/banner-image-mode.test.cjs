@@ -77,16 +77,17 @@ test('standard and image-only banners retain identical compact heights and fill 
   assert.ok(home.includes('relative max-w-2xl px-5 py-3 text-center text-white'));
   assert.ok(slide.includes('h-[210px]'), 'image-only mobile matches the standard');
   assert.ok(slide.includes('sm:h-64 md:block md:h-72 lg:h-[340px]'), 'image-only desktop matches the standard');
-  assert.ok(slide.includes('className="object-cover object-center"'), 'image-only image fills available area');
-  assert.ok(!slide.includes('object-contain'), 'no letterboxing');
+  assert.ok(slide.includes('mobile ? "object-contain object-center" : "object-cover object-center"'), 'mobile image is uncropped, desktop still fills');
+  assert.ok(slide.includes('bannerContainRect(frameSize.width, frameSize.height, ratio)'), 'mobile uses contain geometry');
   assert.ok(!slide.includes('blur-[24px]'), 'no artificial blurry side fills');
   assert.ok(slide.includes('bannerCoverRect(frameSize.width, frameSize.height, ratio)'));
   assert.ok(slide.includes("mode === 'hotspot'"));
   assert.ok(slide.includes("mode === 'full'"));
   assert.ok(editor.includes('bannerCoverRect(frameSize.width, frameSize.height, aspectRatio)'));
+  assert.ok(editor.includes('bannerContainRect(frameSize.width, frameSize.height, aspectRatio)'));
   assert.ok(editor.includes('bannerHotspotVisibility'));
   assert.ok(form.includes('frameAspectRatio={1360 / 340}'));
-  assert.ok(form.includes('frameAspectRatio={390 / 210}'));
+  assert.ok(form.includes('frameAspectRatio={390 / 210} fit="contain"'));
 });
 
 test('object-cover centering and hotspot visibility calculate cropped image bounds', () => {
@@ -104,4 +105,20 @@ test('object-cover centering and hotspot visibility calculate cropped image boun
   assert.equal(mobileCover.width, 390);
   assert.ok(mobileCover.top < 0 && mobileCover.top > -6);
   assert.ok(Math.abs(bannerHotspotVisibility(mobileCover, bottomHotspot, 390, 210) - 1) < 1e-9);
+});
+
+test('mobile shows every pixel of a 1280×320 artwork while retaining the clickable button', () => {
+  const { bannerContainRect, bannerHotspotVisibility } = moduleRef.exports;
+  const imageBox = bannerContainRect(360, 210, 1280 / 320);
+  assert.equal(imageBox.width, 360);
+  assert.equal(imageBox.height, 90);
+  assert.equal(imageBox.left, 0);
+  assert.equal(imageBox.top, 60);
+  const button = { x: 6, y: 72, width: 27, height: 16 };
+  assert.ok(Math.abs(bannerHotspotVisibility(imageBox, button, 360, 210) - 1) < 1e-9);
+
+  const fullWide = bannerContainRect(390, 210, 16 / 9);
+  assert.ok(fullWide.left > 0 && fullWide.left < 10);
+  assert.equal(fullWide.height, 210);
+  assert.ok(Math.abs(bannerHotspotVisibility(fullWide, button, 390, 210) - 1) < 1e-9);
 });
