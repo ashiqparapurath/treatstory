@@ -259,7 +259,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
         </div> : <Button type="button" variant="outline" className="h-28 w-full border-dashed" onClick={() => desktopInput.current?.click()} disabled={isSubmitting}>
           <UploadCloud className="mr-2 h-5 w-5" />Choose banner image
         </Button>}
-        <p className="text-xs text-muted-foreground">JPG, PNG or WebP, up to 16 MB. Images larger than 3.4 MB are optimized before uploading; a wide layout works best for text.</p>
+        <p className="text-xs text-muted-foreground">JPG, PNG or WebP, up to 16 MB. Recommended: 1280 × 720 px (16:9). Images larger than 3.4 MB are optimized before uploading.</p>
         {form.formState.errors.imageUrl && <p className="text-sm text-destructive">{form.formState.errors.imageUrl.message}</p>}
       </div>
 

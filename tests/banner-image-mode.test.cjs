@@ -65,24 +65,29 @@ test('banner upload respects banner-sized request bodies and prepares larger ima
   assert.ok(helper.includes('BANNER_UPLOAD_TARGET_BYTES = 3_400_000'));
 });
 
-test('image-only artwork uses the same fixed carousel heights as standard banners', () => {
+test('standard and image-only banners use the same responsive 16:9 frame', () => {
   const home = fs.readFileSync(path.join(root, 'src/components/home-client.tsx'), 'utf8');
   const slide = fs.readFileSync(path.join(root, 'src/components/banner-image-slide.tsx'), 'utf8');
-  assert.ok(home.includes('min-h-[210px]'));
-  assert.ok(slide.includes('h-[210px]'));
-  for (const size of ['h-[clamp(200px,54vw,236px)]', 'sm:h-64', 'md:h-72', 'lg:h-[340px]']) {
-    assert.ok(home.includes(size), 'standard slide missing ' + size);
-    assert.ok(slide.includes(size), 'image-only slide missing ' + size);
-  }
-  assert.ok(!slide.includes('style={{ aspectRatio:'), 'image-only slide should not change its frame height by ratio');
-  assert.match(slide, /Math\.min\(frameSize\.width, frameSize\.height \* aspectRatio\)/);
-  assert.match(slide, /mode === 'hotspot'/);
-  assert.match(slide, /mode === 'full'/);
+  const imageOnlyFrames = slide.match(/aspect-video w-full/g) || [];
+  const standardFrames = home.match(/aspect-video w-full/g) || [];
+  assert.equal(imageOnlyFrames.length, 2, 'mobile and desktop image-only frames are 16:9');
+  assert.ok(standardFrames.length >= 2, 'standard mobile and desktop frames are 16:9');
+  assert.ok(home.includes('aspect-video w-full rounded-[24px]'), 'loading skeleton uses same ratio');
+  assert.ok(!slide.includes('h-[210px]'), 'image-only must not use a fixed mobile height');
+  assert.ok(!slide.includes('lg:h-[340px]'), 'image-only must not use a fixed desktop height');
+  assert.ok(!home.includes('min-h-[210px]'), 'standard mobile content must fit in 16:9');
+  assert.ok(!home.includes('lg:h-[340px]'), 'standard desktop must not use the old 4:1 height');
+  assert.match(slide, /Math\\.min\\(frameSize\\.width, frameSize\\.height \\* aspectRatio\\)/);
+  assert.ok(slide.includes("mode === 'hotspot'"));
+  assert.ok(slide.includes("mode === 'full'"));
   assert.ok(slide.includes('ResizeObserver'));
 });
 
-test('image-only banner fills side gutters without cropping text or moving hotspot', () => {
+test('1280 by 720 image fills the banner while other images remain uncropped', () => {
+  assert.equal(1280 / 720, 16 / 9);
   const slide = fs.readFileSync(path.join(root, 'src/components/banner-image-slide.tsx'), 'utf8');
+  assert.ok(slide.includes('Math.abs(aspectRatio - 16 / 9) > 0.015'));
+  assert.ok(slide.includes('shouldLoad && needsSideFill'));
   assert.ok(slide.includes('pointer-events-none absolute inset-0 overflow-hidden'));
   assert.ok(slide.includes('scale-110 object-cover blur-[24px]'));
   assert.ok(slide.includes('className="object-contain"'));
