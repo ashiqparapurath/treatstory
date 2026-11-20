@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import type { BannerHotspot, BannerCoverRect } from '@/lib/banner-layout';
-import { bannerCoverRect, bannerHotspotVisibility, normalizeBannerHotspot } from '@/lib/banner-layout';
+import { bannerContainRect, bannerCoverRect, bannerHotspotVisibility, normalizeBannerHotspot } from '@/lib/banner-layout';
 
 type Props = {
   label: string;
@@ -12,6 +12,8 @@ type Props = {
   aspectRatio: number;
   /** The proportions of the live carousel frame represented in the admin preview. */
   frameAspectRatio: number;
+  /** Desktop crops to fill; mobile displays the complete image. */
+  fit?: 'cover' | 'contain';
   value: BannerHotspot;
   onChange: (next: BannerHotspot) => void;
   disabled?: boolean;
@@ -26,7 +28,7 @@ type Gesture = {
 type BoxSize = { width: number; height: number };
 
 export function BannerHotspotEditor({
-  label, src, aspectRatio, frameAspectRatio, value, onChange, disabled,
+  label, src, aspectRatio, frameAspectRatio, fit = 'cover', value, onChange, disabled,
 }: Props) {
   const gesture = useRef<Gesture | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -54,7 +56,8 @@ export function BannerHotspotEditor({
   }, []);
 
   const cover: BannerCoverRect | null = frameSize
-    ? bannerCoverRect(frameSize.width, frameSize.height, aspectRatio)
+    ? (fit === 'contain' ? bannerContainRect(frameSize.width, frameSize.height, aspectRatio)
+      : bannerCoverRect(frameSize.width, frameSize.height, aspectRatio))
     : null;
   const visible = cover && frameSize
     ? bannerHotspotVisibility(cover, current, frameSize.width, frameSize.height)
@@ -104,11 +107,13 @@ export function BannerHotspotEditor({
 
   return <div className="min-w-0 space-y-2">
     <p className="text-sm font-medium">{label}</p>
-    <p className="text-xs text-muted-foreground">The preview matches the website's full-frame crop. Drag the blue area to move it, resize its corner, or tap the preview to reposition.</p>
+    <p className="text-xs text-muted-foreground">{fit === 'contain'
+      ? 'Mobile shows your complete banner. Drag the blue link area to move it over the printed button.'
+      : 'Desktop fills the frame; the preview shows its actual crop and the clickable area.'}</p>
     <div ref={hostRef} className="relative w-full overflow-hidden rounded-lg border bg-[#eee2d7] touch-none"
       style={{ aspectRatio: previewRatio }}
       onPointerDown={start} onPointerMove={move} onPointerUp={stop} onPointerCancel={stop}>
-      {src && !cover && <Image src={src} alt="" fill unoptimized className="pointer-events-none object-cover" />}
+      {src && !cover && <Image src={src} alt="" fill unoptimized className={fit === "contain" ? "pointer-events-none object-contain" : "pointer-events-none object-cover"} />}
       {src && cover && <div className="pointer-events-none absolute" style={{
         left: cover.left, top: cover.top, width: cover.width, height: cover.height,
       }}>
@@ -126,7 +131,7 @@ export function BannerHotspotEditor({
         </div>
       </div>}
     </div>
-    {src && visible < 0.9 && <p role="status" className="text-xs text-amber-700">
+    {src && fit === "cover" && visible < 0.9 && <p role="status" className="text-xs text-amber-700">
       The clickable area is {visible === 0 ? 'outside' : 'partially outside'} the visible crop.
       Move it over a visible button, use a differently composed {label.toLowerCase()} image, or select Whole banner clickable.
     </p>}
