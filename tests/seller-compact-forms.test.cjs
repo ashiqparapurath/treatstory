@@ -17,9 +17,11 @@ test('store settings navigate in three compact sections without discarding draft
 
 test('product editor uses expandable optional sections and preserves core fields', () => {
  const source=read('src/components/seller-product-editor.tsx');
- for(const field of ['Product basics','Product photos','Review and publish','Payment requirements','Weight, size & variant pricing','Advanced listing details','seller-editor-availability','variant-pricing-title','Publish Product','Save as Draft','Save changes','required minLength={2}','role="combobox"']) assert.ok(source.includes(field),field);
+ for(const field of ['Product basics','Product photos','Review & publish','Payment requirements','Weight, size & variant pricing','Advanced listing details','seller-editor-availability','variant-pricing-title','Save draft','Save changes','required minLength={2}','role="combobox"']) assert.ok(source.includes(field),field);
  assert.match(source,/open=\{draft\.weightOptions\.length > 0 \? true : undefined\}/);
  assert.match(source,/disabled=\{blocked \|\| !enabled\}/);
+ assert.ok(source.includes("onSubmit('published')"), 'publish action is preserved');
+ assert.ok(source.includes("onSubmit('draft')"), 'draft action is preserved');
 });
 
 test('new listings default to published while edit mode keeps saved visibility', () => {
@@ -35,13 +37,13 @@ test('stock quantity and availability use matching labeled control geometry', ()
    assert.ok(editor.includes('htmlFor="'+id+'"'), 'missing matching label for '+id);
    assert.ok(editor.includes('id="'+id+'"'), 'missing input or trigger id for '+id);
  }
- assert.match(editor,/grid items-start gap-3 sm:grid-cols-2/);
+ assert.match(editor,/grid min-w-0 items-start gap-4 rounded-2xl/);
  assert.match(editor,/flex min-w-0 flex-col gap-1\.5/);
 });
 
 test('image links can be added individually with validation and gallery actions', () => {
  const editor=read('src/components/seller-product-editor.tsx');
- for (const marker of ['newPhotoLink','addPhotoLink','photoLinkError','Add link','Add image by link','creatorImageLink','aria-invalid={!!photoLinkError}','photos.includes(link)','photos.length >= 10','arrangePhotos([...photos, link])','shiftPhoto(i,-1)','shiftPhoto(i,1)']) assert.ok(editor.includes(marker),marker);
+ for (const marker of ['newPhotoLink','addPhotoLink','photoLinkError','Add link','Add photo by link','creatorImageLink','aria-invalid={!!photoLinkError}','photos.includes(link)','photos.length >= 10','arrangePhotos([...photos, link])','shiftPhoto(i,-1)','shiftPhoto(i,1)']) assert.ok(editor.includes(marker),marker);
  assert.match(editor,/isPublicProductImageUrl\(link\)/);
  assert.match(editor,/type="button" variant="outline" className="h-11 shrink-0 rounded-xl/);
  assert.doesNotMatch(editor,/Or paste image URLs manually/);

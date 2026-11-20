@@ -79,3 +79,21 @@ test('storefront shared URL stays canonical and encodes seller IDs', () => {
   assert.match(decodeURIComponent(whatsapp), /Explore As Production on TreatStory/);
   assert.match(decodeURIComponent(whatsapp), /https:\/\/treatstory.vercel.app\/shop\/seller-test-1/);
 });
+
+test('public seller identity card stays compact on phones without hiding approval, delivery or share actions', () => {
+  const client = fs.readFileSync('src/components/seller-store-client.tsx', 'utf8');
+  const share = fs.readFileSync('src/components/store-share-button.tsx', 'utf8');
+  assert.match(client, /hidden min-w-0 items-center justify-between gap-3 border-b/);
+  assert.match(client, /h-12 w-12 shrink-0 rounded-\[14px\]/);
+  assert.match(client, /sm:h-20 sm:w-20/);
+  assert.match(client, /text-\[clamp\(1\.1rem,5\.3vw,1\.3rem\)\]/);
+  assert.match(client, /<span className="sm:hidden">Approved<\/span>/);
+  assert.match(client, /Taking orders/);
+  assert.match(client, /line-clamp-2 max-w-3xl/);
+  assert.match(client, /<StoreShareButton sellerId=\{visibleSeller!\.slug \|\| id\} storeName=\{visibleSeller!\.businessName\} compact/);
+  assert.match(client, /sellerCoverageLabel\(visibleSeller!\)/);
+  assert.match(client, /Marketplace approval is not third-party identity verification/);
+  assert.match(client, /FSSAI number \(seller supplied\)/);
+  assert.match(share, /compact\?: boolean/);
+  assert.match(share, /Share store/);
+});

@@ -195,3 +195,15 @@ select option { background-color: #fffdfa; color: #352c23; }
 @media (max-width: 639px) {
   .seller-wizard { top: var(--wizard-top, 0px); height: var(--wizard-height, 100dvh); }
 }
+
+/* Premium product wizard: content scrolls under a safe-area-aware, fixed action footer. */
+.seller-wizard-scroll { scrollbar-gutter: stable; }
+.seller-wizard :is(input[type="checkbox"]) { min-width: 16px; min-height: 16px; }
+.seller-wizard :is(input, textarea, select) { max-width: 100%; }
+.seller-wizard summary:focus-visible, .seller-wizard label[for="sellerPhotoFiles"]:focus-within {
+  outline: 2px solid #836847; outline-offset: 3px;
+}
+@media (max-width: 639px) {
+  .seller-wizard-scroll { scrollbar-gutter: auto; }
+  .seller-wizard .seller-wizard-scroll [data-step] { padding-bottom: .5rem; }
+}

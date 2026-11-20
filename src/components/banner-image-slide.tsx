@@ -7,13 +7,13 @@ import type { Banner } from '@/lib/products';
 import { bannerImageRect, normalizeBannerHotspot, safeBannerLink } from '@/lib/banner-layout';
 import { BANNER_IMAGE_SIZES } from '@/lib/image-source';
 
-type Props = { banner: Banner; shouldLoad: boolean; onLoad: () => void; active: boolean };
+type Props = { banner: Banner; shouldLoad: boolean; onLoad: () => void; active: boolean; first?: boolean };
 type BoxSize = { width: number; height: number };
 
 /** Keep desktop full bleed, but show the complete image on mobile.
  * Hotspots follow the visible image, which is contained on mobile and covered on desktop.
  */
-function ImageSlide({ banner, mobile, shouldLoad, onLoad, active }: Props & { mobile: boolean }) {
+function ImageSlide({ banner, mobile, shouldLoad, onLoad, active, first }: Props & { mobile: boolean }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [frameSize, setFrameSize] = useState<BoxSize | null>(null);
 
@@ -56,7 +56,8 @@ function ImageSlide({ banner, mobile, shouldLoad, onLoad, active }: Props & { mo
     {!cover && shouldLoad && <OptimizedImage src={src}
       alt={banner.imageAlt || banner.title || 'TreatStory collection banner'} fill
       sizes={mobile ? '(max-width: 767px) 100vw, 0px' : BANNER_IMAGE_SIZES}
-      quality={80} loading="lazy" onLoad={onLoad}
+      quality={80} loading={first && mobile ? 'eager' : 'lazy'}
+      fetchPriority={first && mobile ? 'high' : 'auto'} onLoad={onLoad}
       className={mobile ? "object-contain object-center" : "object-cover object-center"} />}
     {cover && <div className="absolute" style={{
       left: cover.left, top: cover.top, width: cover.width, height: cover.height,
@@ -64,7 +65,8 @@ function ImageSlide({ banner, mobile, shouldLoad, onLoad, active }: Props & { mo
       {shouldLoad && <OptimizedImage src={src}
         alt={banner.imageAlt || banner.title || 'TreatStory collection banner'} fill
         sizes={mobile ? '(max-width: 767px) 100vw, 0px' : BANNER_IMAGE_SIZES}
-        quality={80} loading="lazy" fetchPriority={active ? 'auto' : 'low'} onLoad={onLoad}
+        quality={80} loading={first && mobile ? 'eager' : 'lazy'}
+        fetchPriority={first && mobile ? 'high' : active ? 'auto' : 'low'} onLoad={onLoad}
         className={mobile ? "object-contain object-center" : "object-cover object-center"} />}
       {href && mode === 'hotspot' && <Link href={href} aria-label={accessibleLabel}
         className="absolute z-10 block rounded-sm bg-transparent outline-offset-[-3px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#874a28]"

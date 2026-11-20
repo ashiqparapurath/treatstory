@@ -35,3 +35,14 @@ test('unreviewed encrypted support API is disabled by default and key/message co
   assert.doesNotMatch(rules,/match \/support_chat_keys/);
   assert.doesNotMatch(rules,/match \/support_tickets\/\{ticketId\}\/messages/);
 });
+
+test('disabled Matrix feature does not load its heavy client bundle on the legacy support page',()=>{
+  const support=read('src/app/support/page.tsx');
+  const layout=read('src/app/support/layout.tsx');
+  assert.doesNotMatch(support,/^'use client'/);
+  assert.match(support,/if \(!enabled\) return null/);
+  assert.match(support,/await import\('@\/components\/support-matrix-workspace'\)/);
+  assert.match(support,/NEXT_PUBLIC_ENCRYPTED_SUPPORT_ENABLED === 'true'/);
+  assert.match(support,/NEXT_PUBLIC_SUPPORT_MATRIX_ENABLED === 'true'/);
+  assert.match(layout,/<LegacySupportPage/);
+});

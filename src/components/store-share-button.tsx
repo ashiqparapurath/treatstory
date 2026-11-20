@@ -12,10 +12,12 @@ export function StoreShareButton({
   sellerId,
   storeName,
   dark = false,
+  compact = false,
 }: {
   sellerId: string;
   storeName: string;
   dark?: boolean;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [canNativeShare, setCanNativeShare] = useState(false);
@@ -65,10 +67,10 @@ export function StoreShareButton({
           aria-label={'Share store: ' + storeName}
           className={dark
             ? 'min-h-11 shrink-0 gap-2 rounded-full border-white/40 bg-white/10 px-4 text-xs font-semibold text-white hover:bg-white/20 hover:text-white'
-            : 'min-h-11 shrink-0 gap-2 rounded-full border-[#ded4c7] bg-[#fbf9f6] px-4 text-xs font-semibold text-[#4e4030] hover:bg-[#f3ede4]'}
+            : compact ? 'min-h-10 shrink-0 gap-1.5 rounded-full border-[#ded4c7] bg-[#fbf9f6] px-3 text-xs font-semibold text-[#4e4030] hover:bg-[#f3ede4] sm:min-h-11 sm:gap-2 sm:px-4' : 'min-h-11 shrink-0 gap-2 rounded-full border-[#ded4c7] bg-[#fbf9f6] px-4 text-xs font-semibold text-[#4e4030] hover:bg-[#f3ede4]'}
         >
           <Share2 className="h-4 w-4" />
-          Share store
+          {compact ? <><span className="sm:hidden">Share</span><span className="hidden sm:inline">Share store</span></> : 'Share store'}
         </Button>
       </PopoverTrigger>
       <PopoverContent

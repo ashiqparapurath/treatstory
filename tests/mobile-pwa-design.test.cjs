@@ -14,7 +14,8 @@ test('reference-style mobile home retains a working product search and catalogue
   assert.match(products,/useEffect\(\(\) => setSearchTerm\(incomingQuery\)/);
   assert.match(home,/<CatalogMaintenanceGate>/);
   assert.match(home,/<MobileCategoryRail \/>/);
-  assert.match(home,/mobileCompact/);
+  assert.match(home,/<DeferredHomepageCatalog \/>/);
+  assert.match(read('src/components/home-legacy-products.tsx'),/mobileCompact/);
   assert.match(home,/<BannerCarousel \/>/);
   assert.match(category,/encodeURIComponent\(query\)/);
   assert.doesNotMatch(category,/New York|Up to 40|fake|placeholder-price/i);
@@ -443,4 +444,28 @@ test('Explore mobile filters open on demand without crowding product search',()=
   assert.match(page,/onUpdate=\{change=>setFilters\(current=>\(\{\.\.\.current,\.\.\.change\}\)\)\}/);
   assert.match(page,/aria-label="Refine Explore products" className="mb-8 hidden/);
   assert.match(page,/md:block md:p-5/);
+});
+
+test('seller product wizard is compact and touch-friendly on mobile without losing product features', () => {
+  const wizard=read('src/components/seller-product-editor.tsx');
+  const css=read('src/app/globals.css');
+  assert.ok(wizard.includes('stepDescriptions[step]'), 'each wizard step has a concise instruction');
+  assert.ok(wizard.includes('role="progressbar"'), 'screen readers can track progress');
+  assert.ok(wizard.includes('seller-wizard-scroll'), 'step content scrolls under a fixed footer');
+  assert.ok(wizard.includes('pb-[max(.75rem,env(safe-area-inset-bottom))]'), 'safe-area padding for phones');
+  assert.ok(wizard.includes('flex-1 rounded-xl bg-[#74472e]'), 'mobile Continue fills available width');
+  assert.ok(wizard.includes('grid-cols-1 gap-2.5 min-[390px]:grid-cols-2'), 'photo cards reflow on very narrow devices');
+  assert.ok(wizard.includes('max-h-56 w-full object-cover'), 'main cover preview is bounded in height');
+  assert.ok(wizard.includes('Add photo by link'), 'URL photo entry remains available but collapsible');
+  assert.ok(wizard.includes("linkField?.closest('details')?.setAttribute('open', '')"), 'invalid pending link expands its editor');
+  assert.ok(wizard.includes('relative grid min-w-0 grid-cols-2 items-end'), 'size and price fields fit in two mobile columns');
+  assert.ok(wizard.includes('absolute right-2 top-2 flex size-10'), 'variant delete stays on the size card header');
+  assert.ok(wizard.includes('rounded-2xl border border-[#e9dfd3] bg-white p-4 text-sm'), 'review is separated into readable cards');
+  assert.ok(wizard.includes('Save draft'), 'existing draft action remains');
+  assert.ok(wizard.includes("onSubmit('published')"), 'published product action remains');
+  assert.ok(wizard.includes("onSubmit('draft')"), 'saving drafts remains available');
+  assert.ok(wizard.includes('ConfirmActionDialog'), 'unsaved changes remain protected');
+  assert.ok(wizard.includes('SellerDescriptionSuggestion'), 'compact inline AI is still present');
+  assert.ok(css.includes('seller-wizard-scroll { scrollbar-gutter: auto; }'), 'mobile scroll area does not reserve unused gutter');
+  assert.ok(css.includes('.seller-wizard [data-step][hidden]'), 'inactive steps stay hidden');
 });
