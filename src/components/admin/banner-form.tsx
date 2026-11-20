@@ -10,6 +10,7 @@ import { UploadCloud, X } from 'lucide-react';
 
 import { useFirestore, useAccountRole, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { uploadTreatStoryPhoto } from '@/lib/cloudinary-upload';
+import { MAX_ORIGINAL_BANNER_BYTES } from '@/lib/banner-image-upload';
 import { safeBannerLink, DEFAULT_BANNER_HOTSPOT, type BannerHotspot } from '@/lib/banner-layout';
 import type { Banner, Category } from '@/lib/products';
 import { errorToast, ActionError } from '@/lib/user-notices';
@@ -22,7 +23,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const MAX_BANNER_BYTES = 4_000_000;
+const MAX_BANNER_BYTES = MAX_ORIGINAL_BANNER_BYTES;
 const ACCEPTED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const hotspotSchema = z.object({
   x: z.number().min(0).max(100),
@@ -130,7 +131,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
       return;
     }
     if (file.size > MAX_BANNER_BYTES) {
-      form.setError(field, { type: 'manual', message: 'Image exceeds 4 MB. Compress it before uploading.' });
+      form.setError(field, { type: 'manual', message: 'Image exceeds 16 MB. Choose a smaller image.' });
       return;
     }
     clearPreviewUrl(kind);
@@ -208,7 +209,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
       onFinished();
     } catch (error) {
       console.error('Banner save failed', { code: (error as { code?: string })?.code, error });
-      toast(errorToast(error, 'save'));
+      toast(errorToast(error, error instanceof ActionError && error.status === 413 ? 'upload-photo' : 'save'));
     } finally {
       setIsSubmitting(false);
     }
@@ -258,7 +259,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
         </div> : <Button type="button" variant="outline" className="h-28 w-full border-dashed" onClick={() => desktopInput.current?.click()} disabled={isSubmitting}>
           <UploadCloud className="mr-2 h-5 w-5" />Choose banner image
         </Button>}
-        <p className="text-xs text-muted-foreground">JPG, PNG or WebP, up to 4 MB. Artwork with text looks best in a wide layout.</p>
+        <p className="text-xs text-muted-foreground">JPG, PNG or WebP, up to 16 MB. Images larger than 3.4 MB are optimized before uploading; a wide layout works best for text.</p>
         {form.formState.errors.imageUrl && <p className="text-sm text-destructive">{form.formState.errors.imageUrl.message}</p>}
       </div>
 

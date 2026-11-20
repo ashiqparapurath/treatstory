@@ -53,3 +53,14 @@ test('legacy banners render standard while image artwork stays uncropped and lin
   assert.match(form, /BannerHotspotEditor label="Desktop"/);
   assert.match(form, /BannerHotspotEditor label="Mobile"/);
 });
+
+test('banner upload respects banner-sized request bodies and prepares larger images', () => {
+  const api = fs.readFileSync(path.join(root, 'src/app/api/cloudinary/upload/route.ts'), 'utf8');
+  const upload = fs.readFileSync(path.join(root, 'src/lib/cloudinary-upload.ts'), 'utf8');
+  const helper = fs.readFileSync(path.join(root, 'src/lib/banner-image-upload.ts'), 'utf8');
+  assert.match(api, /readBodyBytes\\(request,MAX_BANNER_BYTES\\+50_000\\)/);
+  assert.match(api, /if \\(contentLength > MAX_BANNER_BYTES \\+ 50_000\\)/);
+  assert.match(upload, /kind === 'banner' \\? await prepareBannerImage\\(file\\) : file/);
+  assert.match(helper, /MAX_ORIGINAL_BANNER_BYTES = 16_000_000/);
+  assert.match(helper, /BANNER_UPLOAD_TARGET_BYTES = 3_400_000/);
+});

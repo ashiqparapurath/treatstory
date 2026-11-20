@@ -85,10 +85,10 @@ export async function POST(request: NextRequest) {
   } catch { return json({ error: 'Unable to check account status. Try again later.' }, 503); }
 
   const contentLength = Number(request.headers.get('content-length') || 0);
-  if (contentLength > MAX_BANNER_BYTES + 50_000) return json({ error: 'Image upload is too large.' }, 413);
+  if (contentLength > MAX_BANNER_BYTES + 50_000) return json({ error: 'Upload exceeds the request size limit. Try a smaller banner image.', code: 'UPLOAD_TOO_LARGE' }, 413);
   let form: FormData;
   try {
-    const bounded=await readBodyBytes(request,MAX_PRODUCT_BYTES+50_000);
+    const bounded=await readBodyBytes(request,MAX_BANNER_BYTES+50_000);
     form=await new Response(bounded as BodyInit,{headers:{'Content-Type':request.headers.get('content-type')||''}}).formData();
   }catch(error){if(error instanceof ApiError)return safeResponse(error);return json({error:'Could not read the selected image.'},400);}
   const kind = form.get('kind');
