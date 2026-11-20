@@ -11,7 +11,7 @@ import { UploadCloud, X } from 'lucide-react';
 import { useFirestore, useAccountRole, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { uploadTreatStoryPhoto } from '@/lib/cloudinary-upload';
 import { MAX_ORIGINAL_BANNER_BYTES } from '@/lib/banner-image-upload';
-import { safeBannerLink, DEFAULT_BANNER_HOTSPOT, type BannerHotspot } from '@/lib/banner-layout';
+import { safeBannerLink, DEFAULT_BANNER_HOTSPOT, DEFAULT_BANNER_PLACEMENT, type BannerHotspot, type BannerImagePlacement } from '@/lib/banner-layout';
 import type { Banner, Category } from '@/lib/products';
 import { errorToast, ActionError } from '@/lib/user-notices';
 import { useToast } from '@/hooks/use-toast';
@@ -32,6 +32,12 @@ const hotspotSchema = z.object({
   height: z.number().min(8).max(100),
 });
 
+const placementSchema = z.object({
+  x: z.number().min(0).max(100),
+  y: z.number().min(0).max(100),
+  zoom: z.number().min(100).max(250),
+});
+
 const formSchema = z.object({
   displayMode: z.enum(['standard', 'image-only']),
   imageLinkMode: z.enum(['none', 'full', 'hotspot']),
@@ -47,6 +53,8 @@ const formSchema = z.object({
   mobileAspectRatio: z.number().min(0.1).max(10),
   desktopHotspot: hotspotSchema,
   mobileHotspot: hotspotSchema,
+  desktopPlacement: placementSchema,
+  mobilePlacement: placementSchema,
   isActive: z.boolean(),
 }).superRefine((value, ctx) => {
   if (value.displayMode === 'standard') {
@@ -108,6 +116,8 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
       mobileAspectRatio: banner?.mobileAspectRatio || banner?.imageAspectRatio || 16 / 9,
       desktopHotspot: banner?.desktopHotspot || { ...DEFAULT_BANNER_HOTSPOT },
       mobileHotspot: banner?.mobileHotspot || banner?.desktopHotspot || { ...DEFAULT_BANNER_HOTSPOT },
+      desktopPlacement: banner?.desktopPlacement || { ...DEFAULT_BANNER_PLACEMENT },
+      mobilePlacement: banner?.mobilePlacement || { ...DEFAULT_BANNER_PLACEMENT },
       isActive: banner?.isActive ?? true,
     },
   });
@@ -115,6 +125,11 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
   const linkMode = form.watch('imageLinkMode');
   const desktopHotspot = form.watch('desktopHotspot');
   const mobileHotspot = form.watch('mobileHotspot');
+  const desktopPlacement = form.watch('desktopPlacement');
+  const mobilePlacement = form.watch('mobilePlacement');
+  const title = form.watch('title');
+  const subtitle = form.watch('subtitle');
+  const buttonText = form.watch('buttonText');
 
   const clearPreviewUrl = (kind: PhotoKind) => {
     if (previewUrls.current[kind]) URL.revokeObjectURL(previewUrls.current[kind]);
@@ -201,6 +216,8 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
         mobileAspectRatio: data.mobileAspectRatio,
         desktopHotspot: data.desktopHotspot,
         mobileHotspot: data.mobileHotspot,
+        desktopPlacement: data.desktopPlacement,
+        mobilePlacement: data.mobilePlacement,
         isActive: data.isActive,
       };
       if (banner) await updateDoc(doc(firestore, 'banners', banner.id), { ...bannerData, updatedAt: serverTimestamp() });
@@ -318,17 +335,35 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
           </div> : <Button type="button" size="sm" variant="outline" onClick={() => mobileInput.current?.click()} disabled={isSubmitting}>Upload mobile image</Button>}
           {form.formState.errors.mobileImageUrl && <p className="text-sm text-destructive">{form.formState.errors.mobileImageUrl.message}</p>}
         </div>
-        {linkMode === 'hotspot' && <div className="space-y-5 rounded-xl border p-3">
-          <h3 className="font-semibold">Button Position Preview</h3>
-          <BannerHotspotEditor label="Desktop" src={imagePreview} aspectRatio={form.watch('imageAspectRatio')}
-            frameAspectRatio={1360 / 340} value={desktopHotspot as BannerHotspot} onChange={(next) => form.setValue('desktopHotspot', next, { shouldDirty: true })}
-            disabled={isSubmitting} />
-          <BannerHotspotEditor label="Mobile" src={mobilePreview || imagePreview}
-            aspectRatio={mobilePreview ? form.watch('mobileAspectRatio') : form.watch('imageAspectRatio')}
-            frameAspectRatio={390 / 210} fit="contain" value={mobileHotspot as BannerHotspot} onChange={(next) => form.setValue('mobileHotspot', next, { shouldDirty: true })}
-            disabled={isSubmitting} />
-        </div>}
+
       </>}
+
+      <div className="space-y-3 border-t border-[#e9dfd5] pt-4">
+        <div>
+          <h3 className="font-semibold">Live banner previews</h3>
+          <p className="text-xs text-muted-foreground">These update instantly. Drag each image or use Zoom and position controls; desktop and mobile positions save separately.</p>
+        </div>
+        <BannerHotspotEditor label="Desktop" src={imagePreview}
+          aspectRatio={form.watch('imageAspectRatio')} frameAspectRatio={1360 / 340}
+          fit="cover" displayMode={mode} imageLinkMode={mode === 'standard' ? 'none' : linkMode}
+          title={title} subtitle={subtitle} buttonText={buttonText}
+          value={desktopHotspot as BannerHotspot}
+          onChange={(next) => form.setValue('desktopHotspot', next, { shouldDirty: true })}
+          placement={desktopPlacement as BannerImagePlacement}
+          onPlacementChange={(next) => form.setValue('desktopPlacement', next, { shouldDirty: true })}
+          disabled={isSubmitting} />
+        <BannerHotspotEditor label="Mobile" src={mode === 'image-only' ? mobilePreview || imagePreview : imagePreview}
+          aspectRatio={mode === 'image-only' && mobilePreview
+            ? form.watch('mobileAspectRatio') : form.watch('imageAspectRatio')}
+          frameAspectRatio={390 / 210} fit={mode === 'image-only' ? 'contain' : 'cover'}
+          displayMode={mode} imageLinkMode={mode === 'standard' ? 'none' : linkMode}
+          title={title} subtitle={subtitle} buttonText={buttonText}
+          value={mobileHotspot as BannerHotspot}
+          onChange={(next) => form.setValue('mobileHotspot', next, { shouldDirty: true })}
+          placement={mobilePlacement as BannerImagePlacement}
+          onPlacementChange={(next) => form.setValue('mobilePlacement', next, { shouldDirty: true })}
+          disabled={isSubmitting} />
+      </div>
 
       <FormField control={form.control} name="isActive" render={({ field }) => <FormItem className="flex items-center justify-between gap-3 rounded-lg border p-3">
         <div className="space-y-1"><FormLabel>Activate Banner</FormLabel><FormDescription>Show this banner on the homepage.</FormDescription></div>
