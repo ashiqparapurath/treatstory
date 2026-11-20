@@ -78,16 +78,15 @@ test('standard and image-only banners retain identical compact heights and fill 
   assert.ok(slide.includes('h-[210px]'), 'image-only mobile matches the standard');
   assert.ok(slide.includes('sm:h-64 md:block md:h-72 lg:h-[340px]'), 'image-only desktop matches the standard');
   assert.ok(slide.includes('mobile ? "object-contain object-center" : "object-cover object-center"'), 'mobile image is uncropped, desktop still fills');
-  assert.ok(slide.includes('bannerContainRect(frameSize.width, frameSize.height, ratio)'), 'mobile uses contain geometry');
+  assert.ok(slide.includes("mobile ? 'contain' : 'cover'"), 'mobile uses contain geometry');
   assert.ok(!slide.includes('blur-[24px]'), 'no artificial blurry side fills');
-  assert.ok(slide.includes('bannerCoverRect(frameSize.width, frameSize.height, ratio)'));
+  assert.ok(slide.includes('bannerImageRect(frameSize.width, frameSize.height, ratio'));
   assert.ok(slide.includes("mode === 'hotspot'"));
   assert.ok(slide.includes("mode === 'full'"));
-  assert.ok(editor.includes('bannerCoverRect(frameSize.width, frameSize.height, aspectRatio)'));
-  assert.ok(editor.includes('bannerContainRect(frameSize.width, frameSize.height, aspectRatio)'));
+  assert.ok(editor.includes('bannerImageRect(areaWidth, areaHeight, aspectRatio, fit, position)'));
   assert.ok(editor.includes('bannerHotspotVisibility'));
   assert.ok(form.includes('frameAspectRatio={1360 / 340}'));
-  assert.ok(form.includes('frameAspectRatio={390 / 210} fit="contain"'));
+  assert.ok(form.includes('frameAspectRatio={390 / 210} fit={mode === \'image-only\' ? \'contain\' : \'cover\'}'));
 });
 
 test('object-cover centering and hotspot visibility calculate cropped image bounds', () => {
@@ -121,4 +120,54 @@ test('mobile shows every pixel of a 1280×320 artwork while retaining the clicka
   assert.ok(fullWide.left > 0 && fullWide.left < 10);
   assert.equal(fullWide.height, 210);
   assert.ok(Math.abs(bannerHotspotVisibility(fullWide, button, 390, 210) - 1) < 1e-9);
+});
+
+test('saved placement projects into the same image geometry on desktop and mobile', () => {
+  const { bannerImageRect, normalizeBannerPlacement, panBannerImage } = moduleRef.exports;
+  const desktop = bannerImageRect(1360, 340, 16 / 9, 'cover', null);
+  assert.equal(desktop.width, 1360);
+  assert.equal(desktop.height, 765);
+  assert.equal(desktop.top, -212.5);
+  const mobile = bannerImageRect(360, 210, 4, 'contain', { x: 50, y: 50, zoom: 100 });
+  assert.equal(mobile.width, 360);
+  assert.equal(mobile.height, 90);
+  assert.equal(mobile.top, 60);
+  const mobileZoom = bannerImageRect(360, 210, 4, 'contain', { x: 0, y: 50, zoom: 150 });
+  assert.equal(mobileZoom.width, 540);
+  assert.equal(mobileZoom.left, 0);
+  assert.equal(mobileZoom.height, 135);
+  const mobileRight = bannerImageRect(360, 210, 4, 'contain', { x: 100, y: 50, zoom: 150 });
+  assert.equal(mobileRight.left, -180);
+  const adjusted = panBannerImage({ x: 50, y: 50, zoom: 150 }, 360, 210,
+    bannerImageRect(360, 210, 4, 'contain', { x: 50, y: 50, zoom: 150 }), -45, 0);
+  assert.equal(adjusted.x, 75);
+  const clamped = normalizeBannerPlacement({ x: -8, y: 200, zoom: 900 });
+  assert.equal(clamped.x, 0);
+  assert.equal(clamped.y, 100);
+  assert.equal(clamped.zoom, 250);
+});
+
+test('banner admin form persistently saves responsive adjustments and exposes live editing', () => {
+  const form = fs.readFileSync(path.join(root, 'src/components/admin/banner-form.tsx'), 'utf8');
+  const editor = fs.readFileSync(path.join(root, 'src/components/admin/banner-hotspot-editor.tsx'), 'utf8');
+  const home = fs.readFileSync(path.join(root, 'src/components/home-client.tsx'), 'utf8');
+  const imageSlide = fs.readFileSync(path.join(root, 'src/components/banner-image-slide.tsx'), 'utf8');
+  const standardRenderer = fs.readFileSync(path.join(root, 'src/components/banner-placed-image.tsx'), 'utf8');
+  assert.ok(form.includes("desktopPlacement: banner?.desktopPlacement"));
+  assert.ok(form.includes("mobilePlacement: banner?.mobilePlacement"));
+  assert.ok(form.includes("desktopPlacement: data.desktopPlacement"));
+  assert.ok(form.includes("mobilePlacement: data.mobilePlacement"));
+  assert.ok(form.includes("Live banner previews"));
+  assert.ok(form.includes('label="Desktop"'));
+  assert.ok(form.includes('label="Mobile"'));
+  assert.ok(editor.includes("onPointerDown={start}"));
+  assert.ok(editor.includes("panBannerImage("));
+  assert.ok(editor.includes('type="range"'));
+  assert.ok(editor.includes("Reset"));
+  assert.ok(editor.includes("Move button"));
+  assert.ok(editor.includes("Move image"));
+  assert.ok(home.includes('BannerPlacedImage'));
+  assert.ok(imageSlide.includes("banner.desktopPlacement"));
+  assert.ok(imageSlide.includes("banner.mobilePlacement"));
+  assert.ok(standardRenderer.includes('bannerImageRect(frame.width, frame.height, ratio, fit, placement)'));
 });
