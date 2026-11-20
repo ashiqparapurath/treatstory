@@ -206,9 +206,9 @@ test('desktop and mobile uploads are offered together for both banner modes', ()
   assert.ok(imageSlide.includes('mobile && banner.mobileImageUrl ? banner.mobileImageUrl : banner.imageUrl'));
 });
 
-test('banner carousel automatically rotates multiple slides with accessible pause behavior', () => {
+test('banner carousel automatically rotates slides without a stop button', () => {
   const home = fs.readFileSync(path.join(root, 'src/components/home-client.tsx'), 'utf8');
-  assert.ok(home.includes("const [autoRotate,setAutoRotate]=useState(true)"));
+  assert.ok(!home.includes('setAutoRotate'), 'no visible or internal manual stop toggle');
   assert.ok(home.includes("(banners?.length ?? 0)<2"), 'only multiple banners auto-rotate');
   assert.ok(home.includes("const timer=window.setInterval(()=>api.scrollNext(),6000)"));
   assert.ok(home.includes("window.clearInterval(timer)"), 'interval is cleaned up');
@@ -220,7 +220,10 @@ test('banner carousel automatically rotates multiple slides with accessible paus
   assert.ok(home.includes('onFocusCapture={()=>setFocused(true)}'));
   assert.ok(home.includes('onTouchStartCapture={()=>setTouching(true)}'));
   assert.ok(home.includes("onTouchEndCapture={()=>setTouching(false)}"));
-  assert.ok(home.includes("Pause automatic banner rotation"));
-  assert.ok(home.includes("Resume automatic banner rotation"));
+  assert.ok(!home.includes("Pause automatic banner rotation"), 'no pause button on mobile or desktop');
+  assert.ok(!home.includes("Resume automatic banner rotation"), 'no resume button on mobile or desktop');
+  assert.ok(!home.includes("<Pause"), 'playback controls absent');
+  assert.ok(!home.includes("<Play"), 'playback controls absent');
+  assert.ok(home.includes('aria-label={`Banner ${active + 1} of ${banners.length}`}'), 'mobile slide indicators remain');
   assert.ok(home.includes("loop: true"), 'rotation wraps to the first banner');
 });
