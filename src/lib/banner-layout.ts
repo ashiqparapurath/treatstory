@@ -63,3 +63,13 @@ export function bannerHotspotVisibility(
   const visibleH = Math.max(0, Math.min(frameHeight, top + height) - Math.max(0, top));
   return (visibleW * visibleH) / (width * height);
 }
+
+/** Image bounds for the mobile contain fit: show the entire artwork without cropping. */
+export function bannerContainRect(frameWidth: number, frameHeight: number, imageRatio: number): BannerCoverRect {
+  if (!Number.isFinite(frameWidth) || !Number.isFinite(frameHeight) ||
+      frameWidth <= 0 || frameHeight <= 0) return { left: 0, top: 0, width: 0, height: 0 };
+  const ratio = Number.isFinite(imageRatio) && imageRatio > 0 ? imageRatio : 16 / 9;
+  const width = Math.min(frameWidth, frameHeight * ratio);
+  const height = width / ratio;
+  return { left: (frameWidth - width) / 2, top: (frameHeight - height) / 2, width, height };
+}
