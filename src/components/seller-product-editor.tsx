@@ -161,7 +161,9 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
     }
     if (step === 1 && newPhotoLink.trim()) {
       setPhotoLinkError('Add this image link or clear it to continue.');
-      document.getElementById('creatorImageLink')?.focus();
+      const linkField = document.getElementById('creatorImageLink');
+      linkField?.closest('details')?.setAttribute('open', '');
+      linkField?.focus();
       return;
     }
     if (step === 2) {
@@ -378,7 +380,7 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
             {saveError && <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">{saveError}</p>}
           </div>
           <footer className="flex shrink-0 items-center gap-2 border-t border-[#e8e0d5] bg-white px-4 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-6px_18px_rgba(59,39,22,0.035)] sm:px-7 sm:py-3">
-            {step > 0 && <Button type="button" variant="ghost" aria-label="Back" className="h-12 shrink-0 rounded-xl border border-[#e8dfd4] px-4 text-[#665544]" disabled={blocked} onClick={() => move(step-1)}><><ArrowLeft className="mr-1 h-4 w-4"/>Back</></Button>}
+            {step > 0 && <Button type="button" variant="ghost" aria-label="Back" className="h-12 shrink-0 rounded-xl border border-[#e8dfd4] px-4 text-[#665544]" disabled={blocked} onClick={() => move(step-1)}><ArrowLeft className="mr-1 h-4 w-4"/>Back</Button>}
             {step < 3 ? <Button type="submit" disabled={blocked} className="ml-auto h-12 min-w-0 flex-1 rounded-xl bg-[#74472e] px-6 text-sm font-semibold hover:bg-[#5f3824] sm:flex-none sm:rounded-full">Continue <ArrowRight className="ml-2 h-4 w-4" /></Button> :
               <div className="ml-auto grid min-w-0 flex-1 grid-cols-2 gap-2 [&_button]:h-12 [&_button]:min-w-0 [&_button]:rounded-xl [&_button]:px-2 [&_button]:text-[12px] sm:flex-none sm:[&_button]:rounded-full sm:[&_button]:px-4 sm:[&_button]:text-sm">
                 <Button type="button" variant="outline" disabled={blocked || !enabled} onClick={() => onSubmit('draft')}>Save draft</Button>
