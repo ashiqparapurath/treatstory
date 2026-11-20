@@ -39,12 +39,12 @@ test('hotspots are restricted to the full displayed image', () => {
   assert.ok(invalid.width >= 8 && invalid.height >= 8);
 });
 
-test('legacy banners render standard while image artwork stays uncropped and linked accessibly', () => {
+test('legacy banners remain standard and full-frame artwork is linked accessibly', () => {
   const home = fs.readFileSync(path.join(root, 'src/components/home-client.tsx'), 'utf8');
   const slide = fs.readFileSync(path.join(root, 'src/components/banner-image-slide.tsx'), 'utf8');
   const form = fs.readFileSync(path.join(root, 'src/components/admin/banner-form.tsx'), 'utf8');
   assert.match(home, /banner\.displayMode === 'image-only'/);
-  assert.match(slide, /object-contain/);
+  assert.match(slide, /object-cover object-center/);
   assert.match(slide, /aria-label=\{accessibleLabel\}/);
   assert.match(slide, /safeBannerLink\(banner\.buttonLink\)/);
   assert.match(slide, /mobileHotspot \|\| banner\.desktopHotspot/);
@@ -97,11 +97,11 @@ test('object-cover centering and hotspot visibility calculate cropped image boun
   assert.equal(cover.left, 0);
   assert.equal(cover.top, -212.5);
   const centerHotspot = { x: 40, y: 40, width: 20, height: 20 };
-  assert.equal(bannerHotspotVisibility(cover, centerHotspot, 1360, 340), 1);
+  assert.ok(Math.abs(bannerHotspotVisibility(cover, centerHotspot, 1360, 340) - 1) < 1e-9);
   const bottomHotspot = { x: 5, y: 80, width: 25, height: 12 };
   assert.equal(bannerHotspotVisibility(cover, bottomHotspot, 1360, 340), 0);
   const mobileCover = bannerCoverRect(390, 210, 16 / 9);
   assert.equal(mobileCover.width, 390);
   assert.ok(mobileCover.top < 0 && mobileCover.top > -6);
-  assert.equal(bannerHotspotVisibility(mobileCover, bottomHotspot, 390, 210), 1);
+  assert.ok(Math.abs(bannerHotspotVisibility(mobileCover, bottomHotspot, 390, 210) - 1) < 1e-9);
 });
