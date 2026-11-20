@@ -185,3 +185,23 @@ test('visual banner editor uses a blank-free artwork canvas and separate honest 
   assert.ok(editor.includes("aria-pressed={artworkMode}"));
   assert.ok(editor.includes('actual website frame'));
 });
+
+test('desktop and mobile uploads are offered together for both banner modes', () => {
+  const form = fs.readFileSync(path.join(root, 'src/components/admin/banner-form.tsx'), 'utf8');
+  const home = fs.readFileSync(path.join(root, 'src/components/home-client.tsx'), 'utf8');
+  const imageSlide = fs.readFileSync(path.join(root, 'src/components/banner-image-slide.tsx'), 'utf8');
+  assert.ok(form.includes('Desktop image'));
+  assert.ok(form.includes('Mobile image'));
+  assert.ok(form.indexOf('Upload mobile banner image') < form.indexOf("mode === 'standard'"), 'both image slots appear before mode-specific fields');
+  assert.ok(form.includes('Recommended 1280 × 320 px'));
+  assert.ok(form.includes('Recommended 780 × 420 px'));
+  assert.ok(form.includes('if (mobileFile) mobileUrl = await uploadTreatStoryPhoto(user, mobileFile, \'banner\')'));
+  assert.ok(form.includes('mobileImageUrl: mobileUrl,'));
+  assert.ok(form.includes('src={mobilePreview || imagePreview}'));
+  assert.ok(form.includes("mobileAspectRatio: mobileUrl ? data.mobileAspectRatio : data.imageAspectRatio"));
+  assert.ok(!form.includes("mobileImageUrl: imageOnly ? mobileUrl : ''"));
+  assert.ok(!form.includes("mobileFile && data.displayMode === 'image-only'"));
+  assert.ok(home.includes('src={banner.mobileImageUrl || banner.imageUrl} alt={banner.title}'));
+  assert.ok(home.includes('banner.mobileAspectRatio || banner.imageAspectRatio'));
+  assert.ok(imageSlide.includes('mobile && banner.mobileImageUrl ? banner.mobileImageUrl : banner.imageUrl'));
+});

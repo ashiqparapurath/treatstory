@@ -67,11 +67,11 @@ function BannerCarousel() {
                 onLoad={() => { if (index === active) setFirstLoaded(true); }} /> : <>
               <CardContent className="relative isolate min-h-[210px] overflow-hidden bg-[#f9f3eb] p-0 md:hidden">
                 <div className="absolute inset-y-0 right-0 w-[56%] bg-[#e9d9c6]">{banner.mobilePlacement
-                  ? <BannerPlacedImage src={banner.imageUrl} alt={banner.title}
-                    ratio={banner.imageAspectRatio || 16 / 9} placement={banner.mobilePlacement}
+                  ? <BannerPlacedImage src={banner.mobileImageUrl || banner.imageUrl} alt={banner.title}
+                    ratio={banner.mobileImageUrl ? (banner.mobileAspectRatio || banner.imageAspectRatio || 16 / 9) : (banner.imageAspectRatio || 16 / 9)} placement={banner.mobilePlacement}
                     shouldLoad={requested.has(index)||index===active} sizes="(max-width: 767px) 60vw, 0px"
                     onLoad={()=>{if(index===active)setFirstLoaded(true);}} />
-                  : (requested.has(index)||index===active)&&<OptimizedImage src={banner.imageUrl} alt={banner.title} fill sizes="(max-width: 767px) 60vw, 0px" quality={75} loading="lazy" onLoad={()=>{if(index===active)setFirstLoaded(true);}} className="object-cover object-center"/>}</div>
+                  : (requested.has(index)||index===active)&&<OptimizedImage src={banner.mobileImageUrl || banner.imageUrl} alt={banner.title} fill sizes="(max-width: 767px) 60vw, 0px" quality={75} loading="lazy" onLoad={()=>{if(index===active)setFirstLoaded(true);}} className="object-cover object-center"/>}</div>
                 <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,#f9f3eb_0%,#f9f3eb_45%,rgba(249,243,235,0.98)_65%,rgba(249,243,235,0.58)_83%,rgba(249,243,235,0.06)_100%)]"/>
                 <div className="relative z-10 flex min-h-[210px] flex-col items-start justify-start gap-3 px-4 py-4 text-left">
                   <div className="w-[71%] min-w-0">

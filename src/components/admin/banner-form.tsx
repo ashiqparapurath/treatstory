@@ -195,9 +195,9 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
       let url = data.imageUrl;
       let mobileUrl = data.mobileImageUrl;
       if (selectedFile) url = await uploadTreatStoryPhoto(user, selectedFile, 'banner');
-      if (mobileFile && data.displayMode === 'image-only') mobileUrl = await uploadTreatStoryPhoto(user, mobileFile, 'banner');
+      if (mobileFile) mobileUrl = await uploadTreatStoryPhoto(user, mobileFile, 'banner');
       if (!url || url === 'pending-upload') throw new ActionError('Choose a banner image before saving.', 400);
-      if (mobileUrl === 'pending-upload') mobileUrl = '';
+      if (mobileUrl === 'pending-upload') throw new ActionError('The mobile banner image has not finished uploading.', 400);
 
       const imageOnly = data.displayMode === 'image-only';
       const needsLink = !imageOnly || data.imageLinkMode !== 'none';
@@ -211,9 +211,9 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
         linkLabel: data.linkLabel.trim(),
         imageAlt: data.imageAlt.trim(),
         imageUrl: url,
-        mobileImageUrl: imageOnly ? mobileUrl : '',
+        mobileImageUrl: mobileUrl,
         imageAspectRatio: data.imageAspectRatio,
-        mobileAspectRatio: data.mobileAspectRatio,
+        mobileAspectRatio: mobileUrl ? data.mobileAspectRatio : data.imageAspectRatio,
         desktopHotspot: data.desktopHotspot,
         mobileHotspot: data.mobileHotspot,
         desktopPlacement: data.desktopPlacement,
@@ -260,24 +260,69 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
         <FormDescription>Existing banners remain standard unless you change their mode.</FormDescription>
       </FormItem>} />
 
-      <div className="space-y-2">
-        <FormLabel>Banner Image</FormLabel>
-        <input ref={desktopInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only"
-          aria-label="Upload banner image" onChange={(event) => changeImage(event, 'desktop')} disabled={isSubmitting} />
-        {imagePreview ? <div className="space-y-2">
-          <div className="relative aspect-video overflow-hidden rounded-lg border bg-secondary">
-            <Image src={imagePreview} alt="Uploaded desktop banner preview" fill unoptimized className="object-contain"
-              onLoad={(event) => updateAspect('desktop', event.currentTarget)} />
-          </div>
-          <div className="flex gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => desktopInput.current?.click()} disabled={isSubmitting}>Replace image</Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => removeImage('desktop')} disabled={isSubmitting}><X className="mr-1 h-4 w-4" />Remove</Button>
-          </div>
-        </div> : <Button type="button" variant="outline" className="h-28 w-full border-dashed" onClick={() => desktopInput.current?.click()} disabled={isSubmitting}>
-          <UploadCloud className="mr-2 h-5 w-5" />Choose banner image
-        </Button>}
-        <p className="text-xs text-muted-foreground">JPG, PNG or WebP, up to 16 MB. Recommended: 1280 × 720 px (16:9). Images larger than 3.4 MB are optimized before uploading.</p>
-        {form.formState.errors.imageUrl && <p className="text-sm text-destructive">{form.formState.errors.imageUrl.message}</p>}
+      <div className="space-y-3">
+        <div>
+          <h3 className="font-semibold">Banner images</h3>
+          <p className="text-xs text-muted-foreground">Choose a separate image for each screen. Both images are saved with this banner, and the mobile image is optional.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <section className="min-w-0 space-y-2 rounded-xl border border-[#e8ded2] bg-[#fffdfa] p-3">
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="text-sm font-semibold">Desktop image</h4>
+              <span className="text-xs text-muted-foreground">Required</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Recommended 1280 × 320 px (4:1)</p>
+            <input ref={desktopInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only"
+              aria-label="Upload desktop banner image" onChange={(event) => changeImage(event, 'desktop')} disabled={isSubmitting} />
+            {imagePreview ? <div className="space-y-2">
+              <div className="relative aspect-[4/1] overflow-hidden rounded-lg border bg-secondary">
+                <Image src={imagePreview} alt="Desktop banner image preview" fill unoptimized className="object-contain"
+                  onLoad={(event) => updateAspect('desktop', event.currentTarget)} />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => desktopInput.current?.click()} disabled={isSubmitting}>Replace desktop</Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => removeImage('desktop')} disabled={isSubmitting}>
+                  <X className="mr-1 h-4 w-4" />Remove
+                </Button>
+              </div>
+            </div> : <Button type="button" variant="outline" className="h-28 w-full border-dashed"
+              onClick={() => desktopInput.current?.click()} disabled={isSubmitting}>
+              <UploadCloud className="mr-2 h-5 w-5" />Upload desktop image
+            </Button>}
+            {form.formState.errors.imageUrl && <p role="alert" className="text-sm text-destructive">{form.formState.errors.imageUrl.message}</p>}
+          </section>
+
+          <section className="min-w-0 space-y-2 rounded-xl border border-[#e8ded2] bg-[#fffdfa] p-3">
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="text-sm font-semibold">Mobile image</h4>
+              <span className="text-xs text-muted-foreground">Optional</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Recommended 780 × 420 px (1.86:1)</p>
+            <input ref={mobileInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only"
+              aria-label="Upload mobile banner image" onChange={(event) => changeImage(event, 'mobile')} disabled={isSubmitting} />
+            {mobilePreview ? <div className="space-y-2">
+              <div className="relative aspect-[13/7] overflow-hidden rounded-lg border bg-secondary">
+                <Image src={mobilePreview} alt="Mobile banner image preview" fill unoptimized className="object-contain"
+                  onLoad={(event) => updateAspect('mobile', event.currentTarget)} />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => mobileInput.current?.click()} disabled={isSubmitting}>Replace mobile</Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => removeImage('mobile')} disabled={isSubmitting}>
+                  <X className="mr-1 h-4 w-4" />Remove
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">This image will be shown to visitors on mobile screens.</p>
+            </div> : <div className="space-y-2">
+              <Button type="button" variant="outline" className="h-28 w-full border-dashed"
+                onClick={() => mobileInput.current?.click()} disabled={isSubmitting}>
+                <UploadCloud className="mr-2 h-5 w-5" />Upload mobile image
+              </Button>
+              <p className="text-xs text-muted-foreground">If omitted, the desktop image is used automatically on mobile.</p>
+            </div>}
+            {form.formState.errors.mobileImageUrl && <p role="alert" className="text-sm text-destructive">{form.formState.errors.mobileImageUrl.message}</p>}
+          </section>
+        </div>
+        <p className="text-xs text-muted-foreground">JPG, PNG or WebP · Up to 16 MB each. Images over 3.4 MB are optimized before upload.</p>
       </div>
 
       {mode === 'standard' ? <>
@@ -292,7 +337,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
         </FormItem>} />
         {linkSelect}
       </> : <>
-        <p className="text-sm text-muted-foreground">Desktop artwork fills the banner edge-to-edge. Mobile shows the full image without cropping, so embedded text and buttons are not cut off. Preview each layout below.</p>
+        <p className="text-sm text-muted-foreground">The desktop and mobile images can have different compositions. Mobile image-only artwork is shown without cropping; preview the two layouts below.</p>
         <FormField control={form.control} name="imageLinkMode" render={({ field }) => <FormItem>
           <FormLabel>Clickable Area</FormLabel>
           <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
@@ -318,23 +363,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
           <FormControl><Input placeholder="e.g., Roses and curated gift boxes" {...field} disabled={isSubmitting} /></FormControl>
           <FormDescription>Describes the artwork to visitors who cannot see it.</FormDescription>
         </FormItem>} />
-        <div className="space-y-2">
-          <FormLabel>Mobile Banner Image (optional)</FormLabel>
-          <p className="text-xs text-muted-foreground">Upload a mobile-specific composition for larger text, or reuse the complete desktop image without cropping.</p>
-          <input ref={mobileInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only"
-            aria-label="Upload mobile banner image" onChange={(event) => changeImage(event, 'mobile')} disabled={isSubmitting} />
-          {mobilePreview ? <div className="space-y-2">
-            <div className="relative aspect-video overflow-hidden rounded-lg border bg-secondary">
-              <Image src={mobilePreview} alt="Uploaded mobile banner preview" fill unoptimized className="object-contain"
-                onLoad={(event) => updateAspect('mobile', event.currentTarget)} />
-            </div>
-            <div className="flex gap-2">
-              <Button type="button" size="sm" variant="outline" onClick={() => mobileInput.current?.click()} disabled={isSubmitting}>Replace mobile image</Button>
-              <Button type="button" size="sm" variant="ghost" onClick={() => removeImage('mobile')} disabled={isSubmitting}><X className="mr-1 h-4 w-4" />Remove</Button>
-            </div>
-          </div> : <Button type="button" size="sm" variant="outline" onClick={() => mobileInput.current?.click()} disabled={isSubmitting}>Upload mobile image</Button>}
-          {form.formState.errors.mobileImageUrl && <p className="text-sm text-destructive">{form.formState.errors.mobileImageUrl.message}</p>}
-        </div>
+
 
       </>}
 
@@ -352,9 +381,8 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
           placement={desktopPlacement as BannerImagePlacement}
           onPlacementChange={(next) => form.setValue('desktopPlacement', next, { shouldDirty: true })}
           disabled={isSubmitting} />
-        <BannerHotspotEditor label="Mobile" src={mode === 'image-only' ? mobilePreview || imagePreview : imagePreview}
-          aspectRatio={mode === 'image-only' && mobilePreview
-            ? form.watch('mobileAspectRatio') : form.watch('imageAspectRatio')}
+        <BannerHotspotEditor label="Mobile" src={mobilePreview || imagePreview}
+          aspectRatio={mobilePreview ? form.watch('mobileAspectRatio') : form.watch('imageAspectRatio')}
           frameAspectRatio={390 / 210} fit={mode === 'image-only' ? 'contain' : 'cover'}
           displayMode={mode} imageLinkMode={mode === 'standard' ? 'none' : linkMode}
           title={title} subtitle={subtitle} buttonText={buttonText}
