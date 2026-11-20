@@ -882,16 +882,18 @@ test('home creator cards use an in-place weight/price selection dialog and keep 
   assert.equal(canBuySellerSize({...cake,availability:'unavailable'},options[0]),false);
 
   const section=fs.readFileSync('src/components/seller-storefront-products.tsx','utf8');
+  const shared=fs.readFileSync('src/components/seller-product-collection.tsx','utf8');
   const card=fs.readFileSync('src/components/seller-product-card.tsx','utf8');
   const detail=fs.readFileSync('src/components/product-detail-client.tsx','utf8');
-  assert.match(section,/choices.length > 1/);
-  assert.match(section,/setPendingChoice\(\{ product: p, intent \}\)/);
-  assert.match(section,/<Dialog open=\{!!pendingChoice\}/);
-  assert.match(section,/role="group" aria-label="Available weights and sizes"/);
-  assert.match(section,/aria-pressed=\{selectedWeightIndex === index\}/);
-  assert.match(section,/disabled=\{!chosenAvailable \|\| !pendingChoice\}/);
-  assert.match(section,/selectedWeightIndex\]\;/);
-  assert.doesNotMatch(section,/router.push\(\x60\/product\/seller:/);
+  assert.match(section,/<SellerProductCollection products=\{visible\.slice\(0, visibleCount\)\}/);
+  assert.match(shared,/choices.length > 1/);
+  assert.match(shared,/setPendingChoice\(\{ product, intent \}\)/);
+  assert.match(shared,/<Dialog open=\{!!pendingChoice\}/);
+  assert.match(shared,/role="group" aria-label="Available weights and sizes"/);
+  assert.match(shared,/aria-pressed=\{selectedWeightIndex === index\}/);
+  assert.match(shared,/disabled=\{!chosenAvailable \|\| !pendingChoice\}/);
+  assert.match(shared,/choiceOptions\[selectedWeightIndex\]/);
+  assert.doesNotMatch(shared,/router.push\(\x60\/product\/seller:/);
   assert.doesNotMatch(card, /\{p\.sku && <span/);
   assert.match(detail, /<ProductSkuCopy sku=\{creator\.sku\}/);
 });
