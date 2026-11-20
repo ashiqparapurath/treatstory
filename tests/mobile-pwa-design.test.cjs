@@ -146,9 +146,9 @@ test('mobile home uses requested location permission, shows readable active bann
   assert.match(location,/Math\.round\(position\.coords\.latitude \* 100\) \/ 100/);
   assert.match(area,/publicCount/);
   assert.match(area,/zoom: '10'/);
-  assert.ok(home.includes('relative isolate aspect-video w-full'), 'mobile standard banner uses 16:9');
-  assert.ok(home.includes('line-clamp-2 text-[clamp(12px,3.7vw,16px)]'), 'title remains compact at small widths');
-  assert.ok(home.includes('mt-1 inline-flex min-h-10 max-w-[76%]'), 'CTA remains close to copy');
+  assert.match(home,/min-h-\[210px\]/);
+  assert.match(home,/line-clamp-4 text-\[16px\]/);
+  assert.match(home,/mt-1 inline-flex min-h-11 max-w-\[76%\]/);
   assert.match(home,/bg-\[linear-gradient\(90deg/);
   assert.doesNotMatch(legacy,/<ProductSkuCopy|SKU:|product\.sku/);
   assert.doesNotMatch(seller,/<ProductSkuCopy|SKU:|p\.sku/);
@@ -258,16 +258,16 @@ test('mobile product cards have a solid visible white border without changing de
 });
 
 
-test('mobile promotional banner fits a 16:9 frame and keeps the CTA close to copy',()=>{
-  const home=read('src/components/home-client.tsx');
-  const mobile=home.slice(home.indexOf('<CardContent className="relative isolate'),home.indexOf('<CardContent className="relative hidden'));
-  assert.ok(mobile.includes('aspect-video w-full'), 'mobile promotional frame is 16:9');
-  assert.ok(mobile.includes('absolute inset-0 z-10 flex flex-col items-start justify-center'), 'copy vertically centers');
-  assert.ok(mobile.includes('mt-1 inline-flex min-h-10 max-w-[76%]'), 'CTA remains beside the copy');
-  assert.ok(mobile.includes('line-clamp-2 text-[clamp(12px,3.7vw,16px)]'), 'heading is clamped at small widths');
-  assert.ok(mobile.includes('min-[380px]:line-clamp-2'), 'description is available at suitable widths');
-  assert.doesNotMatch(mobile,/justify-between/);
-  assert.ok(home.includes('relative hidden aspect-video w-full items-center justify-center p-0 md:flex'), 'desktop frame shares ratio');
+test('mobile promotional banner is compact and keeps the CTA close to its copy',()=>{
+ const home=read('src/components/home-client.tsx');
+ const mobile=home.slice(home.indexOf('<CardContent className="relative isolate'),home.indexOf('<CardContent className="relative hidden'));
+ assert.match(mobile,/min-h-\[210px\]/);
+ assert.match(mobile,/flex-col items-start justify-start gap-3/);
+ assert.match(mobile,/mt-1 inline-flex min-h-11 max-w-\[76%\]/);
+ assert.match(mobile,/line-clamp-4 text-\[16px\]/);
+ assert.match(mobile,/line-clamp-2 text-\[12px\]/);
+ assert.doesNotMatch(mobile,/justify-between/);
+ assert.match(home,/md:flex sm:h-64 md:h-72 lg:h-\[340px\]/);
 });
 
 

@@ -11,8 +11,8 @@ type Props = { banner: Banner; shouldLoad: boolean; onLoad: () => void; active: 
 type BoxSize = { width: number; height: number };
 
 /**
- * Display a 16:9 carousel frame for every banner. Keep the full artwork and
- * position clickable areas over the visible image, never letterbox padding.
+ * Match the original compact promotional carousel dimensions while keeping
+ * uploaded image artwork intact and hotspots on the visible artwork.
  */
 function ImageSlide({
   banner, mobile, shouldLoad, onLoad, active,
@@ -44,7 +44,10 @@ function ImageSlide({
     ? banner.mobileAspectRatio || banner.imageAspectRatio || 16 / 9
     : banner.imageAspectRatio || 16 / 9;
   const aspectRatio = Number.isFinite(rawRatio) && rawRatio > 0 ? rawRatio : 16 / 9;
-  const needsSideFill = Math.abs(aspectRatio - 16 / 9) > 0.015;
+  // Only the uploaded image's visible area carries the hotspot. The rest of
+  // the compact frame is softly extended with the same artwork rather than a
+  // blank panel or a crop that cuts off printed text/buttons.
+  const needsSideFill = !frameSize || Math.abs(aspectRatio - frameSize.width / frameSize.height) > 0.015;
   const hotspot = normalizeBannerHotspot(mobile ? banner.mobileHotspot || banner.desktopHotspot : banner.desktopHotspot);
   const href = safeBannerLink(banner.buttonLink);
   const accessibleLabel = banner.linkLabel?.trim() || 'Explore collection';
@@ -58,10 +61,10 @@ function ImageSlide({
   return (
     <div ref={frameRef}
       className={mobile
-        ? 'relative flex aspect-video w-full items-center justify-center overflow-hidden bg-[#f7f0e8] md:hidden'
-        : 'relative hidden aspect-video w-full items-center justify-center overflow-hidden bg-[#f7f0e8] md:flex'}>
-      {/* 16:9 artwork fills the frame naturally. For other aspect ratios,
-          use a blurred backdrop behind the uncropped original. */}
+        ? 'relative flex h-[210px] w-full items-center justify-center overflow-hidden bg-[#f7f0e8] md:hidden'
+        : 'relative hidden h-[clamp(200px,54vw,236px)] w-full items-center justify-center overflow-hidden bg-[#f7f0e8] sm:h-64 md:flex md:h-72 lg:h-[340px]'}>
+      {/* Keep the entire 16:9 upload readable in the original wide frame.
+          Only use a soft decorative extension when its ratio does not fit. */}
       {shouldLoad && needsSideFill && <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
         <OptimizedImage src={src} alt="" fill
           sizes={mobile ? '(max-width: 767px) 100vw, 0px' : BANNER_IMAGE_SIZES}
@@ -99,7 +102,7 @@ function ImageSlide({
   );
 }
 
-/** Both modes occupy the same responsive 16:9 carousel frame. */
+/** Both modes occupy the same original compact carousel height at each breakpoint. */
 export function ImageOnlyBannerSlide(props: Props) {
   return <>
     <ImageSlide {...props} mobile onLoad={props.onLoad} />

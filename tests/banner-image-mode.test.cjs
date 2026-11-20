@@ -65,33 +65,30 @@ test('banner upload respects banner-sized request bodies and prepares larger ima
   assert.ok(helper.includes('BANNER_UPLOAD_TARGET_BYTES = 3_400_000'));
 });
 
-test('standard and image-only banners use the same responsive 16:9 frame', () => {
+test('standard promotional banners retain the original compact screenshot layout', () => {
   const home = fs.readFileSync(path.join(root, 'src/components/home-client.tsx'), 'utf8');
   const slide = fs.readFileSync(path.join(root, 'src/components/banner-image-slide.tsx'), 'utf8');
-  const imageOnlyFrames = slide.match(/aspect-video w-full/g) || [];
-  const standardFrames = home.match(/aspect-video w-full/g) || [];
-  assert.equal(imageOnlyFrames.length, 2, 'mobile and desktop image-only frames are 16:9');
-  assert.ok(standardFrames.length >= 2, 'standard mobile and desktop frames are 16:9');
-  assert.ok(home.includes('aspect-video w-full rounded-[24px]'), 'loading skeleton uses same ratio');
-  assert.ok(!slide.includes('h-[210px]'), 'image-only must not use a fixed mobile height');
-  assert.ok(!slide.includes('lg:h-[340px]'), 'image-only must not use a fixed desktop height');
-  assert.ok(!home.includes('min-h-[210px]'), 'standard mobile content must fit in 16:9');
-  assert.ok(!home.includes('lg:h-[340px]'), 'standard desktop must not use the old 4:1 height');
-  assert.ok(slide.includes('Math.min(frameSize.width, frameSize.height * aspectRatio)'));
-  assert.ok(slide.includes('const imageHeight = imageWidth / aspectRatio'));
-  assert.ok(slide.includes("mode === 'hotspot'"));
-  assert.ok(slide.includes("mode === 'full'"));
-  assert.ok(slide.includes('ResizeObserver'));
+  assert.ok(home.includes('h-[clamp(200px,54vw,236px)]'), 'desktop original responsive height restored');
+  assert.ok(home.includes('sm:h-64 md:h-72 lg:h-[340px]'), 'original desktop 340px maximum at large sizes restored');
+  assert.ok(home.includes('min-h-[210px]'), 'original mobile banner sizing restored');
+  assert.ok(home.includes('absolute inset-0 bg-black/40'), 'existing dark overlay remains');
+  assert.ok(home.includes('relative max-w-2xl px-5 py-3 text-center text-white'), 'centered promotional content remains');
+  assert.ok(home.includes('The TreatStory edit'), 'original editorial banner label remains');
+  assert.ok(home.includes('className="object-cover"'), 'standard banner still fills its frame');
+  assert.ok(!home.includes('aspect-video w-full'), 'homepage frame is not forced to 16:9');
+  assert.ok(slide.includes('h-[210px]'), 'image-only mobile frame matches original standard height');
+  assert.ok(slide.includes('sm:h-64 md:flex md:h-72 lg:h-[340px]'), 'image-only desktop frame matches standard');
+  assert.ok(slide.includes('className="object-contain"'), 'image-only artwork stays uncropped');
+  assert.ok(slide.includes('Math.abs(aspectRatio - frameSize.width / frameSize.height)'), 'background extension matches frame geometry');
+  assert.ok(slide.includes('scale-110 object-cover blur-[24px]'), 'no blank side panels');
+  assert.ok(slide.includes('style={{ width: imageWidth, height: imageHeight }}'), 'hotspot corresponds to visible image dimensions');
+  assert.ok(slide.includes('mode === \'hotspot\''), 'embedded button remains clickable');
+  assert.ok(slide.includes('mode === \'full\''), 'whole banner linking remains supported');
 });
 
-test('1280 by 720 image fills the banner while other images remain uncropped', () => {
+test('1280 x 720 uploads are accepted as image artwork inside the compact banner frame', () => {
   assert.equal(1280 / 720, 16 / 9);
   const slide = fs.readFileSync(path.join(root, 'src/components/banner-image-slide.tsx'), 'utf8');
-  assert.ok(slide.includes('Math.abs(aspectRatio - 16 / 9) > 0.015'));
-  assert.ok(slide.includes('shouldLoad && needsSideFill'));
-  assert.ok(slide.includes('pointer-events-none absolute inset-0 overflow-hidden'));
-  assert.ok(slide.includes('scale-110 object-cover blur-[24px]'));
-  assert.ok(slide.includes('className="object-contain"'));
-  assert.ok(slide.includes('style={{ width: imageWidth, height: imageHeight }}'));
-  assert.ok(slide.includes('left: \`${hotspot.x}%\`'));
+  assert.ok(slide.includes('const imageWidth = frameSize ? Math.min(frameSize.width, frameSize.height * aspectRatio) : 0'));
+  assert.ok(slide.includes('const imageHeight = imageWidth / aspectRatio'));
 });

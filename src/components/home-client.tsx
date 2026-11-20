@@ -48,7 +48,7 @@ function BannerCarousel() {
 
   useEffect(()=>{if(!firstLoaded||!banners?.length)return;setRequested(previous=>new Set([...previous,active,(active+1)%banners.length]));},[active,firstLoaded,banners?.length]);
 
-  if (isLoading) return <Skeleton className="aspect-video w-full rounded-[24px]" />;
+  if (isLoading) return <Skeleton className="h-[clamp(200px,54vw,236px)] w-full rounded-[24px] sm:h-64 md:h-72" />;
   if (!banners || banners.length === 0) return <div className="relative flex min-h-[166px] items-center overflow-hidden rounded-[22px] bg-[#f2e5d7] px-5 md:hidden">
     <div className="absolute inset-y-0 right-0 w-[55%] opacity-70"><HeroImage alt="Homemade bakes and handmade creations"/></div>
     <div className="absolute inset-0 bg-gradient-to-r from-[#f2e5d7] via-[#f2e5d7]/95 to-transparent"/>
@@ -64,19 +64,19 @@ function BannerCarousel() {
               {banner.displayMode === 'image-only' ? <ImageOnlyBannerSlide banner={banner}
                 shouldLoad={requested.has(index) || index === active} active={index === active}
                 onLoad={() => { if (index === active) setFirstLoaded(true); }} /> : <>
-              <CardContent className="relative isolate aspect-video w-full overflow-hidden bg-[#f9f3eb] p-0 md:hidden">
+              <CardContent className="relative isolate min-h-[210px] overflow-hidden bg-[#f9f3eb] p-0 md:hidden">
                 <div className="absolute inset-y-0 right-0 w-[56%] bg-[#e9d9c6]">{(requested.has(index)||index===active)&&<OptimizedImage src={banner.imageUrl} alt={banner.title} fill sizes="(max-width: 767px) 60vw, 0px" quality={75} loading="lazy" onLoad={()=>{if(index===active)setFirstLoaded(true);}} className="object-cover object-center"/>}</div>
                 <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,#f9f3eb_0%,#f9f3eb_45%,rgba(249,243,235,0.98)_65%,rgba(249,243,235,0.58)_83%,rgba(249,243,235,0.06)_100%)]"/>
-                <div className="absolute inset-0 z-10 flex flex-col items-start justify-center gap-1.5 px-3 py-2 text-left min-[380px]:gap-2 min-[380px]:px-4">
+                <div className="relative z-10 flex min-h-[210px] flex-col items-start justify-start gap-3 px-4 py-4 text-left">
                   <div className="w-[71%] min-w-0">
-                    <span className="hidden rounded-full border border-[#e9d8ca] bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-[#78502f] min-[380px]:inline-flex">Made for you</span>
-                    <h2 className="mt-1 line-clamp-2 text-[clamp(12px,3.7vw,16px)] font-semibold leading-[1.2] tracking-[-0.025em] text-[#33251c] min-[380px]:mt-2">{banner.title}</h2>
-                    <p className="mt-1 hidden text-[11px] font-medium leading-[1.35] text-[#685548] min-[380px]:line-clamp-2">{banner.subtitle}</p>
+                    <span className="inline-flex rounded-full border border-[#e9d8ca] bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-[#78502f]">Made for you</span>
+                    <h2 className="mt-2 line-clamp-4 text-[16px] font-semibold leading-[1.26] tracking-[-0.025em] text-[#33251c]">{banner.title}</h2>
+                    <p className="mt-2 line-clamp-2 text-[12px] font-medium leading-[1.45] text-[#685548]">{banner.subtitle}</p>
                   </div>
-                  <Link href={banner.buttonLink} className="mt-1 inline-flex min-h-10 max-w-[76%] items-center justify-center gap-1.5 rounded-full bg-[#754328] px-3.5 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-[#5c351f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]"><span className="min-w-0 truncate">{banner.buttonText}</span><ArrowRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0"/></Link>
+                  <Link href={banner.buttonLink} className="mt-1 inline-flex min-h-11 max-w-[76%] items-center justify-center gap-1.5 rounded-full bg-[#754328] px-3.5 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-[#5c351f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]"><span className="min-w-0 truncate">{banner.buttonText}</span><ArrowRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0"/></Link>
                 </div>
               </CardContent>
-              <CardContent className="relative hidden aspect-video w-full items-center justify-center p-0 md:flex">
+              <CardContent className="relative hidden h-[clamp(200px,54vw,236px)] items-center justify-center p-0 md:flex sm:h-64 md:h-72 lg:h-[340px]">
                 <div className="absolute inset-0 bg-[#e8dfd2]"/>{(requested.has(index)||index===active)&&<OptimizedImage src={banner.imageUrl} alt={banner.title} fill sizes={BANNER_IMAGE_SIZES} quality={75} loading="lazy" fetchPriority={index===active?'auto':'low'} onLoad={()=>{if(index===active)setFirstLoaded(true);}} className="object-cover"/>}
                 <div className="absolute inset-0 bg-black/40" />
                 <div className="relative max-w-2xl px-5 py-3 text-center text-white sm:px-10 sm:py-6">
