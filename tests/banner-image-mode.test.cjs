@@ -83,7 +83,7 @@ test('standard and image-only banners retain identical compact heights and fill 
   assert.ok(slide.includes('bannerImageRect(frameSize.width, frameSize.height, ratio'));
   assert.ok(slide.includes("mode === 'hotspot'"));
   assert.ok(slide.includes("mode === 'full'"));
-  assert.ok(editor.includes('bannerImageRect(areaWidth, areaHeight, aspectRatio, fit, position)'));
+  assert.ok(editor.includes('bannerImageRect(areaWidth, areaHeight, imageRatio, previewFit, position)'));
   assert.ok(editor.includes('bannerHotspotVisibility'));
   assert.ok(form.includes('frameAspectRatio={1360 / 340}'));
   assert.ok(form.includes('frameAspectRatio={390 / 210} fit={mode === \'image-only\' ? \'contain\' : \'cover\'}'));
@@ -170,4 +170,18 @@ test('banner admin form persistently saves responsive adjustments and exposes li
   assert.ok(imageSlide.includes("banner.desktopPlacement"));
   assert.ok(imageSlide.includes("banner.mobilePlacement"));
   assert.ok(standardRenderer.includes('bannerImageRect(frame.width, frame.height, ratio, fit, placement)'));
+});
+
+test('visual banner editor uses a blank-free artwork canvas and separate honest website preview', () => {
+  const editor = fs.readFileSync(path.join(root, 'src/components/admin/banner-hotspot-editor.tsx'), 'utf8');
+  assert.ok(editor.includes("displayMode === 'image-only' ? 'artwork' : 'website'"));
+  assert.ok(editor.includes("viewMode === 'artwork'"));
+  assert.ok(editor.includes("artworkMode ? imageRatio"));
+  assert.ok(editor.includes("previewFit = artworkMode ? 'contain' : fit"));
+  assert.ok(editor.includes("onLoad={event => measureImage(event.currentTarget)}"));
+  assert.ok(editor.includes('Full artwork'));
+  assert.ok(editor.includes('Website view'));
+  assert.ok(editor.includes("mobile && !artworkMode ? 'mx-auto max-w-[390px]'"));
+  assert.ok(editor.includes("aria-pressed={artworkMode}"));
+  assert.ok(editor.includes('actual website frame'));
 });
