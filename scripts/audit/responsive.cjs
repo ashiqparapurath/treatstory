@@ -68,27 +68,37 @@ const { chromium, firefox, webkit } = require('playwright');
                 : route.fulfill({status:503,json:{error:'Suggestions are unavailable.'}});
             });
             await seller.goto(`http://127.0.0.1:${server.address().port}/?mode=${mode}`);
-            const panel = seller.getByRole('region',{name:'AI description suggestion'});
-            await panel.getByText('5 generations left today.').waitFor();
-            await panel.getByText('Suggest with AI').click();
-            const preview = panel.getByLabel('Review and edit your suggestion');
-            await preview.fill('Edited cocoa cookies.');
-            assert.equal(await seller.locator('#creatorDescription').inputValue(),'Original description');
-            const fits = await panel.locator('button,textarea').evaluateAll(els=>els.every(el=>{
+            // The compact AI button now sits beside the description label.
+            // A successful suggestion is inserted directly in the description
+            // textarea: there is no old writing-preferences region or review box.
+            const description = seller.locator('#creatorDescription');
+            const suggest = seller.getByRole('button',{name:'Suggest with AI'});
+            await suggest.waitFor();
+            assert.equal(await seller.getByRole('region',{name:'AI description suggestion'}).count(),0,
+              engine+' '+mode+' should not render the removed AI panel');
+            await seller.waitForFunction(() =>
+              document.querySelector('button[aria-controls="creatorDescription"]')?.getAttribute('title')?.includes('5 AI suggestions left today')
+            );
+            assert.equal(await description.inputValue(),'Original description');
+            await suggest.click();
+            await seller.waitForFunction(() =>
+              document.querySelector('#creatorDescription')?.value === 'Suggested cocoa cookies.'
+            );
+            await description.fill('Edited cocoa cookies.');
+            assert.equal(await description.inputValue(),'Edited cocoa cookies.');
+            const fits = await seller.locator('#creatorDescription,button[aria-controls="creatorDescription"]').evaluateAll(els=>els.every(el=>{
               const rect=el.getBoundingClientRect();
-              return rect.left >= 0 && rect.right <= document.documentElement.clientWidth + 1;
+              return rect.left >= -1 && rect.right <= document.documentElement.clientWidth + 1;
             }));
-            assert.ok(fits,engine+' '+mode+' AI controls fit at 320px');
-            if (mode === 'ai-add') {
-              await panel.getByText('Cancel',{exact:true}).click();
-              assert.equal(await seller.locator('#creatorDescription').inputValue(),'Original description');
-              await panel.getByText('Suggest with AI').click();
-            } else {
-              await panel.getByText('Regenerate').click();
-            }
-            await panel.getByText(/3 generations left today/).waitFor();
-            await preview.fill('Edited cocoa cookies.');
-            await panel.getByText('Use Description').click();
+            assert.ok(fits,engine+' '+mode+' compact AI controls fit at 320px');
+            // A second request is allowed and updates the editor directly.
+            await suggest.click();
+            await seller.waitForFunction(() =>
+              document.querySelector('#creatorDescription')?.value === 'Suggested cocoa cookies.'
+              && document.querySelector('button[aria-controls="creatorDescription"]')?.getAttribute('title')?.includes('3 AI suggestions left today')
+            );
+            await description.fill('Edited cocoa cookies.');
+            assert.equal(await description.inputValue(),'Edited cocoa cookies.');
             await seller.getByRole('button',{name:'Close product editor'}).click();
             const confirmation = seller.getByRole('alertdialog',{name:'Discard your changes?'});
             await confirmation.getByRole('button',{name:'Keep editing'}).waitFor();
@@ -113,13 +123,18 @@ const { chromium, firefox, webkit } = require('playwright');
             await seller.setViewportSize({width:320,height:568});
             await confirmation.getByRole('button',{name:'Keep editing'}).click();
             await confirmation.waitFor({state:'hidden'});
-            assert.equal(await seller.locator('#creatorDescription').inputValue(),'Edited cocoa cookies.');
+            assert.equal(await description.inputValue(),'Edited cocoa cookies.');
             await seller.evaluate(()=>history.back());
             await confirmation.waitFor();
             await seller.keyboard.press('Escape');
             await confirmation.waitFor({state:'hidden'});
-            await panel.getByText('Suggest with AI').click();
-            await panel.getByRole('alert').waitFor();
+            // Failure still leaves the manually edited description untouched.
+            await suggest.click();
+            await seller.waitForFunction(() => {
+              const button = document.querySelector('button[aria-controls="creatorDescription"]');
+              return button && !button.disabled && button.textContent?.includes('Suggest with AI');
+            });
+            assert.equal(await description.inputValue(),'Edited cocoa cookies.');
             async function checkWizardWidths() {
               for (const width of [320,360,375,390,430,768,1280]) {
                 await seller.setViewportSize({width,height:700});
@@ -137,7 +152,7 @@ const { chromium, firefox, webkit } = require('playwright');
             const next = seller.getByRole('button',{name:'Continue'});
             await seller.getByLabel('Product name').fill('');
             await next.click();
-            await seller.getByText('Step 1 of 4').waitFor();
+            await seller.getByText('Step 1 / 4').waitFor();
             await seller.getByLabel('Product name').fill('Cocoa cookies');
             await next.click();
             await seller.locator('#sellerPhotoFiles').setInputFiles([
@@ -162,10 +177,10 @@ const { chromium, firefox, webkit } = require('playwright');
             }
             await checkWizardWidths();
             await next.click();
-            await seller.getByText('Step 4 of 4').waitFor();
+            await seller.getByText('Step 4 / 4').waitFor();
             await seller.getByAltText('Listing cover').evaluate(img => img.decode());
             await checkWizardWidths();
-            await seller.getByRole('button',{name: mode === 'ai-edit' ? 'Save changes' : 'Save as Draft'}).click();
+            await seller.getByRole('button',{name: mode === 'ai-edit' ? 'Save changes' : 'Save draft'}).click();
             assert.equal(await seller.getByTestId('saved').textContent(),(mode === 'ai-edit' ? 'published' : 'draft') + '/Edited cocoa cookies.');
             await seller.setViewportSize({width:320,height:568});
             await seller.getByRole('button',{name:'Close product editor'}).click();
