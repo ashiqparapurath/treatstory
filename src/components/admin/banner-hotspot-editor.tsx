@@ -152,6 +152,18 @@ export function BannerHotspotEditor({
   const setPosition = (next: Partial<BannerImagePlacement>) =>
     onPlacementChange(normalizeBannerPlacement({ ...position, ...next }));
 
+  const nudge = (axis: 'x' | 'y', direction: -1 | 1) => {
+    // If the image exactly fits an axis, a small zoom creates room to pan.
+    const free = axis === 'x' ? areaWidth - (imageRect?.width || areaWidth)
+      : areaHeight - (imageRect?.height || areaHeight);
+    if (Math.abs(free) < 0.5) {
+      setPosition({ zoom: Math.max(position.zoom, 120), [axis]: 50 + (direction === -1 ? 10 : -10) });
+      return;
+    }
+    // Alignment percentages reverse direction when an image overflows its frame.
+    setPosition({ [axis]: position[axis] + direction * (free > 0 ? 10 : -10) });
+  };
+
   return <section className="min-w-0 space-y-3 rounded-xl border border-[#e5dcd1] bg-white/70 p-3">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
@@ -236,13 +248,13 @@ export function BannerHotspotEditor({
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         <Button type="button" size="sm" variant="outline" disabled={disabled} aria-label={`${label} move image left`}
-          onClick={() => setPosition({ x: position.x + 10 })}><ArrowLeft className="h-4 w-4" /></Button>
+          onClick={() => nudge('x', -1)}><ArrowLeft className="h-4 w-4" /></Button>
         <Button type="button" size="sm" variant="outline" disabled={disabled} aria-label={`${label} move image right`}
-          onClick={() => setPosition({ x: position.x - 10 })}><ArrowRight className="h-4 w-4" /></Button>
+          onClick={() => nudge('x', 1)}><ArrowRight className="h-4 w-4" /></Button>
         <Button type="button" size="sm" variant="outline" disabled={disabled} aria-label={`${label} move image up`}
-          onClick={() => setPosition({ y: position.y + 10 })}><ArrowUp className="h-4 w-4" /></Button>
+          onClick={() => nudge('y', -1)}><ArrowUp className="h-4 w-4" /></Button>
         <Button type="button" size="sm" variant="outline" disabled={disabled} aria-label={`${label} move image down`}
-          onClick={() => setPosition({ y: position.y - 10 })}><ArrowDown className="h-4 w-4" /></Button>
+          onClick={() => nudge('y', 1)}><ArrowDown className="h-4 w-4" /></Button>
         <Button type="button" size="sm" variant="ghost" disabled={disabled} className="ml-auto text-xs"
           onClick={() => onPlacementChange({ x: 50, y: 50, zoom: 100 })}><RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset</Button>
       </div>

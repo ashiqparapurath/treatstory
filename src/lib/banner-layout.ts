@@ -100,9 +100,11 @@ export function bannerImageRect(
   const placement = normalizeBannerPlacement(value);
   const width = base.width * placement.zoom / 100;
   const height = base.height * placement.zoom / 100;
+  const offsetX = (frameWidth - width) * placement.x / 100;
+  const offsetY = (frameHeight - height) * placement.y / 100;
   return {
-    left: (frameWidth - width) * placement.x / 100,
-    top: (frameHeight - height) * placement.y / 100,
+    left: Math.abs(offsetX) < 1e-9 ? 0 : offsetX,
+    top: Math.abs(offsetY) < 1e-9 ? 0 : offsetY,
     width, height,
   };
 }
