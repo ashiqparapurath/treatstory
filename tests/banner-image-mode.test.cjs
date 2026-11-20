@@ -77,7 +77,8 @@ test('standard and image-only banners use the same responsive 16:9 frame', () =>
   assert.ok(!slide.includes('lg:h-[340px]'), 'image-only must not use a fixed desktop height');
   assert.ok(!home.includes('min-h-[210px]'), 'standard mobile content must fit in 16:9');
   assert.ok(!home.includes('lg:h-[340px]'), 'standard desktop must not use the old 4:1 height');
-  assert.match(slide, /Math\\.min\\(frameSize\\.width, frameSize\\.height \\* aspectRatio\\)/);
+  assert.ok(slide.includes('Math.min(frameSize.width, frameSize.height * aspectRatio)'));
+  assert.ok(slide.includes('const imageHeight = imageWidth / aspectRatio'));
   assert.ok(slide.includes("mode === 'hotspot'"));
   assert.ok(slide.includes("mode === 'full'"));
   assert.ok(slide.includes('ResizeObserver'));
