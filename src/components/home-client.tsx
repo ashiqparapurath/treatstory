@@ -156,7 +156,7 @@ function BannerCarousel() {
         aria-pressed={!autoRotate} onClick={()=>setAutoRotate(value=>!value)}
         className="absolute bottom-4 right-4 z-10 hidden h-9 w-9 items-center justify-center rounded-full border border-white/60 bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-black/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white md:inline-flex">
         {autoRotate?<Pause className="h-4 w-4" />:<Play className="h-4 w-4" />}
-      </button>
+      </button>}
     </Carousel>
   );
 }
