@@ -11,7 +11,7 @@ import{BANNER_IMAGE_SIZES}from'@/lib/image-source';
 import { OptimizedImage } from '@/components/optimized-image';
 import { ImageOnlyBannerSlide } from '@/components/banner-image-slide';
 import { BannerPlacedImage } from '@/components/banner-placed-image';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Pause, Play, Sparkles } from 'lucide-react';
 import { FooterInstagramLink } from '@/components/footer-instagram-link';
 import { MobileCategoryRail } from '@/components/mobile-category-rail';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
@@ -49,6 +49,34 @@ function BannerCarousel() {
 
   useEffect(()=>{if(!firstLoaded||!banners?.length)return;setRequested(previous=>new Set([...previous,active,(active+1)%banners.length]));},[active,firstLoaded,banners?.length]);
 
+  // Rotate multiple banners, but never interrupt hovering, keyboard focus,
+  // touching/swiping, a hidden tab or a visitor's reduced-motion preference.
+  const [autoRotate,setAutoRotate]=useState(true);
+  const [hovered,setHovered]=useState(false);
+  const [focused,setFocused]=useState(false);
+  const [touching,setTouching]=useState(false);
+  const [pageVisible,setPageVisible]=useState(true);
+  const [reducedMotion,setReducedMotion]=useState(false);
+  useEffect(()=>{
+    const updateVisibility=()=>setPageVisible(!document.hidden);
+    updateVisibility();
+    document.addEventListener('visibilitychange',updateVisibility);
+    return()=>document.removeEventListener('visibilitychange',updateVisibility);
+  },[]);
+  useEffect(()=>{
+    const query=window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update=()=>setReducedMotion(query.matches);
+    update();
+    query.addEventListener('change',update);
+    return()=>query.removeEventListener('change',update);
+  },[]);
+  useEffect(()=>{
+    if(!api || !firstLoaded || (banners?.length ?? 0)<2 || !autoRotate ||
+       reducedMotion || !pageVisible || hovered || focused || touching)return;
+    const timer=window.setInterval(()=>api.scrollNext(),6000);
+    return()=>window.clearInterval(timer);
+  },[api,firstLoaded,banners?.length,autoRotate,reducedMotion,pageVisible,hovered,focused,touching]);
+
   if (isLoading) return <Skeleton className="h-[clamp(200px,54vw,236px)] w-full rounded-[24px] sm:h-64 md:h-72" />;
   if (!banners || banners.length === 0) return <div className="relative flex min-h-[166px] items-center overflow-hidden rounded-[22px] bg-[#f2e5d7] px-5 md:hidden">
     <div className="absolute inset-y-0 right-0 w-[55%] opacity-70"><HeroImage alt="Homemade bakes and handmade creations"/></div>
@@ -57,7 +85,15 @@ function BannerCarousel() {
   </div>;
 
   return (
-    <Carousel setApi={setApi} className="w-full" opts={{ align: "start", loop: true }}>
+    <Carousel setApi={setApi} className="w-full" opts={{ align: "start", loop: true }}
+      onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}
+      onFocusCapture={()=>setFocused(true)}
+      onBlurCapture={event=>{
+        if(!event.relatedTarget || !event.currentTarget.contains(event.relatedTarget as Node))setFocused(false);
+      }}
+      onTouchStartCapture={()=>setTouching(true)}
+      onTouchEndCapture={()=>setTouching(false)}
+      onTouchCancelCapture={()=>setTouching(false)}>
       <CarouselContent>
         {banners.map((banner,index) => (
           <CarouselItem key={banner.id}>
@@ -106,7 +142,21 @@ function BannerCarousel() {
       </CarouselContent>
       <CarouselPrevious className="absolute left-4 top-1/2 hidden -translate-y-1/2 border-white/50 bg-white/30 backdrop-blur-xl md:flex" />
       <CarouselNext className="absolute right-4 top-1/2 hidden -translate-y-1/2 border-white/50 bg-white/30 backdrop-blur-xl md:flex" />
-      <div className="mt-3 flex items-center justify-center gap-1.5 md:hidden" aria-label={`Banner ${active + 1} of ${banners.length}`}>{banners.map((banner,n)=><span key={banner.id} className={`h-1.5 rounded-full ${n===active?'w-5 bg-[#874a28]':'w-1.5 bg-[#e4ddd6]'}`} />)}</div>
+      <div className="mt-3 flex items-center justify-center gap-3 md:hidden">
+        <div className="flex items-center gap-1.5" aria-label={`Banner ${active + 1} of ${banners.length}`}>{banners.map((banner,n)=><span key={banner.id} className={`h-1.5 rounded-full ${n===active?'w-5 bg-[#874a28]':'w-1.5 bg-[#e4ddd6]'}`} />)}</div>
+        {banners.length>1 && !reducedMotion && <button type="button"
+          aria-label={autoRotate?'Pause automatic banner rotation':'Resume automatic banner rotation'}
+          aria-pressed={!autoRotate} onClick={()=>setAutoRotate(value=>!value)}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#e4ddd6] text-[#754328] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]">
+          {autoRotate?<Pause className="h-3.5 w-3.5" />:<Play className="h-3.5 w-3.5" />}
+        </button>}
+      </div>
+      {banners.length>1 && !reducedMotion && <button type="button"
+        aria-label={autoRotate?'Pause automatic banner rotation':'Resume automatic banner rotation'}
+        aria-pressed={!autoRotate} onClick={()=>setAutoRotate(value=>!value)}
+        className="absolute bottom-4 right-4 z-10 hidden h-9 w-9 items-center justify-center rounded-full border border-white/60 bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-black/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white md:inline-flex">
+        {autoRotate?<Pause className="h-4 w-4" />:<Play className="h-4 w-4" />}
+      </button>
     </Carousel>
   );
 }
