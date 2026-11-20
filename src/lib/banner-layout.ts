@@ -1,4 +1,4 @@
-/** Image-only banners store click areas as percentages of the *uncropped* image. */
+/** Image-only banners store clickable areas as percentages of the original image. */
 export type BannerHotspot = { x: number; y: number; width: number; height: number };
 export type BannerDisplayMode = 'standard' | 'image-only';
 export type BannerImageLinkMode = 'none' | 'full' | 'hotspot';
@@ -35,4 +35,31 @@ export function safeBannerLink(link: unknown): string | null {
   } catch {
     return null;
   }
+}
+
+/** Bounds of an object-cover image centered inside a banner frame, in CSS pixels. */
+export type BannerCoverRect = { left: number; top: number; width: number; height: number };
+
+export function bannerCoverRect(frameWidth: number, frameHeight: number, imageRatio: number): BannerCoverRect {
+  if (!Number.isFinite(frameWidth) || !Number.isFinite(frameHeight) ||
+      frameWidth <= 0 || frameHeight <= 0) return { left: 0, top: 0, width: 0, height: 0 };
+  const ratio = Number.isFinite(imageRatio) && imageRatio > 0 ? imageRatio : 16 / 9;
+  const height = Math.max(frameHeight, frameWidth / ratio);
+  const width = height * ratio;
+  return { left: (frameWidth - width) / 2, top: (frameHeight - height) / 2, width, height };
+}
+
+/** How much of the clickable rectangle survives object-cover cropping (0..1). */
+export function bannerHotspotVisibility(
+  cover: BannerCoverRect, hotspot: BannerHotspot, frameWidth: number, frameHeight: number,
+): number {
+  if (!cover.width || !cover.height || !frameWidth || !frameHeight) return 0;
+  const area = normalizeBannerHotspot(hotspot);
+  const left = cover.left + cover.width * area.x / 100;
+  const top = cover.top + cover.height * area.y / 100;
+  const width = cover.width * area.width / 100;
+  const height = cover.height * area.height / 100;
+  const visibleW = Math.max(0, Math.min(frameWidth, left + width) - Math.max(0, left));
+  const visibleH = Math.max(0, Math.min(frameHeight, top + height) - Math.max(0, top));
+  return (visibleW * visibleH) / (width * height);
 }

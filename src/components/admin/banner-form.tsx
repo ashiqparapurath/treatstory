@@ -275,7 +275,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
         </FormItem>} />
         {linkSelect}
       </> : <>
-        <p className="text-sm text-muted-foreground">The original artwork is displayed in full with no duplicate headline, dark overlay or visible extra button.</p>
+        <p className="text-sm text-muted-foreground">The banner fills the entire frame with no duplicate headline, dark overlay or extra button. Artwork may be cropped on wide screens; use the preview below to check that text and the printed button remain visible.</p>
         <FormField control={form.control} name="imageLinkMode" render={({ field }) => <FormItem>
           <FormLabel>Clickable Area</FormLabel>
           <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
@@ -303,7 +303,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
         </FormItem>} />
         <div className="space-y-2">
           <FormLabel>Mobile Banner Image (optional)</FormLabel>
-          <p className="text-xs text-muted-foreground">Upload a mobile-specific composition for easier-to-read text, or reuse the desktop banner without cropping.</p>
+          <p className="text-xs text-muted-foreground">Upload a mobile-specific composition for easier-to-read text, or reuse the desktop image with center cropping.</p>
           <input ref={mobileInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only"
             aria-label="Upload mobile banner image" onChange={(event) => changeImage(event, 'mobile')} disabled={isSubmitting} />
           {mobilePreview ? <div className="space-y-2">
@@ -321,11 +321,11 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
         {linkMode === 'hotspot' && <div className="space-y-5 rounded-xl border p-3">
           <h3 className="font-semibold">Button Position Preview</h3>
           <BannerHotspotEditor label="Desktop" src={imagePreview} aspectRatio={form.watch('imageAspectRatio')}
-            value={desktopHotspot as BannerHotspot} onChange={(next) => form.setValue('desktopHotspot', next, { shouldDirty: true })}
+            frameAspectRatio={1360 / 340} value={desktopHotspot as BannerHotspot} onChange={(next) => form.setValue('desktopHotspot', next, { shouldDirty: true })}
             disabled={isSubmitting} />
           <BannerHotspotEditor label="Mobile" src={mobilePreview || imagePreview}
             aspectRatio={mobilePreview ? form.watch('mobileAspectRatio') : form.watch('imageAspectRatio')}
-            value={mobileHotspot as BannerHotspot} onChange={(next) => form.setValue('mobileHotspot', next, { shouldDirty: true })}
+            frameAspectRatio={390 / 210} value={mobileHotspot as BannerHotspot} onChange={(next) => form.setValue('mobileHotspot', next, { shouldDirty: true })}
             disabled={isSubmitting} />
         </div>}
       </>}

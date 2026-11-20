@@ -65,30 +65,43 @@ test('banner upload respects banner-sized request bodies and prepares larger ima
   assert.ok(helper.includes('BANNER_UPLOAD_TARGET_BYTES = 3_400_000'));
 });
 
-test('standard promotional banners retain the original compact screenshot layout', () => {
+
+test('standard and image-only banners retain identical compact heights and fill the frame', () => {
   const home = fs.readFileSync(path.join(root, 'src/components/home-client.tsx'), 'utf8');
   const slide = fs.readFileSync(path.join(root, 'src/components/banner-image-slide.tsx'), 'utf8');
-  assert.ok(home.includes('h-[clamp(200px,54vw,236px)]'), 'desktop original responsive height restored');
-  assert.ok(home.includes('sm:h-64 md:h-72 lg:h-[340px]'), 'original desktop 340px maximum at large sizes restored');
-  assert.ok(home.includes('min-h-[210px]'), 'original mobile banner sizing restored');
-  assert.ok(home.includes('absolute inset-0 bg-black/40'), 'existing dark overlay remains');
-  assert.ok(home.includes('relative max-w-2xl px-5 py-3 text-center text-white'), 'centered promotional content remains');
-  assert.ok(home.includes('The TreatStory edit'), 'original editorial banner label remains');
-  assert.ok(home.includes('className="object-cover"'), 'standard banner still fills its frame');
-  assert.ok(!home.includes('aspect-video w-full'), 'homepage frame is not forced to 16:9');
-  assert.ok(slide.includes('h-[210px]'), 'image-only mobile frame matches original standard height');
-  assert.ok(slide.includes('sm:h-64 md:flex md:h-72 lg:h-[340px]'), 'image-only desktop frame matches standard');
-  assert.ok(slide.includes('className="object-contain"'), 'image-only artwork stays uncropped');
-  assert.ok(slide.includes('Math.abs(aspectRatio - frameSize.width / frameSize.height)'), 'background extension matches frame geometry');
-  assert.ok(slide.includes('scale-110 object-cover blur-[24px]'), 'no blank side panels');
-  assert.ok(slide.includes('style={{ width: imageWidth, height: imageHeight }}'), 'hotspot corresponds to visible image dimensions');
-  assert.ok(slide.includes('mode === \'hotspot\''), 'embedded button remains clickable');
-  assert.ok(slide.includes('mode === \'full\''), 'whole banner linking remains supported');
+  const editor = fs.readFileSync(path.join(root, 'src/components/admin/banner-hotspot-editor.tsx'), 'utf8');
+  const form = fs.readFileSync(path.join(root, 'src/components/admin/banner-form.tsx'), 'utf8');
+  assert.ok(home.includes('min-h-[210px]'));
+  assert.ok(home.includes('sm:h-64 md:h-72 lg:h-[340px]'));
+  assert.ok(home.includes('absolute inset-0 bg-black/40'), 'standard banner remains unchanged');
+  assert.ok(home.includes('relative max-w-2xl px-5 py-3 text-center text-white'));
+  assert.ok(slide.includes('h-[210px]'), 'image-only mobile matches the standard');
+  assert.ok(slide.includes('sm:h-64 md:block md:h-72 lg:h-[340px]'), 'image-only desktop matches the standard');
+  assert.ok(slide.includes('className="object-cover object-center"'), 'image-only image fills available area');
+  assert.ok(!slide.includes('object-contain'), 'no letterboxing');
+  assert.ok(!slide.includes('blur-[24px]'), 'no artificial blurry side fills');
+  assert.ok(slide.includes('bannerCoverRect(frameSize.width, frameSize.height, ratio)'));
+  assert.ok(slide.includes("mode === 'hotspot'"));
+  assert.ok(slide.includes("mode === 'full'"));
+  assert.ok(editor.includes('bannerCoverRect(frameSize.width, frameSize.height, aspectRatio)'));
+  assert.ok(editor.includes('bannerHotspotVisibility'));
+  assert.ok(form.includes('frameAspectRatio={1360 / 340}'));
+  assert.ok(form.includes('frameAspectRatio={390 / 210}'));
 });
 
-test('1280 x 720 uploads are accepted as image artwork inside the compact banner frame', () => {
-  assert.equal(1280 / 720, 16 / 9);
-  const slide = fs.readFileSync(path.join(root, 'src/components/banner-image-slide.tsx'), 'utf8');
-  assert.ok(slide.includes('const imageWidth = frameSize ? Math.min(frameSize.width, frameSize.height * aspectRatio) : 0'));
-  assert.ok(slide.includes('const imageHeight = imageWidth / aspectRatio'));
+test('object-cover centering and hotspot visibility calculate cropped image bounds', () => {
+  const { bannerCoverRect, bannerHotspotVisibility } = moduleRef.exports;
+  const cover = bannerCoverRect(1360, 340, 16 / 9);
+  assert.equal(cover.width, 1360);
+  assert.equal(cover.height, 765);
+  assert.equal(cover.left, 0);
+  assert.equal(cover.top, -212.5);
+  const centerHotspot = { x: 40, y: 40, width: 20, height: 20 };
+  assert.equal(bannerHotspotVisibility(cover, centerHotspot, 1360, 340), 1);
+  const bottomHotspot = { x: 5, y: 80, width: 25, height: 12 };
+  assert.equal(bannerHotspotVisibility(cover, bottomHotspot, 1360, 340), 0);
+  const mobileCover = bannerCoverRect(390, 210, 16 / 9);
+  assert.equal(mobileCover.width, 390);
+  assert.ok(mobileCover.top < 0 && mobileCover.top > -6);
+  assert.equal(bannerHotspotVisibility(mobileCover, bottomHotspot, 390, 210), 1);
 });
