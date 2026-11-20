@@ -290,33 +290,36 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
           </details>
             </section>
             <section data-step hidden={step !== 1} aria-label="Product photos" className="space-y-4">
-              <p className="text-xs leading-5 text-muted-foreground">Add up to 10 photos. Choose JPG, PNG or WebP files up to 2 MB each.</p>
-              <div className="flex flex-wrap items-center gap-3">
-                <label htmlFor="sellerPhotoFiles" className={`flex min-h-28 w-full justify-center cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-[#bfae95] bg-[#f8f5f0] px-5 text-xs font-semibold text-[#594b39] ${uploading || busy || !enabled || photoCount >= 10 ? 'pointer-events-none opacity-50' : ''}`}><ImagePlus className="h-4 w-4" />{uploading ? 'Uploading photos…' : 'Upload product photos'}</label>
-                <input id="sellerPhotoFiles" className="sr-only" type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={uploading || busy || !enabled || photoCount >= 10} onChange={e => { const files = [...(e.target.files ?? [])]; e.target.value = ''; if (files.length) void onUploadPhotos(files); }} />
-                <span role="status" aria-live="polite" className="text-xs text-muted-foreground">{uploadProgress || `${photoCount} / 10 photos`}</span>
+              <div className="flex min-w-0 items-center justify-between gap-3">
+                <p className="text-xs leading-5 text-[#746659]">Add up to 10 photos · JPG, PNG or WebP · 2 MB each.</p>
+                <span className="shrink-0 rounded-full bg-[#f0e8dc] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[#735b43]">{photoCount} / 10</span>
               </div>
-              {photos.length > 0 && <ul className="grid gap-2 sm:grid-cols-2">{photos.map((url,i) =>
-                <li key={url} className={'min-w-0 overflow-hidden rounded-xl bg-white ' + (i ? 'flex items-center gap-2 px-2 sm:block sm:px-0' : 'sm:col-span-2')}>
-                  <img src={url} alt={i === 0 ? 'Cover photo' : 'Product photo ' + (i + 1)} className={i ? 'size-16 shrink-0 rounded-lg object-cover sm:aspect-[2/1] sm:h-auto sm:w-full' : 'max-h-56 w-full aspect-[2/1] object-cover'}/>
-                  <div className="flex flex-1 flex-wrap items-center justify-between gap-1 px-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <label htmlFor="sellerPhotoFiles" className={`flex min-h-24 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#c5ae93] bg-[#f7f2eb] px-4 py-4 text-center text-[13px] font-semibold text-[#594b39] transition-colors hover:bg-[#f2e9df] sm:min-h-28 ${uploading || busy || !enabled || photoCount >= 10 ? 'pointer-events-none opacity-50' : ''}`}><ImagePlus className="h-5 w-5" />{uploading ? 'Uploading photos…' : photoCount ? 'Add more photos' : 'Choose product photos'}</label>
+                <input id="sellerPhotoFiles" className="sr-only" type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={uploading || busy || !enabled || photoCount >= 10} onChange={e => { const files = [...(e.target.files ?? [])]; e.target.value = ''; if (files.length) void onUploadPhotos(files); }} />
+                <span role="status" aria-live="polite" className="w-full text-center text-xs text-muted-foreground">{uploadProgress || (photoCount ? "Use Set as cover or reorder pictures below." : "Your first photo becomes the product cover.")}</span>
+              </div>
+              {photos.length > 0 && <ul className="grid grid-cols-1 gap-2.5 min-[390px]:grid-cols-2">{photos.map((url,i) =>
+                <li key={url} className={'min-w-0 overflow-hidden rounded-2xl border border-[#e9dfd4] bg-white shadow-[0_2px_8px_rgba(62,43,25,0.035)] ' + (i ? '' : 'min-[390px]:col-span-2')}>
+                  <img src={url} alt={i === 0 ? 'Cover photo' : 'Product photo ' + (i + 1)} className={i ? 'aspect-square w-full object-cover sm:aspect-[2/1]' : 'aspect-[2/1] max-h-56 w-full object-cover'}/>
+                  <div className="flex min-w-0 flex-wrap items-center justify-between gap-1 px-2 py-1">
                     {i === 0 ? <span className="text-xs font-semibold">Cover photo</span> :
-                      <button type="button" disabled={uploading} className="min-h-11 text-xs underline" onClick={() => arrangePhotos([url, ...photos.filter(photo => photo !== url)])}>Set as cover</button>}
-                    <div className="flex">
-                      <button type="button" className="grid size-11 place-items-center" disabled={i===0||uploading} aria-label={`Move photo ${i+1} left`} onClick={() => shiftPhoto(i,-1)}><ArrowLeft size={16}/></button>
-                      <button type="button" className="grid size-11 place-items-center" disabled={i===photoCount-1||uploading} aria-label={`Move photo ${i+1} right`} onClick={() => shiftPhoto(i,1)}><ArrowRight size={16}/></button>
-                      <button type="button" className="grid size-11 place-items-center text-red-700" disabled={uploading} aria-label={`Remove photo ${i+1}`} onClick={() => arrangePhotos(photos.filter((_,n) => n !== i))}><Trash2 size={16}/></button>
+                      <button type="button" disabled={uploading} className="min-h-11 text-[11px] font-semibold text-[#72563d] underline underline-offset-2" onClick={() => arrangePhotos([url, ...photos.filter(photo => photo !== url)])}>Set as cover</button>}
+                    <div className="ml-auto flex items-center">
+                      <button type="button" className="grid size-10 place-items-center" disabled={i===0||uploading} aria-label={`Move photo ${i+1} left`} onClick={() => shiftPhoto(i,-1)}><ArrowLeft size={16}/></button>
+                      <button type="button" className="grid size-10 place-items-center" disabled={i===photoCount-1||uploading} aria-label={`Move photo ${i+1} right`} onClick={() => shiftPhoto(i,1)}><ArrowRight size={16}/></button>
+                      <button type="button" className="grid size-10 place-items-center text-red-700" disabled={uploading} aria-label={`Remove photo ${i+1}`} onClick={() => arrangePhotos(photos.filter((_,n) => n !== i))}><Trash2 size={16}/></button>
                     </div>
                   </div>
                 </li>)}</ul>}
-              <div className="rounded-xl border border-[#e8e0d5] bg-[#faf8f5] p-3 sm:p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-semibold text-[#352c23]">Add image by link</p><p className="mt-1 text-[11px] text-[#87786a]">Add one HTTPS image link at a time. Repeat for more photos.</p></div><span className="text-[11px] tabular-nums text-[#87786a]">{photoCount} / 10</span></div>
+              <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-3.5 sm:p-4">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold [&::-webkit-details-marker]:hidden">Add photo by link <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180"/></summary><p className="mt-1 text-[11px] text-[#87786a]">Optional: paste one public HTTPS image link at a time.</p>
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                   <Input id="creatorImageLink" type="url" inputMode="url" autoComplete="url" aria-label="Image URL" aria-invalid={!!photoLinkError} aria-describedby={photoLinkError ? 'creatorImageLinkError' : undefined} placeholder="https://example.com/my-product.jpg" value={newPhotoLink} disabled={uploading || busy || !enabled || photoCount >= 10} onChange={e => { setNewPhotoLink(e.target.value); if (photoLinkError) setPhotoLinkError(''); }} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addPhotoLink(); } }} className="h-11 min-w-0 flex-1 rounded-xl bg-white" />
                   <Button type="button" variant="outline" className="h-11 shrink-0 rounded-xl border-[#cbb89e] bg-white" onClick={addPhotoLink} disabled={uploading || busy || !enabled || photoCount >= 10 || !newPhotoLink.trim()}><Plus className="mr-2 h-4 w-4" />Add link</Button>
                 </div>
                 {photoLinkError && <p id="creatorImageLinkError" role="alert" className="mt-2 text-xs text-red-700">{photoLinkError}</p>}
-              </div>
+              </details>
             </section>
             <section data-step hidden={step !== 2} aria-label="Pricing and availability" className="space-y-5">
               {!draft.weightOptions.length && <label className="block space-y-1 text-sm">Price (₹)<Input required={!draft.weightOptions.length} type="number" inputMode="decimal" min={0} max={10000000} step="0.01" value={draft.price} onChange={e=>set('price',e.target.value)}/></label>}
