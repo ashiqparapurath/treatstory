@@ -898,13 +898,17 @@ test('home creator cards use an in-place weight/price selection dialog and keep 
   assert.match(detail, /<ProductSkuCopy sku=\{creator\.sku\}/);
 });
 
-test('homepage banners are short on mobile and Our Story uses its editorial banner responsively',()=>{
+test('homepage uses 16:9 banner frames and Our Story remains responsive',()=>{
   const home=fs.readFileSync('src/components/home-client.tsx','utf8');
+  const imageOnly=fs.readFileSync('src/components/banner-image-slide.tsx','utf8');
   const about=fs.readFileSync('src/app/about/page.tsx','utf8');
   const svg=fs.readFileSync('public/img/our-story-creators.svg','utf8');
-  assert.match(home,/h-\[clamp\(200px,54vw,236px\)\]/);
-  assert.doesNotMatch(home,/min-h-72 items-center justify-center/);
-  assert.match(home,/sm:h-64 md:h-72 lg:h-\[340px\]/);
+  assert.ok(home.includes('aspect-video w-full rounded-[24px]'), 'banner loading skeleton uses 16:9');
+  assert.ok(home.includes('relative isolate aspect-video w-full'), 'standard mobile banner uses 16:9');
+  assert.ok(home.includes('relative hidden aspect-video w-full'), 'standard desktop banner uses 16:9');
+  assert.ok(imageOnly.includes('relative flex aspect-video w-full'), 'image-only mobile banner uses 16:9');
+  assert.ok(imageOnly.includes('relative hidden aspect-video w-full'), 'image-only desktop banner uses 16:9');
+  assert.ok(!home.includes('sm:h-64 md:h-72 lg:h-[340px]'), 'old short desktop frame removed');
   assert.ok(about.includes('our-story-banner.webp'));
   assert.ok(about.includes('aspect-[3/2]'));
   assert.ok(about.includes('bg-[length:200%_auto]'));

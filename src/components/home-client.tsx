@@ -71,7 +71,7 @@ function BannerCarousel() {
                   <div className="w-[71%] min-w-0">
                     <span className="hidden rounded-full border border-[#e9d8ca] bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-[#78502f] min-[380px]:inline-flex">Made for you</span>
                     <h2 className="mt-1 line-clamp-2 text-[clamp(12px,3.7vw,16px)] font-semibold leading-[1.2] tracking-[-0.025em] text-[#33251c] min-[380px]:mt-2">{banner.title}</h2>
-                    <p className="mt-1 hidden text-[11px] font-medium leading-[1.35] text-[#685548] min-[380px]:line-clamp-2 min-[380px]:block">{banner.subtitle}</p>
+                    <p className="mt-1 hidden text-[11px] font-medium leading-[1.35] text-[#685548] min-[380px]:line-clamp-2">{banner.subtitle}</p>
                   </div>
                   <Link href={banner.buttonLink} className="mt-1 inline-flex min-h-10 max-w-[76%] items-center justify-center gap-1.5 rounded-full bg-[#754328] px-3.5 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-[#5c351f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]"><span className="min-w-0 truncate">{banner.buttonText}</span><ArrowRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0"/></Link>
                 </div>
