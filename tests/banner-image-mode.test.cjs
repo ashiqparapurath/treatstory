@@ -185,3 +185,42 @@ test('visual banner editor uses a blank-free artwork canvas and separate honest 
   assert.ok(editor.includes("aria-pressed={artworkMode}"));
   assert.ok(editor.includes('actual website frame'));
 });
+
+test('desktop and mobile uploads are offered together for both banner modes', () => {
+  const form = fs.readFileSync(path.join(root, 'src/components/admin/banner-form.tsx'), 'utf8');
+  const home = fs.readFileSync(path.join(root, 'src/components/home-client.tsx'), 'utf8');
+  const imageSlide = fs.readFileSync(path.join(root, 'src/components/banner-image-slide.tsx'), 'utf8');
+  assert.ok(form.includes('Desktop image'));
+  assert.ok(form.includes('Mobile image'));
+  assert.ok(form.indexOf('Upload mobile banner image') < form.indexOf("mode === 'standard'"), 'both image slots appear before mode-specific fields');
+  assert.ok(form.includes('Recommended 1280 × 320 px'));
+  assert.ok(form.includes('Recommended 780 × 420 px'));
+  assert.ok(form.includes('if (mobileFile) mobileUrl = await uploadTreatStoryPhoto(user, mobileFile, \'banner\')'));
+  assert.ok(form.includes('mobileImageUrl: mobileUrl,'));
+  assert.ok(form.includes('src={mobilePreview || imagePreview}'));
+  assert.ok(form.includes("mobileAspectRatio: mobileUrl ? data.mobileAspectRatio : data.imageAspectRatio"));
+  assert.ok(!form.includes("mobileImageUrl: imageOnly ? mobileUrl : ''"));
+  assert.ok(!form.includes("mobileFile && data.displayMode === 'image-only'"));
+  assert.ok(home.includes('src={banner.mobileImageUrl || banner.imageUrl} alt={banner.title}'));
+  assert.ok(home.includes('banner.mobileAspectRatio || banner.imageAspectRatio'));
+  assert.ok(imageSlide.includes('mobile && banner.mobileImageUrl ? banner.mobileImageUrl : banner.imageUrl'));
+});
+
+test('banner carousel automatically rotates multiple slides with accessible pause behavior', () => {
+  const home = fs.readFileSync(path.join(root, 'src/components/home-client.tsx'), 'utf8');
+  assert.ok(home.includes("const [autoRotate,setAutoRotate]=useState(true)"));
+  assert.ok(home.includes("(banners?.length ?? 0)<2"), 'only multiple banners auto-rotate');
+  assert.ok(home.includes("const timer=window.setInterval(()=>api.scrollNext(),6000)"));
+  assert.ok(home.includes("window.clearInterval(timer)"), 'interval is cleaned up');
+  assert.ok(home.includes('firstLoaded'), 'wait for the first banner to load');
+  assert.ok(home.includes("document.addEventListener('visibilitychange'"), 'pause when tab is hidden');
+  assert.ok(home.includes("prefers-reduced-motion: reduce"), 'respect reduced-motion preference');
+  assert.ok(home.includes("hovered || focused || touching"), 'pause during interaction');
+  assert.ok(home.includes('onMouseEnter={()=>setHovered(true)}'));
+  assert.ok(home.includes('onFocusCapture={()=>setFocused(true)}'));
+  assert.ok(home.includes('onTouchStartCapture={()=>setTouching(true)}'));
+  assert.ok(home.includes("onTouchEndCapture={()=>setTouching(false)}"));
+  assert.ok(home.includes("Pause automatic banner rotation"));
+  assert.ok(home.includes("Resume automatic banner rotation"));
+  assert.ok(home.includes("loop: true"), 'rotation wraps to the first banner');
+});
