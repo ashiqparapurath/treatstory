@@ -59,6 +59,16 @@ function ImageSlide({
       className={mobile
         ? 'relative flex h-[210px] w-full items-center justify-center overflow-hidden bg-[#f7f0e8] md:hidden'
         : 'relative hidden h-[clamp(200px,54vw,236px)] w-full items-center justify-center overflow-hidden bg-[#f7f0e8] sm:h-64 md:flex md:h-72 lg:h-[340px]'}>
+      {/* Extend the photograph across the entire fixed-size carousel area.
+          The soft decorative copy removes empty side bars without cropping
+          the original artwork, its embedded headline, or CTA. */}
+      {shouldLoad && <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <OptimizedImage src={src} alt="" fill
+          sizes={mobile ? '(max-width: 767px) 100vw, 0px' : BANNER_IMAGE_SIZES}
+          quality={60} loading="lazy"
+          className="scale-110 object-cover blur-[24px] saturate-90" />
+        <div className="absolute inset-0 bg-[#f7f0e8]/20" />
+      </div>}
       {/* The fallback image stays visible while the frame is being measured. */}
       {!frameSize && shouldLoad && <OptimizedImage src={src}
         alt={banner.imageAlt || banner.title || 'TreatStory collection banner'} fill
