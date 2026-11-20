@@ -83,9 +83,9 @@ test('image-only artwork uses the same fixed carousel heights as standard banner
 
 test('image-only banner fills side gutters without cropping text or moving hotspot', () => {
   const slide = fs.readFileSync(path.join(root, 'src/components/banner-image-slide.tsx'), 'utf8');
-  assert.match(slide, /pointer-events-none absolute inset-0 overflow-hidden/);
-  assert.match(slide, /scale-110 object-cover blur-\\[24px\\]/);
-  assert.match(slide, /className="object-contain"/);
-  assert.match(slide, /style=\\{\\{ width: imageWidth, height: imageHeight \\}\\}/);
-  assert.match(slide, /left: \`\\$\\{hotspot.x\\}%\\`/);
+  assert.ok(slide.includes('pointer-events-none absolute inset-0 overflow-hidden'));
+  assert.ok(slide.includes('scale-110 object-cover blur-[24px]'));
+  assert.ok(slide.includes('className="object-contain"'));
+  assert.ok(slide.includes('style={{ width: imageWidth, height: imageHeight }}'));
+  assert.ok(slide.includes('left: \`${hotspot.x}%\`'));
 });
