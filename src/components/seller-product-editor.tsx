@@ -256,9 +256,14 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="creatorDescription">Description</Label>
-              <Textarea id="creatorDescription" required maxLength={2000} rows={3} placeholder="Tell buyers about the product, materials, portions and special touches…" value={draft.description} onChange={e => set('description',e.target.value)} className="resize-y" />
-              {enabled && user && <SellerDescriptionSuggestion user={user} draft={draft} onUse={value => set('description', value)} />}
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                <Label htmlFor="creatorDescription">Description</Label>
+                {enabled && user && <SellerDescriptionSuggestion user={user} draft={draft}
+                  onUse={value => set('description', value)} />}
+              </div>
+              <Textarea id="creatorDescription" required maxLength={2000} rows={3}
+                placeholder="Tell buyers about the product, materials, portions and special touches…"
+                value={draft.description} onChange={e => set('description',e.target.value)} className="resize-y" />
             </div>
           <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-5">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Advanced listing details <ChevronDown className="h-4 w-4 transition group-open:rotate-180"/></summary>

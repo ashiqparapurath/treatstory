@@ -41,3 +41,22 @@ test('SDK sends one bounded request and handles malformed, blocked and unavailab
     fetch.mock.restore();
   }
 });
+
+test('seller product description AI sits above the textarea and writes directly into it', () => {
+  const fs = require('node:fs');
+  const editor = fs.readFileSync('src/components/seller-product-editor.tsx', 'utf8');
+  const ui = fs.readFileSync('src/components/seller-description-suggestion.tsx', 'utf8');
+  assert.ok(editor.includes('flex min-w-0 items-center justify-between gap-2'));
+  assert.ok(editor.indexOf('<SellerDescriptionSuggestion') < editor.indexOf('<Textarea id="creatorDescription"'));
+  assert.ok(editor.includes("onUse={value => set('description', value)}"));
+  assert.ok(ui.includes('onUse(suggestion);'), 'inserts server response immediately');
+  assert.ok(ui.includes('latestDescription.current !== descriptionAtRequest'), 'does not clobber typing during a request');
+  assert.ok(ui.includes("style: 'Professional', language: 'English'"), 'default style and language remain');
+  assert.ok(ui.includes('aria-controls="creatorDescription"'));
+  assert.ok(ui.includes('Google AI receives public product details'), 'privacy information is still accessible');
+  assert.ok(ui.includes("remaining === 0"), 'daily limit still enforced');
+  assert.ok(!ui.includes('Writing preferences'), 'large writing preferences section is removed');
+  assert.ok(!ui.includes('Review and edit your suggestion'), 'textarea itself is the suggestion editor');
+  assert.ok(!ui.includes('Use Description'), 'no second confirmation button');
+  assert.ok(!ui.includes('Regenerate'), 'only one compact action is displayed');
+});
