@@ -36,19 +36,19 @@ test('browser tab uses original favicon and PWA artwork stays separate', () => {
   assert.match(layout, /<link rel="manifest" href="\/manifest\.json"/);
 });
 
-test('public seller card gives name its own responsive row and keeps status / share actions separate', () => {
+test('seller storefront presents a compact responsive approved creator identity', () => {
   const page = fs.readFileSync('src/components/seller-store-client.tsx', 'utf8');
-  assert.match(page, /mt-7 min-w-0 rounded-3xl border/);
-  assert.match(page, /mt-5 flex min-w-0 items-center gap-3 sm:gap-5/);
-  assert.match(page, /h1 className="min-w-0 flex-1 break-words text-\[clamp\(/);
-  assert.match(page, /mt-5 flex min-w-0 flex-wrap items-center gap-3/);
-  const heading = page.indexOf('<h1 className="min-w-0');
-  const disclaimer = page.indexOf('Approved TreatStory seller');
-  const badge = page.indexOf('Accepting new orders');
-  const share = page.indexOf('<StoreShareButton');
-  assert.ok(heading >= 0 && heading < disclaimer && disclaimer < badge && badge < share);
-  assert.doesNotMatch(page, /flex flex-wrap items-start justify-between gap-4/);
+  assert.match(page, /rounded-\[28px\] border border-\[#e9dfd2\]/);
+  assert.match(page, /id="seller-store-name"/);
+  assert.match(page, /min-w-0 break-words text-\[clamp\(/);
+  assert.match(page, /\[overflow-wrap:anywhere\]/);
+  assert.match(page, /TreatStory approved/);
+  assert.match(page, /Marketplace approval is not third-party identity verification/);
+  assert.match(page, /FSSAI number \(seller supplied\)/);
+  assert.match(page, /Accepting new orders/);
   assert.match(page, /<StoreShareButton sellerId=\{visibleSeller!\.slug \|\| id\} storeName=\{visibleSeller!\.businessName\}/);
+  assert.match(page, /<SellerProductCollection products=\{visibleProducts\}/);
+  assert.doesNotMatch(page, /<ProductImage/);
 });
 
 test('seller settings exposes public storefront link and sharing without saving store settings', () => {
