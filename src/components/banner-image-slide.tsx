@@ -4,14 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { OptimizedImage } from '@/components/optimized-image';
 import type { Banner } from '@/lib/products';
-import { bannerCoverRect, normalizeBannerHotspot, safeBannerLink } from '@/lib/banner-layout';
+import { bannerContainRect, bannerCoverRect, normalizeBannerHotspot, safeBannerLink } from '@/lib/banner-layout';
 import { BANNER_IMAGE_SIZES } from '@/lib/image-source';
 
 type Props = { banner: Banner; shouldLoad: boolean; onLoad: () => void; active: boolean };
 type BoxSize = { width: number; height: number };
 
-/** Full-bleed image-only slides use the original carousel heights.
- * The linked hotspot follows the same centered object-cover crop as the artwork.
+/** Keep desktop full bleed, but show the complete image on mobile.
+ * Hotspots follow the visible image, which is contained on mobile and covered on desktop.
  */
 function ImageSlide({ banner, mobile, shouldLoad, onLoad, active }: Props & { mobile: boolean }) {
   const frameRef = useRef<HTMLDivElement>(null);
@@ -45,7 +45,9 @@ function ImageSlide({ banner, mobile, shouldLoad, onLoad, active }: Props & { mo
   const href = safeBannerLink(banner.buttonLink);
   const accessibleLabel = banner.linkLabel?.trim() || 'Explore collection';
   const mode = banner.imageLinkMode || 'none';
-  const cover = frameSize ? bannerCoverRect(frameSize.width, frameSize.height, ratio) : null;
+  const cover = frameSize ? (mobile
+    ? bannerContainRect(frameSize.width, frameSize.height, ratio)
+    : bannerCoverRect(frameSize.width, frameSize.height, ratio)) : null;
 
   return <div ref={frameRef}
     className={mobile
@@ -55,7 +57,8 @@ function ImageSlide({ banner, mobile, shouldLoad, onLoad, active }: Props & { mo
     {!cover && shouldLoad && <OptimizedImage src={src}
       alt={banner.imageAlt || banner.title || 'TreatStory collection banner'} fill
       sizes={mobile ? '(max-width: 767px) 100vw, 0px' : BANNER_IMAGE_SIZES}
-      quality={80} loading="lazy" onLoad={onLoad} className="object-cover object-center" />}
+      quality={80} loading="lazy" onLoad={onLoad}
+      className={mobile ? "object-contain object-center" : "object-cover object-center"} />}
     {cover && <div className="absolute" style={{
       left: cover.left, top: cover.top, width: cover.width, height: cover.height,
     }}>
@@ -63,7 +66,7 @@ function ImageSlide({ banner, mobile, shouldLoad, onLoad, active }: Props & { mo
         alt={banner.imageAlt || banner.title || 'TreatStory collection banner'} fill
         sizes={mobile ? '(max-width: 767px) 100vw, 0px' : BANNER_IMAGE_SIZES}
         quality={80} loading="lazy" fetchPriority={active ? 'auto' : 'low'} onLoad={onLoad}
-        className="object-cover object-center" />}
+        className={mobile ? "object-contain object-center" : "object-cover object-center"} />}
       {href && mode === 'hotspot' && <Link href={href} aria-label={accessibleLabel}
         className="absolute z-10 block rounded-sm bg-transparent outline-offset-[-3px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#874a28]"
         style={{
