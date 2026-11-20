@@ -275,7 +275,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
         </FormItem>} />
         {linkSelect}
       </> : <>
-        <p className="text-sm text-muted-foreground">The banner fills the entire frame with no duplicate headline, dark overlay or extra button. Artwork may be cropped on wide screens; use the preview below to check that text and the printed button remain visible.</p>
+        <p className="text-sm text-muted-foreground">Desktop artwork fills the banner edge-to-edge. Mobile shows the full image without cropping, so embedded text and buttons are not cut off. Preview each layout below.</p>
         <FormField control={form.control} name="imageLinkMode" render={({ field }) => <FormItem>
           <FormLabel>Clickable Area</FormLabel>
           <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
@@ -303,7 +303,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
         </FormItem>} />
         <div className="space-y-2">
           <FormLabel>Mobile Banner Image (optional)</FormLabel>
-          <p className="text-xs text-muted-foreground">Upload a mobile-specific composition for easier-to-read text, or reuse the desktop image with center cropping.</p>
+          <p className="text-xs text-muted-foreground">Upload a mobile-specific composition for larger text, or reuse the complete desktop image without cropping.</p>
           <input ref={mobileInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only"
             aria-label="Upload mobile banner image" onChange={(event) => changeImage(event, 'mobile')} disabled={isSubmitting} />
           {mobilePreview ? <div className="space-y-2">
@@ -325,7 +325,7 @@ export function BannerForm({ banner, onFinished }: BannerFormProps) {
             disabled={isSubmitting} />
           <BannerHotspotEditor label="Mobile" src={mobilePreview || imagePreview}
             aspectRatio={mobilePreview ? form.watch('mobileAspectRatio') : form.watch('imageAspectRatio')}
-            frameAspectRatio={390 / 210} value={mobileHotspot as BannerHotspot} onChange={(next) => form.setValue('mobileHotspot', next, { shouldDirty: true })}
+            frameAspectRatio={390 / 210} fit="contain" value={mobileHotspot as BannerHotspot} onChange={(next) => form.setValue('mobileHotspot', next, { shouldDirty: true })}
             disabled={isSubmitting} />
         </div>}
       </>}
