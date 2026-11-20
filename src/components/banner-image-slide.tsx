@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { OptimizedImage } from '@/components/optimized-image';
 import type { Banner } from '@/lib/products';
-import { bannerContainRect, bannerCoverRect, normalizeBannerHotspot, safeBannerLink } from '@/lib/banner-layout';
+import { bannerImageRect, normalizeBannerHotspot, safeBannerLink } from '@/lib/banner-layout';
 import { BANNER_IMAGE_SIZES } from '@/lib/image-source';
 
 type Props = { banner: Banner; shouldLoad: boolean; onLoad: () => void; active: boolean };
@@ -45,9 +45,8 @@ function ImageSlide({ banner, mobile, shouldLoad, onLoad, active }: Props & { mo
   const href = safeBannerLink(banner.buttonLink);
   const accessibleLabel = banner.linkLabel?.trim() || 'Explore collection';
   const mode = banner.imageLinkMode || 'none';
-  const cover = frameSize ? (mobile
-    ? bannerContainRect(frameSize.width, frameSize.height, ratio)
-    : bannerCoverRect(frameSize.width, frameSize.height, ratio)) : null;
+  const cover = frameSize ? bannerImageRect(frameSize.width, frameSize.height, ratio,
+    mobile ? 'contain' : 'cover', mobile ? banner.mobilePlacement : banner.desktopPlacement) : null;
 
   return <div ref={frameRef}
     className={mobile
