@@ -49,7 +49,7 @@ function DeferredHomepageCatalog() {
         setNearViewport(true);
         observer.disconnect();
       }
-    }, { rootMargin: '650px 0px' });
+    }, { rootMargin: '350px 0px' });
     observer.observe(node);
     return () => observer.disconnect();
   }, []);

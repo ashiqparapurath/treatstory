@@ -14,7 +14,8 @@ test('reference-style mobile home retains a working product search and catalogue
   assert.match(products,/useEffect\(\(\) => setSearchTerm\(incomingQuery\)/);
   assert.match(home,/<CatalogMaintenanceGate>/);
   assert.match(home,/<MobileCategoryRail \/>/);
-  assert.match(home,/mobileCompact/);
+  assert.match(home,/<DeferredHomepageCatalog \/>/);
+  assert.match(read('src/components/home-legacy-products.tsx'),/mobileCompact/);
   assert.match(home,/<BannerCarousel \/>/);
   assert.match(category,/encodeURIComponent\(query\)/);
   assert.doesNotMatch(category,/New York|Up to 40|fake|placeholder-price/i);

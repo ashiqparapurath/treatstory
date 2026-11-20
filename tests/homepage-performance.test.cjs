@@ -8,7 +8,7 @@ test('homepage defers lower catalog requests and chunks until the products appro
   const legacy=read('src/components/home-legacy-products.tsx');
   assert.match(home,/function DeferredHomepageCatalog\(\)/);
   assert.match(home,/new IntersectionObserver\(/);
-  assert.match(home,/rootMargin: '650px 0px'/);
+  assert.match(home,/rootMargin: '350px 0px'/);
   assert.match(home,/typeof IntersectionObserver === 'undefined'/);
   assert.match(home,/observer\.disconnect\(\)/);
   assert.match(home,/nearViewport \? <>/);
