@@ -38,7 +38,13 @@ export const emptyDraft: ProductDraft = {
 const presets = ['Home bakery', 'Cakes', 'Cookies', 'Desserts', 'Art', 'Paintings', 'Handmade crafts', 'Gifts', 'Candles', 'Accessories'];
 const units: WeightUnit[] = ['g', 'kg', 'ml', 'l', 'pieces'];
 
-const stepNames = ['Product basics', 'Product photos', 'Pricing and availability', 'Review and publish'];
+const stepNames = ['Product basics', 'Product photos', 'Pricing & stock', 'Review & publish'];
+const stepDescriptions = [
+  'Tell buyers what makes your product special.',
+  'Make a great first impression with clear photos.',
+  'Set your prices, sizes and availability.',
+  'Check the details before your listing goes live.',
+];
 
 export function SellerProductEditor({ user, open, editing, sku, busy, enabled, draft, setDraft, categories, storeName, onClose, onSubmit, onUploadPhotos, uploading, uploadProgress, saveError }: {
   user: Pick<User, 'getIdToken'> | null;
@@ -208,25 +214,34 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
     <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 z-50 bg-black/45" />
       <Dialog.Content aria-describedby={undefined} onOpenAutoFocus={event => { event.preventDefault(); heading.current?.focus(); }}
-        className="seller-wizard fixed inset-0 z-50 mx-auto flex h-dvh max-w-3xl flex-col overflow-hidden bg-[#fbf9f6] text-[#302b25] sm:inset-y-[4dvh] sm:h-[92dvh] sm:w-[calc(100%-3rem)] sm:rounded-3xl sm:shadow-2xl">
-        <header className="shrink-0 bg-white px-4 pb-3 pt-[max(.75rem,env(safe-area-inset-top))] sm:px-7">
-          <div className="flex items-center justify-between gap-3">
-            <Dialog.Title className="text-sm font-medium">{editing ? 'Edit product' : 'Add product'}</Dialog.Title>
-            <button type="button" disabled={blocked} onClick={close} aria-label="Close product editor" className="grid size-11 place-items-center rounded-full hover:bg-[#f5f1eb]"><X size={18}/></button>
+        className="seller-wizard fixed inset-0 z-50 mx-auto flex h-dvh w-full min-w-0 max-w-3xl flex-col overflow-hidden bg-[#fbf9f6] text-[#302b25] sm:inset-y-[4dvh] sm:h-[92dvh] sm:w-[calc(100%-3rem)] sm:rounded-[28px] sm:shadow-2xl">
+        <header className="shrink-0 border-b border-[#ede6dc] bg-white px-4 pb-4 pt-[max(.75rem,env(safe-area-inset-top))] sm:px-7 sm:pb-5">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <Dialog.Title className="truncate text-[13px] font-semibold tracking-tight text-[#675b50]">
+              {editing ? 'Edit product' : 'Create a product'}
+            </Dialog.Title>
+            <span className="ml-auto rounded-full bg-[#f6f0e8] px-3 py-1 text-[11px] font-semibold tabular-nums text-[#795e43]">Step {step + 1} / 4</span>
+            <button type="button" disabled={blocked} onClick={close} aria-label="Close product editor"
+              className="grid size-11 shrink-0 place-items-center rounded-full border border-[#eee8e0] bg-[#fbf9f6] transition-colors hover:bg-[#f2ece5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#795e43]"><X size={18}/></button>
           </div>
-          <p className="text-xs text-[#736554]">Step {step + 1} of 4</p>
-          <h2 ref={heading} tabIndex={-1} className="mt-1 font-serif text-2xl leading-tight outline-none sm:text-3xl">{stepNames[step]}</h2>
-          <div aria-hidden className="mt-3 flex gap-1">{stepNames.map((name,i) => <span key={name} className={'h-1 flex-1 rounded-full ' + (i <= step ? 'bg-[#836847]' : 'bg-[#eee9e2]')}/>)}</div>
+          <h2 ref={heading} tabIndex={-1} className="mt-2 font-serif text-[clamp(1.45rem,5vw,1.9rem)] leading-[1.15] tracking-[-0.025em] outline-none sm:mt-3 sm:text-[2rem]">{stepNames[step]}</h2>
+          <p className="mt-1 text-[12px] leading-5 text-[#796c5e]">{stepDescriptions[step]}</p>
+          <div role="progressbar" aria-label="Product creation progress" aria-valuenow={step + 1}
+            aria-valuemin={1} aria-valuemax={4}
+            className="mt-3 flex gap-1.5 sm:mt-4">
+            {stepNames.map((name,i) => <span key={name}
+              aria-label={name} className={'h-1.5 min-w-0 flex-1 rounded-full transition-colors ' + (i <= step ? 'bg-[#8a6444]' : 'bg-[#eee7de]')} />)}
+          </div>
         </header>
         <form id="sellerProductForm" noValidate className="flex min-h-0 flex-1 flex-col" onSubmit={event => {
           event.preventDefault();
           if (step < 3) nextStep();
         }}>
-          <div ref={content} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7">
-            <section data-step hidden={step !== 0} className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block space-y-1.5 text-xs font-semibold sm:col-span-2">Product name<Input required minLength={2} maxLength={120} placeholder="e.g. Red velvet birthday cake" value={draft.name} onChange={e => set('name',e.target.value)} /></label>
-              <div className="block space-y-1.5 text-xs font-semibold">
+          <div ref={content} className="seller-wizard-scroll min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 pb-6 pt-4 sm:px-7 sm:pb-8 sm:pt-6">
+            <section data-step hidden={step !== 0} aria-label="Product basics" className="space-y-5">
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+              <label className="block space-y-1.5 text-[13px] font-semibold text-[#4a3b2d] sm:col-span-2">Product name<Input required minLength={2} maxLength={120} placeholder="e.g. Red velvet birthday cake" value={draft.name} onChange={e => set('name',e.target.value)} /></label>
+              <div className="block min-w-0 space-y-1.5 text-[13px] font-semibold text-[#4a3b2d">
                 <Label htmlFor="seller-category-name" className="text-xs font-semibold">Category</Label>
                 <div className="relative" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setCategoryOpen(false); }}>
                   <Input id="seller-category-name" required minLength={2} maxLength={80} value={draft.category}
@@ -256,16 +271,16 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
               </div>
             </div>
             <div className="space-y-2">
-              <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
                 <Label htmlFor="creatorDescription">Description</Label>
                 {enabled && user && <SellerDescriptionSuggestion user={user} draft={draft}
                   onUse={value => set('description', value)} />}
               </div>
               <Textarea id="creatorDescription" required maxLength={2000} rows={3}
                 placeholder="Tell buyers about the product, materials, portions and special touches…"
-                value={draft.description} onChange={e => set('description',e.target.value)} className="resize-y" />
+                value={draft.description} onChange={e => set('description',e.target.value)} className="min-h-[108px] resize-y rounded-xl border-[#ded6cb] bg-white text-base leading-6" />
             </div>
-          <details className="group rounded-2xl border border-[#e8e0d5] bg-white p-4 sm:p-5">
+          <details className="group overflow-hidden rounded-2xl border border-[#e8e0d5] bg-white p-3.5 sm:p-5">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">Advanced listing details <ChevronDown className="h-4 w-4 transition group-open:rotate-180"/></summary>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <label className="space-y-1 text-xs font-medium sm:col-span-2">Customization prompts (one per line)<Textarea id="listing-customization" rows={3} maxLength={500} placeholder={"Cake message\nColour preference\nGift note"} value={draft.customizationOptions} onChange={e=>set('customizationOptions',e.target.value)} /><span className="block text-[11px] text-muted-foreground">Up to six prompts (80 characters each). Requests do not change pricing.</span></label>
@@ -274,7 +289,7 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
             </div>
           </details>
             </section>
-            <section data-step hidden={step !== 1} className="space-y-4">
+            <section data-step hidden={step !== 1} aria-label="Product photos" className="space-y-4">
               <p className="text-xs leading-5 text-muted-foreground">Add up to 10 photos. Choose JPG, PNG or WebP files up to 2 MB each.</p>
               <div className="flex flex-wrap items-center gap-3">
                 <label htmlFor="sellerPhotoFiles" className={`flex min-h-28 w-full justify-center cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-[#bfae95] bg-[#f8f5f0] px-5 text-xs font-semibold text-[#594b39] ${uploading || busy || !enabled || photoCount >= 10 ? 'pointer-events-none opacity-50' : ''}`}><ImagePlus className="h-4 w-4" />{uploading ? 'Uploading photos…' : 'Upload product photos'}</label>
@@ -303,7 +318,7 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
                 {photoLinkError && <p id="creatorImageLinkError" role="alert" className="mt-2 text-xs text-red-700">{photoLinkError}</p>}
               </div>
             </section>
-            <section data-step hidden={step !== 2} className="space-y-4">
+            <section data-step hidden={step !== 2} aria-label="Pricing and availability" className="space-y-5">
               {!draft.weightOptions.length && <label className="block space-y-1 text-sm">Price (₹)<Input required={!draft.weightOptions.length} type="number" inputMode="decimal" min={0} max={10000000} step="0.01" value={draft.price} onChange={e=>set('price',e.target.value)}/></label>}
           <details className="group rounded-2xl border border-[#e4d6c5] bg-white p-4 sm:p-5" open={draft.weightOptions.length > 0 ? true : undefined} aria-labelledby="variant-pricing-title">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden"><span id="variant-pricing-title">Weight, size & variant pricing</span><span className="flex items-center gap-2 text-xs font-normal text-[#8b795e]">{draft.weightOptions.length} sizes <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180"/></span></summary><div className="mt-4 space-y-4">
@@ -343,7 +358,7 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
               <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={draft.advancePaymentRequired} onChange={e => set('advancePaymentRequired', e.target.checked)} />Advance payment required before preparation</label><p className="text-xs text-muted-foreground sm:col-span-2">Arrange the advance directly with the buyer. TreatStory does not collect online payments.</p></div>
           </details>
             </section>
-            <section data-step hidden={step !== 3} className="space-y-4 break-words">
+            <section data-step hidden={step !== 3} aria-label="Review and publish" className="space-y-4 break-words">
               {photos[0] && <img src={photos[0]} alt="Listing cover" className="aspect-[2/1] max-h-64 w-full rounded-2xl object-contain bg-[#eee9e2]"/>}
               <div><p className="text-xs text-muted-foreground">{[storeName,draft.category].filter(Boolean).join(' · ')}</p>
                 <h3 className="mt-1 text-xl font-semibold">{draft.name}</h3>
