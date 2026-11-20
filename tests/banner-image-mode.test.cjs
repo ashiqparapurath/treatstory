@@ -58,9 +58,9 @@ test('banner upload respects banner-sized request bodies and prepares larger ima
   const api = fs.readFileSync(path.join(root, 'src/app/api/cloudinary/upload/route.ts'), 'utf8');
   const upload = fs.readFileSync(path.join(root, 'src/lib/cloudinary-upload.ts'), 'utf8');
   const helper = fs.readFileSync(path.join(root, 'src/lib/banner-image-upload.ts'), 'utf8');
-  assert.match(api, /readBodyBytes\\(request,MAX_BANNER_BYTES\\+50_000\\)/);
-  assert.match(api, /if \\(contentLength > MAX_BANNER_BYTES \\+ 50_000\\)/);
-  assert.match(upload, /kind === 'banner' \\? await prepareBannerImage\\(file\\) : file/);
-  assert.match(helper, /MAX_ORIGINAL_BANNER_BYTES = 16_000_000/);
-  assert.match(helper, /BANNER_UPLOAD_TARGET_BYTES = 3_400_000/);
+  assert.ok(api.includes('readBodyBytes(request,MAX_BANNER_BYTES+50_000)'));
+  assert.ok(api.includes('contentLength > MAX_BANNER_BYTES + 50_000'));
+  assert.ok(upload.includes("kind === 'banner' ? await prepareBannerImage(file) : file"));
+  assert.ok(helper.includes('MAX_ORIGINAL_BANNER_BYTES = 16_000_000'));
+  assert.ok(helper.includes('BANNER_UPLOAD_TARGET_BYTES = 3_400_000'));
 });
