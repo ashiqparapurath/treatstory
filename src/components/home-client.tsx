@@ -1,9 +1,7 @@
-'use client';import { ProductGridSkeleton, LoadError } from '@/components/loading-states';
+'use client';import { ProductGridSkeleton } from '@/components/loading-states';
 import { usePublicCatalog } from '@/firebase/firestore/use-public-catalog';
 
 import { Header } from '@/components/header';
-import { SellerStorefrontProducts } from '@/components/seller-storefront-products';
-import { ProductGridContainer } from '@/components/product-grid';
 import { CatalogMaintenanceGate } from '@/components/catalog-maintenance-gate';
 import Link from 'next/link';
 import {HeroImage}from'@/components/hero-image';
@@ -18,23 +16,50 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, limit } from 'firebase/firestore';
-import type { Product, Banner } from '@/lib/products';
+import { collection, query, where } from 'firebase/firestore';
+import type { Banner } from '@/lib/products';
+import dynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 
-function HomePageContent() {
-  const firestore = useFirestore();
-  const productsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'products'), limit(8));
-  }, [firestore]);
-  const { data: products, isLoading, error, retry } = usePublicCatalog<Product>(productsQuery);
 
-  if (error) return <LoadError retry={retry} error={error} />;
-  if (isLoading) return <ProductGridSkeleton count={8} />;
-  if (!products?.length) return null;
-  return <ProductGridContainer products={products} mobileCompact />;
+// Client-only lower catalog chunks and Firestore reads wait until near the viewport.
+const SellerStorefrontProducts = dynamic(
+  () => import('@/components/seller-storefront-products').then(mod => mod.SellerStorefrontProducts),
+  { ssr: false, loading: () => <ProductGridSkeleton count={8} /> },
+);
+const HomePageContent = dynamic(
+  () => import('@/components/home-legacy-products'),
+  { ssr: false, loading: () => <ProductGridSkeleton count={8} /> },
+);
+
+function DeferredHomepageCatalog() {
+  const container = useRef<HTMLDivElement>(null);
+  const [nearViewport, setNearViewport] = useState(false);
+
+  useEffect(() => {
+    const node = container.current;
+    if (!node) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setNearViewport(true);
+      return;
+    }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        setNearViewport(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '650px 0px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  return <div ref={container} className="min-w-0">
+    {nearViewport ? <>
+      <div className="mb-7"><SellerStorefrontProducts limitCount={8} /></div>
+      <Suspense fallback={<ProductGridSkeleton count={8} />}><HomePageContent /></Suspense>
+    </> : <ProductGridSkeleton count={8} />}
+  </div>;
 }
 
 function BannerCarousel() {
@@ -98,15 +123,17 @@ function BannerCarousel() {
           <CarouselItem key={banner.id}>
             <Card className="overflow-hidden rounded-[22px] border-0 bg-[#f7f0e8] shadow-none">
               {banner.displayMode === 'image-only' ? <ImageOnlyBannerSlide banner={banner}
-                shouldLoad={requested.has(index) || index === active} active={index === active}
+                shouldLoad={requested.has(index) || index === active} active={index === active} first={index === 0}
                 onLoad={() => { if (index === active) setFirstLoaded(true); }} /> : <>
               <CardContent className="relative isolate min-h-[210px] overflow-hidden bg-[#f9f3eb] p-0 md:hidden">
                 <div className="absolute inset-y-0 right-0 w-[56%] bg-[#e9d9c6]">{banner.mobilePlacement
                   ? <BannerPlacedImage src={banner.mobileImageUrl || banner.imageUrl} alt={banner.title}
                     ratio={banner.mobileImageUrl ? (banner.mobileAspectRatio || banner.imageAspectRatio || 16 / 9) : (banner.imageAspectRatio || 16 / 9)} placement={banner.mobilePlacement}
-                    shouldLoad={requested.has(index)||index===active} sizes="(max-width: 767px) 60vw, 0px"
+                    eager={index===0} shouldLoad={requested.has(index)||index===active} sizes="(max-width: 767px) 60vw, 0px"
                     onLoad={()=>{if(index===active)setFirstLoaded(true);}} />
-                  : (requested.has(index)||index===active)&&<OptimizedImage src={banner.mobileImageUrl || banner.imageUrl} alt={banner.title} fill sizes="(max-width: 767px) 60vw, 0px" quality={75} loading="lazy" onLoad={()=>{if(index===active)setFirstLoaded(true);}} className="object-cover object-center"/>}</div>
+                  : (requested.has(index)||index===active)&&<OptimizedImage src={banner.mobileImageUrl || banner.imageUrl} alt={banner.title} fill sizes="(max-width: 767px) 60vw, 0px" quality={75} loading={index===0?'eager':'lazy'}
+                    fetchPriority={index===0?'high':'auto'}
+                    onLoad={()=>{if(index===active)setFirstLoaded(true);}} className="object-cover object-center"/>}</div>
                 <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,#f9f3eb_0%,#f9f3eb_45%,rgba(249,243,235,0.98)_65%,rgba(249,243,235,0.58)_83%,rgba(249,243,235,0.06)_100%)]"/>
                 <div className="relative z-10 flex min-h-[210px] flex-col items-start justify-start gap-3 px-4 py-4 text-left">
                   <div className="w-[71%] min-w-0">
@@ -219,8 +246,7 @@ export default function Home() {
               <div><p className="eyebrow hidden text-[#a68a64] md:block">Picked for you</p><h2 className="text-[19px] font-semibold tracking-tight text-[#30251c] md:mt-2 md:text-4xl md:font-medium"><span className="md:hidden">Featured products</span><span className="hidden md:inline">Find your next favourite</span></h2><p className="mt-2 hidden text-sm text-muted-foreground md:block">Thoughtful finds, all in one happy place.</p></div>
               <Link href="/products" className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em]">View everything <ArrowRight className="h-4 w-4" /></Link>
             </div>
-            <div className="mb-7"><SellerStorefrontProducts limitCount={8} /></div>
-            <Suspense fallback={<Skeleton className="h-96 w-full rounded-2xl" />}><HomePageContent /></Suspense>
+            <DeferredHomepageCatalog />
             </CatalogMaintenanceGate>
           </div>
         </section>

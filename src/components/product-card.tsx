@@ -37,7 +37,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="relative aspect-[3/4] w-full touch-pan-y overflow-hidden rounded-[22px] bg-[#efe7dd] sm:aspect-[3/4] sm:rounded-none" onTouchStart={gallery.onTouchStart} onTouchEnd={gallery.onTouchEnd} onClickCapture={gallery.onClickCapture}>
           <div key={gallery.index} className={`absolute inset-0 ${gallery.direction === 'next' ? 'treatstory-photo-next' : 'treatstory-photo-previous'}`}><ProductImage src={images[gallery.index]} alt={product.name} sizes={LEGACY_CARD_IMAGE_SIZES}/></div>
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[72%] rounded-b-[22px] bg-gradient-to-t from-[#16110f]/95 via-[#251c17]/55 to-transparent sm:h-3/4 sm:rounded-none sm:from-black/85 sm:via-black/20" />
-          <Link href={`/product/${encodeURIComponent(product.id)}`} aria-label={`View details for ${product.name}`} className="absolute inset-0 z-10" />
+          <Link prefetch={false} href={`/product/${encodeURIComponent(product.id)}`} aria-label={`View details for ${product.name}`} className="absolute inset-0 z-10" />
           
           {images.length > 1 && (
             <>

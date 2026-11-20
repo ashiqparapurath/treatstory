@@ -13,6 +13,7 @@ type Props = {
   sizes: string;
   shouldLoad: boolean;
   active?: boolean;
+  eager?: boolean;
   onLoad?: () => void;
 };
 
@@ -20,7 +21,7 @@ type Props = {
  * The same geometry powers the interactive admin preview.
  */
 export function BannerPlacedImage({
-  src, alt, ratio, placement, fit = 'cover', sizes, shouldLoad, active, onLoad,
+  src, alt, ratio, placement, fit = 'cover', sizes, shouldLoad, active, eager, onLoad,
 }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [frame, setFrame] = useState<{ width: number; height: number } | null>(null);
@@ -47,11 +48,14 @@ export function BannerPlacedImage({
   const rect = frame ? bannerImageRect(frame.width, frame.height, ratio, fit, placement) : null;
   return <div ref={frameRef} className="absolute inset-0 overflow-hidden">
     {shouldLoad && (!rect ? <OptimizedImage src={src} alt={alt} fill
-      sizes={sizes} loading="lazy" quality={75} onLoad={onLoad}
+      sizes={sizes} loading={eager ? 'eager' : 'lazy'}
+      fetchPriority={eager ? 'high' : 'auto'} quality={75} onLoad={onLoad}
       className={fit === 'contain' ? 'object-contain' : 'object-cover'} /> :
       <div className="absolute" style={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height }}>
-        <OptimizedImage src={src} alt={alt} fill sizes={sizes} loading="lazy"
-          fetchPriority={active ? 'auto' : 'low'} quality={75} onLoad={onLoad} className="object-cover" />
+        <OptimizedImage src={src} alt={alt} fill sizes={sizes}
+          loading={eager ? 'eager' : 'lazy'}
+          fetchPriority={eager ? 'high' : active ? 'auto' : 'low'}
+          quality={75} onLoad={onLoad} className="object-cover" />
       </div>)}
   </div>;
 }
