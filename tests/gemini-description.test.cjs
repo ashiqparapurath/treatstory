@@ -46,7 +46,7 @@ test('seller product description AI sits above the textarea and writes directly 
   const fs = require('node:fs');
   const editor = fs.readFileSync('src/components/seller-product-editor.tsx', 'utf8');
   const ui = fs.readFileSync('src/components/seller-description-suggestion.tsx', 'utf8');
-  assert.ok(editor.includes('flex min-w-0 items-center justify-between gap-2'));
+  assert.ok(editor.includes('flex min-w-0 flex-wrap items-center justify-between gap-2'));
   assert.ok(editor.indexOf('<SellerDescriptionSuggestion') < editor.indexOf('<Textarea id="creatorDescription"'));
   assert.ok(editor.includes("onUse={value => set('description', value)}"));
   assert.ok(ui.includes('onUse(suggestion);'), 'inserts server response immediately');
