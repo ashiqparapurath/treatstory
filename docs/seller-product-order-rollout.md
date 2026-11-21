@@ -43,3 +43,17 @@ firebase deploy --only firestore:rules,firestore:indexes --project treatstory-on
 - Run `npm test`, `npm run typecheck`, `npm run build` and real mobile browser checks.
 
 **Not included:** Secure stock reservation, payment settlement, actual carrier/tracking integrations, priced product variants or trusted delivery notifications. "Out for delivery" is a seller-updated fulfillment status, not verified courier tracking.
+
+
+## Product-level delivery charges (optional)
+
+A seller can set **Product delivery charge (₹)** in Product editor → **Pricing & availability**:
+- Blank: inherit the store-wide delivery charge configured in **Store settings → Delivery** (backward compatible with existing products).
+- `0`: free delivery for this product.
+- Any amount from ₹0 to ₹5,000: override the store-wide fee for this product. Pickup always has no delivery fee.
+
+When a buyer checks out with several products from **one seller**, TreatStory applies the **highest applicable product/store delivery charge once per seller**, not per quantity or per product line. Multiple different sellers each have their own delivery charge. The amount is estimated on the checkout page before the order is placed and revalidated in the server-side transaction; if it changes, the buyer must review the latest estimate. Fees are saved in the original seller-order record and included in checkout totals and order details.
+
+The field is optional on the product schema; old records keep their store-wide fallback. Editing an existing product and clearing the override removes the field rather than silently preserving the last custom charge.
+
+Deployment note: **Firestore security rules must be deployed** to permit the new `deliveryCharge` product field for any browser-side Firestore writes. The API uses server-owned writes, but the new rules provide coherent validation for direct authorized legacy writes too. The existing `firebase-rollout.yml` workflow deploys production rules/indexes separately from the Next.js/Vercel application.
