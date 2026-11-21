@@ -16,7 +16,7 @@ export function SupportLegacyInbox() {
   // Update-time sorting brings active follow-ups to the top of the admin inbox.
   const ref = useMemoFirebase(() => db ? query(collection(db, 'support_tickets'), orderBy('updatedAt', 'desc'), limit(100)) : null, [db]);
   const { data, error, isLoading, retry } = useCollection<LegacyTicket>(ref);
-  const visibleTickets = (data ?? []).filter(ticket => ticket.encrypted !== true);
+  const visibleTickets = (data ?? []).filter(ticket => ticket.encrypted !== true && ticket.route !== 'seller');
 
   async function change(ticketId: string, action: 'reply' | 'close', message?: string) {
     if (!user) throw new Error('Sign in as an administrator to respond.');
