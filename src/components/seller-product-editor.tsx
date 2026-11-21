@@ -120,6 +120,21 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
     window.addEventListener('popstate', handleBack);
     return () => window.removeEventListener('popstate', handleBack);
   }, [step, dirty, blocked, confirmDiscard, onClose]);
+  // Nested Radix dialogs can leave keyboard focus on the editor after browser
+  // Back (notably in WebKit). Escape must always cancel the discard prompt
+  // without closing the editor or losing the unsaved draft.
+  useEffect(() => {
+    if (!confirmDiscard || blocked) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setConfirmDiscard(false);
+      }
+    };
+    window.addEventListener('keydown', onEscape, true);
+    return () => window.removeEventListener('keydown', onEscape, true);
+  }, [confirmDiscard, blocked]);
+
   function close() {
     if (blocked || confirmDiscard) return;
     if (dirty) setConfirmDiscard(true);
