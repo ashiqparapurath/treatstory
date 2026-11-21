@@ -3,7 +3,7 @@
  */
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { initializeApp as initializeAdminApp } from 'firebase-admin/app';
+import { initializeApp as initializeAdminApp, deleteApp as deleteAdminApp } from 'firebase-admin/app';
 import { getFirestore as adminFirestore, Timestamp } from 'firebase-admin/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { connectFirestoreEmulator, getFirestore, collection, doc, getDoc, getDocs, limit, query, updateDoc, where, addDoc } from 'firebase/firestore';
@@ -105,7 +105,7 @@ async function main() {
       await deleteApp(item.app);
     }));
     await server.terminate();
-    await adminApp.delete();
+    await deleteAdminApp(adminApp);
   }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
