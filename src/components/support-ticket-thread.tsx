@@ -78,6 +78,7 @@ export function SupportTicketThread({ ticket, perspective, onSend, onClose }: Pr
           <h3 className="mt-2 break-words text-base font-semibold text-[#302a24]">{ticket.subject}</h3>
           <p className="mt-2 text-xs capitalize text-[#867a6c]">{ticket.category} · {ticket.status === 'closed' ? 'Closed' : ticket.status === 'responded' ? 'Replied' : 'Open'}{ticket.orderId ? ' · Order linked' : ''}{ticket.quoteId ? ' · Quotation linked' : ''}</p>
           {ticket.orderId && <p className="mt-2 break-all text-xs text-[#887b6c]">Order reference: {ticket.orderId}</p>}
+          {ticket.quoteId && <Link href={perspective === 'support' ? '/custom-orders?view=received' : '/custom-orders'} className="mt-2 inline-flex min-h-9 items-center text-xs font-semibold text-[#745333] underline underline-offset-4">View linked quotation</Link>}
           {perspective === 'support' && ticket.route !== 'seller' && <p className="mt-2 break-all text-[11px] text-[#9b8e80]">Customer UID: {ticket.ownerUid}</p>}
         </div>
         <p className="mx-auto flex max-w-xl items-start gap-2 text-xs leading-5 text-[#857566]"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Support tickets are not end-to-end encrypted. Do not share passwords, payment card numbers or recovery codes.</p>
