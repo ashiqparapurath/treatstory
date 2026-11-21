@@ -132,7 +132,7 @@ function SellerContent() {
     setEditing(product ?? null);
     setUploadProgress('');
     setDraft(product ? {
-      name: product.name, description: product.description, price: String(product.price), deliveryCharge: product.deliveryCharge == null ? '' : String(product.deliveryCharge), category: product.category,
+      name: product.name, description: product.description, price: product.showPrice === false && product.price === 0 ? '' : String(product.price), deliveryCharge: product.deliveryCharge == null ? '' : String(product.deliveryCharge), category: product.category,
       imageUrls: product.imageUrls.join('\n'), availability: product.availability,
       stockQuantity: product.stockQuantity == null ? '' : String(product.stockQuantity),
       preparationDays: product.preparationDays == null ? '' : String(product.preparationDays),
@@ -145,7 +145,7 @@ function SellerContent() {
       ingredients: product.ingredients ?? '', allergens: (product.allergens??[]).join(', '),
       dietaryTags: (product.dietaryTags??[]).join(', '), shelfLifeDays: product.shelfLifeDays == null ? '' : String(product.shelfLifeDays),
       storageInstructions: product.storageInstructions ?? '',
-      weightOptions: (product.weightOptions?.length ? product.weightOptions : product.weightValue && product.weightUnit ? [{ value: product.weightValue, unit: product.weightUnit }] : []).map(w => ({ value: String(w.value), unit: w.unit, price: 'price' in w && typeof w.price === 'number' ? String(w.price) : String(product.price), stockQuantity: 'stockQuantity' in w && typeof w.stockQuantity === 'number' ? String(w.stockQuantity) : '' })),
+      weightOptions: (product.weightOptions?.length ? product.weightOptions : product.weightValue && product.weightUnit ? [{ value: product.weightValue, unit: product.weightUnit }] : []).map(w => ({ value: String(w.value), unit: w.unit, price: 'price' in w && typeof w.price === 'number' ? String(w.price) : (product.showPrice === false && product.price === 0 ? '' : String(product.price)), stockQuantity: 'stockQuantity' in w && typeof w.stockQuantity === 'number' ? String(w.stockQuantity) : '' })),
       showPrice: product.showPrice, status: product.status === 'published' ? 'published' : 'draft'
     } : recovered?.draft ?? emptyDraft);
     setSaveError('');
@@ -204,7 +204,7 @@ function SellerContent() {
     // Size-specific prices are stored on the same listing. Its base price
     // is the lowest effective variant price for catalog previews.
     const baseEntered = !draft.weightOptions.length && draft.price.trim() !== '';
-    const basePrice = baseEntered ? Number(draft.price) : null;
+    const basePrice = baseEntered ? Number(draft.price) : (!draft.showPrice ? 0 : null);
     if (baseEntered && (!Number.isFinite(basePrice) || basePrice! < 0 || basePrice! > 10000000))
       return toast({ variant: 'destructive', title: 'Enter a valid base price' });
     const imageUrls = parseProductImageUrls(draft.imageUrls);
@@ -215,7 +215,7 @@ function SellerContent() {
     const minQty = Number(draft.minimumOrderQuantity);
     if (!Number.isInteger(minQty) || minQty < 1 || minQty > 99) return toast({ variant: 'destructive', title: 'Minimum order quantity must be 1–99' });
     const weights = draft.weightOptions.map(w => ({ value: Number(w.value), unit: w.unit,
-      ...(w.price.trim() !== '' ? { price: Number(w.price) } : {}),
+      ...(w.price.trim() !== '' ? { price: Number(w.price) } : !draft.showPrice ? { price: 0 } : {}),
       ...(w.stockQuantity.trim() !== '' ? { stockQuantity: Number(w.stockQuantity) } : {}) }));
     if (weights.length > 8 || weights.some(w => !Number.isFinite(w.value) || w.value <= 0 || w.value > 100000 || !['g','kg','ml','l','pieces'].includes(w.unit) ||
       ('price' in w && (!Number.isFinite(w.price) || (w.price ?? -1) < 0 || (w.price ?? 10000001) > 10000000)) ||
@@ -223,9 +223,9 @@ function SellerContent() {
       return toast({ variant: 'destructive', title: 'Check size options, prices and stock (maximum 8 sizes)' });
     if (new Set(weights.map(w => `${w.value}:${w.unit}`)).size !== weights.length)
       return toast({ variant: 'destructive', title: 'Duplicate sizes', description: 'Each weight and unit combination must be unique.' });
-    if (weights.length && weights.some(w => w.price === undefined))
+    if (draft.showPrice && weights.length && weights.some(w => w.price === undefined))
       return toast({ variant: 'destructive', title: 'Price required for every size', description: 'Enter an individual selling price for each weight or unit.' });
-    if (!weights.length && basePrice === null)
+    if (draft.showPrice && !weights.length && basePrice === null)
       return toast({ variant: 'destructive', title: 'Enter a selling price' });
     const price = weights.length
       ? Math.min(...weights.map(w => w.price!))
