@@ -136,7 +136,9 @@ test('seller and buyer interfaces are separated and Firestore access is scoped',
   assert.match(rules,/allow create, update, delete: if false/);
   assert.ok(indexes.indexes.some(item => item.collectionGroup === 'support_tickets' &&
     item.fields?.some(f => f.fieldPath === 'sellerId') && item.fields?.some(f => f.fieldPath === 'route')));
-  assert.match(admin,/ticket.route !== 'seller'/);
+  assert.match(admin,/ticket.route === 'admin'/);
+  assert.match(admin,/!ticket.route/);
+  assert.match(admin,/where\('route', '==', 'admin'\)/);
   assert.match(seller,/where\('sellerId', '==', user.uid\)/);
   assert.match(seller,/where\('route', '==', 'seller'\)/);
   assert.match(buyer,/sellerId: supportToAdmin \? '' : targetSellerId/);
