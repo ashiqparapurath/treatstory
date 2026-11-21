@@ -294,77 +294,65 @@ test('install TreatStory auto-hides the button and guidance after seven seconds'
 });
 
 
-test('mobile product page keeps optional notes collapsed but shows custom order links',()=>{
- const detail=read('src/components/product-detail-client.tsx');
- const reviews=read('src/components/product-reviews.tsx');
- assert.match(detail,/Add a note <span className="font-normal/);
- assert.match(detail,/aria-label="Additional ordering options"/);
-  assert.doesNotMatch(detail,/Other ways to order/);
- assert.match(detail,/group-open:rotate-180/);
- assert.match(detail,/hidden space-y-2 text-sm font-medium md:block/);
- assert.match(detail,/hidden min-h-12 md:flex/);
- assert.match(detail,/ref=\{purchaseControls\} id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-4 py-0/);
- assert.match(detail,/onClick=\{\(\) => void addCurrent\(\)\}/);
- assert.match(detail,/onClick=\{buyNow\}/);
- assert.match(detail,/WhatsApp orders are arranged directly/);
- assert.match(reviews,/Customer reviews/);
- assert.match(reviews,/md:mt-7 md:rounded-2xl md:p-7/);
+test('mobile product page keeps optional notes collapsed and has clear price-request actions',()=>{
+  const detail=read('src/components/product-detail-client.tsx');
+  const reviews=read('src/components/product-reviews.tsx');
+  assert.match(detail,/Add a note <span className="font-normal/);
+  assert.match(detail,/group-open:rotate-180/);
+  assert.match(detail,/hidden space-y-2 text-sm font-medium md:block/);
+  assert.match(detail,/ref=\{purchaseControls\} id="purchase-actions"/);
+  assert.match(detail,/onClick=\{\(\) => void addCurrent\(\)\}/);
+  assert.match(detail,/onClick=\{buyNow\}/);
+  assert.match(detail,/Request current price/);
+  assert.match(detail,/askPrice \? <Link href=\{quoteHref\}/);
+  assert.match(reviews,/Customer reviews/);
+  assert.match(reviews,/md:mt-7 md:rounded-2xl md:p-7/);
 });
 
-
-test('mobile ordering controls have breathing room without hiding cart, WhatsApp or custom quote functionality',()=>{
- const page=read('src/components/product-detail-client.tsx');
- const reviews=read('src/components/product-reviews.tsx');
- assert.match(page,/space-y-4 pb-7 pt-6 md:py-0/);
- assert.match(page,/Add a note/);
- assert.match(page,/aria-label="Additional ordering options"/);
- assert.match(page,/px-4 py-3 md:hidden/);
- assert.doesNotMatch(page,/Other ways to order/);
- assert.match(page,/grid-cols-2 gap-4 py-0 md:grid-cols-\[auto_1fr\]/);
- assert.match(page,/h-12 min-w-0 rounded-full/);
- assert.doesNotMatch(page,/grid scroll-mt-48 grid-cols-2 gap-2 rounded-\[20px\]/);
- assert.match(page,/onClick=\{buyNow\}/);
- assert.match(page,/onClick=\{\(\) => void addCurrent\(\)\}/);
- assert.match(page,/Order via WhatsApp/);
- assert.match(page,/Request a custom quote for this creation/);
- assert.match(page,/px-4 pt-2 md:col-span-2 md:px-0 md:pt-0/);
- assert.match(reviews,/p-5 shadow-\[0_4px_16px/);
+test('mobile and desktop seller contact buttons use separate WhatsApp and TreatStory icons',()=>{
+  const page=read('src/components/product-detail-client.tsx');
+  const reviews=read('src/components/product-reviews.tsx');
+  assert.match(page,/space-y-4 pb-7 pt-6 md:py-0/);
+  assert.match(page,/data-testid="product-order-controls" className="flex flex-col gap-4"/);
+  assert.match(page,/aria-label="Contact seller"/);
+  assert.match(page,/grid gap-2/);
+  assert.match(page,/MessageSquareText aria-hidden="true"/);
+  assert.match(page,/<WhatsAppIcon className="h-5 w-5 shrink-0"/);
+  assert.match(page,/Chat on TreatStory/);
+  assert.match(page,/Chat on WhatsApp/);
+  assert.match(page,/Request a custom quote for this creation/);
+  assert.match(page,/px-4 pt-2 md:col-span-2 md:px-0 md:pt-0/);
+  assert.match(reviews,/p-5 shadow-\[0_4px_16px/);
 });
 
-test('mobile custom quote and WhatsApp links show without an expandable box',()=>{
- const detail=read('src/components/product-detail-client.tsx');
- const start=detail.indexOf('aria-label="Additional ordering options"');
- const end=detail.indexOf('hidden min-h-12 md:flex',start);
- assert.ok(start>0 && end>start);
- const mobile=detail.slice(start,end);
- assert.match(mobile,/space-y-4 md:hidden/);
- assert.match(mobile,/Request a custom quote for this creation<\/Link>/);
- assert.match(mobile,/Order via WhatsApp<\/a>/);
- assert.match(mobile,/min-h-12 items-center justify-center/);
- assert.doesNotMatch(mobile,/<details|<summary/);
- assert.match(detail,/hidden min-h-12 md:flex/);
+test('contact actions stay visible and do not require opening a mobile dropdown',()=>{
+  const detail=read('src/components/product-detail-client.tsx');
+  const start=detail.indexOf('aria-label="Contact seller"');
+  const end=detail.indexOf('Your preferences are kept with your selected size',start);
+  assert.ok(start>0 && end>start,'contact panel follows purchase actions');
+  const contact=detail.slice(start,end);
+  assert.match(contact,/Chat on TreatStory/);
+  assert.match(contact,/Chat on WhatsApp/);
+  assert.match(contact,/min-h-12 min-w-0 items-center justify-center/);
+  assert.doesNotMatch(contact,/<details|<summary/);
+  assert.match(contact,/sm:grid-cols-2/);
 });
 
-test('mobile seller header offers one WhatsApp message action and reviews are inset',()=>{
+test('mobile seller header has WhatsApp shortcut while review and purchase layout remain intact',()=>{
   const detail=read('src/components/product-detail-client.tsx');
   const start=detail.indexOf('className="mt-5 md:hidden"');
   const end=detail.indexOf('className="mt-4 hidden min-h-14',start);
-  assert.ok(start>=0 && end>start, 'seller profile row exists');
+  assert.ok(start>=0 && end>start,'seller profile row exists');
   const sellerRow=detail.slice(start,end);
   assert.match(sellerRow,/aria-label=\{'Message ' \+ sellerName \+ ' on WhatsApp'\}/);
   assert.equal((sellerRow.match(/href=\{'https:\/\/wa\.me\/'/g)||[]).length,1);
+  assert.match(sellerRow,/<WhatsAppIcon className="h-5 w-5"/);
   assert.doesNotMatch(sellerRow,/href=\{'tel:\+'|aria-label=\{'Call '/);
-  assert.doesNotMatch(detail,/\bPhone\b/);
   assert.match(detail,/px-4 pt-2 md:col-span-2 md:px-0 md:pt-0/);
-  assert.match(detail,/aria-label="Additional ordering options" className="space-y-4 md:hidden"/);
-  // The actual flex wrapper contains the note, purchase row and alternate links.
-  assert.match(detail,/data-testid="product-order-controls" className="flex flex-col gap-4"/);
+  assert.match(detail,/aria-label="Contact seller"/);
   const controls=detail.slice(detail.indexOf('data-testid="product-order-controls"'),detail.indexOf('<ProductReviews productId='));
   assert.ok(controls.indexOf('Add a note') < controls.indexOf('id="purchase-actions"'));
-  assert.ok(controls.indexOf('id="purchase-actions"') < controls.indexOf('aria-label="Additional ordering options"'));
-  // Note, primary purchase row, quote and WhatsApp all share a 16px vertical rhythm.
-  assert.match(detail,/space-y-4 pb-7 pt-6 md:py-0/);
-  assert.match(detail,/id="purchase-actions" className="grid scroll-mt-48 grid-cols-2 gap-4 py-0/);
+  assert.ok(controls.indexOf('id="purchase-actions"') < controls.indexOf('aria-label="Contact seller"'));
 });
 
 
