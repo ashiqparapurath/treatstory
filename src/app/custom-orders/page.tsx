@@ -25,10 +25,10 @@ const money = (v:number)=>new Intl.NumberFormat('en-IN',{style:'currency',curren
 function CustomOrderContent(){
   const {user,isUserLoading}=useUser();
   const {role}=useAccountRole();
-  const sellerReceivedView = role === 'seller' && requestedReceivedView;
   const db=useFirestore();
   const params=useSearchParams();
   const requestedReceivedView = params.get('view') === 'received';
+  const sellerReceivedView = role === 'seller' && requestedReceivedView;
   const {toast}=useToast();
   const [sellerId,setSellerId]=useState(params.get('seller')||'');
   const [productId,setProductId]=useState(params.get('product')||'');
