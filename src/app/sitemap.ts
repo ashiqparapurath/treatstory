@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { getServerFirebase } from '@/lib/server/firebase-admin';
 import { siteOrigin } from '@/lib/social-metadata';
+import { storefrontShareUrl } from '@/lib/storefront-share';
 
 // Revalidate the sitemap periodically rather than reading the catalog for every bot request.
 export const revalidate = 3600;
@@ -49,7 +50,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const store of stores) {
       const data=store.data();
       if(data.status!=='active' || typeof data.businessName!=='string' || !data.businessName.trim())continue;
-      const url=new URL('/shop/'+encodeURIComponent(store.id),origin).href;
+      const url=storefrontShareUrl(typeof data.slug === 'string' && data.slug ? data.slug : store.id);
       if(seen.has(url))continue;
       seen.add(url);
       const updated=data.updatedAt?.toDate?.()??data.createdAt?.toDate?.();
