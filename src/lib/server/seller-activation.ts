@@ -38,7 +38,14 @@ export async function activateApprovedSeller(
   if (seller.exists || deleting.exists)
     throw new ApiError(409, 'Account already has seller access or is closing.');
   // Reserve the plain business-name URL, using a short suffix only on collision.
-  const slug = await reserveFriendlyStoreSlug(tx, db, details.businessName, ownerUid);
+  let slug: string;
+  try {
+    slug = await reserveFriendlyStoreSlug(tx, db, details.businessName, ownerUid);
+  } catch (error) {
+    if (error instanceof Error && /No unique public store address|already assigned/.test(error.message))
+      throw new ApiError(409, 'Store address unavailable.');
+    throw error;
+  }
 
   const accessType = plan === 'full' ? 'full' : 'trial';
   const accessEndsAt = Timestamp.fromDate(sellerApprovalEnd(now.toDate(), plan));
