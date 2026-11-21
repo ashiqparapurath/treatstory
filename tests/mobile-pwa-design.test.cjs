@@ -222,7 +222,9 @@ test('seller, contact and rating UI displays only verified real data',()=>{
  assert.match(detail,/sellerName &&/);
  assert.match(detail,/whatsappNumber &&/);
  assert.doesNotMatch(detail,/href=\{'tel:\+' \+ whatsappNumber\}/);
- assert.match(detail,/href=\{'https:\/\/wa\.me\/' \+ whatsappNumber/);
+ assert.match(detail,/const whatsAppHref = whatsappNumber && product/);
+ assert.match(detail,/https:\/\/wa\.me\/' \+ whatsappNumber/);
+ assert.match(detail,/href=\{whatsAppHref\}/);
  assert.match(detail,/<ProductRatingBadge productId=\{creator\.id\}/);
  assert.match(reviews,/where\('status', '==', 'published'\)/);
  assert.match(reviews,/if \(isLoading \|\| error \|\| reviews\.length === 0\) return null/);
