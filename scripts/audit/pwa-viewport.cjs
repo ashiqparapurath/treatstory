@@ -117,44 +117,49 @@ const mocks={
        assert.ok(detailLayout.buyBar.top>=0 && detailLayout.buyBar.right<=width+1,name+' '+width+' purchase bar clipped');
        assert.ok(detailLayout.scrollWidth<=width+1,name+' '+width+' product overflow');
        await page.screenshot({path:path.join(out,name+'-detail-'+width+'.png'),fullPage:false});
-       // Validate visible direct quote and WhatsApp actions, without an accordion.
+       // Validate the new dedicated website chat and WhatsApp contact actions
+       // with an independent quote option, without a nested accordion.
        const quoteLink=page.getByRole('link',{name:'Request a custom quote for this creation'}).first();
-       const whatsLink=page.getByRole('link',{name:'Order via WhatsApp'}).first();
-       await quoteLink.scrollIntoViewIfNeeded();
+       const websiteLink=page.getByRole('link',{name:'Chat on TreatStory'}).first();
+       const whatsLink=page.getByRole('link',{name:'Chat on WhatsApp'}).first();
+       await websiteLink.scrollIntoViewIfNeeded();
+       assert.ok(await websiteLink.isVisible(),name+' '+width+' website seller chat not visible');
        assert.ok(await quoteLink.isVisible(),name+' '+width+' custom quote not visible');
-       if(await whatsLink.count()) assert.ok(await whatsLink.isVisible(),name+' '+width+' WhatsApp order not visible');
+       if(await whatsLink.count())assert.ok(await whatsLink.isVisible(),name+' '+width+' WhatsApp chat not visible');
        const orderSpacing=await page.evaluate(()=>{
          const notes=[...document.querySelectorAll('details')].find(x=>x.querySelector('summary')?.textContent?.includes('Add a note'));
          const actions=document.getElementById('purchase-actions');
          const controls=document.querySelector('[data-testid="product-order-controls"]');
-         const extra=document.querySelector('[aria-label="Additional ordering options"]');
-         const quote=extra?.querySelector('a[href^="/custom-orders"]');
-         const whats=extra?.querySelector('a[href^="https://wa.me/"]');
-         if(!notes||!actions||!extra||!quote||!controls)return null;
-         const n=notes.getBoundingClientRect(),act=actions.getBoundingClientRect(),q=quote.getBoundingClientRect(),w=whats?.getBoundingClientRect();
+         const contact=controls?.querySelector('[aria-label="Contact seller"]');
+         const chat=contact?.querySelector('a[href^="/support?seller="]');
+         const whats=contact?.querySelector('a[href^="https://wa.me/"]');
+         const quote=controls?.querySelector('a[href^="/custom-orders"]');
+         if(!notes||!actions||!contact||!chat||!quote||!controls)return null;
+         const n=notes.getBoundingClientRect(),act=actions.getBoundingClientRect(),
+           co=contact.getBoundingClientRect(),q=quote.getBoundingClientRect(),
+           ch=chat.getBoundingClientRect(),w=whats?.getBoundingClientRect();
          const purchaseButtons=[...actions.querySelectorAll('button')];
          const left=purchaseButtons[0]?.getBoundingClientRect(),right=purchaseButtons[1]?.getBoundingClientRect();
-         return {noteGap:act.top-n.bottom,quoteGap:q.top-act.bottom,whatsGap:w?w.top-q.bottom:null,
-           purchaseGap:left&&right?right.left-left.right:null,verticalGap:getComputedStyle(controls).rowGap,
-           quoteHeight:q.height,whatsHeight:w?.height??null,
-           extraWidth:extra.getBoundingClientRect().width,viewportWidth:document.documentElement.clientWidth,
-           notesOpen:notes.open,hasOtherDetails:!!extra.querySelector('details')};
+         const whatsGap=w?(w.top>=ch.bottom-1?w.top-ch.bottom:w.left-ch.right):null;
+         return {noteGap:act.top-n.bottom,contactGap:co.top-act.bottom,quoteGap:q.top-co.bottom,
+           whatsGap,purchaseGap:left&&right?right.left-left.right:null,
+           verticalGap:getComputedStyle(controls).rowGap,
+           quoteHeight:q.height,chatHeight:ch.height,whatsHeight:w?.height??null,
+           contactWidth:co.width,viewportWidth:document.documentElement.clientWidth,
+           notesOpen:notes.open,hasOtherDetails:!!contact.querySelector('details')};
        });
        assert.ok(orderSpacing,name+' '+width+' ordering controls missing');
        assert.equal(orderSpacing.verticalGap,'16px',name+' '+width+' ordering wrapper needs 16px gap');
-       assert.ok(orderSpacing.noteGap>=12,name+' '+width+' notes too close: '+JSON.stringify(orderSpacing));
-       assert.ok(orderSpacing.quoteGap>=12,name+' '+width+' custom quote too close: '+JSON.stringify(orderSpacing));
-       if(orderSpacing.whatsGap!==null)assert.ok(orderSpacing.whatsGap>=8,name+' '+width+' WhatsApp too close: '+JSON.stringify(orderSpacing));
-       // Note, purchase buttons, quote and WhatsApp should share the same 16px gaps.
-       assert.ok(Math.abs(orderSpacing.noteGap-16)<=2,name+' '+width+' note/purchase gap is not 16px: '+JSON.stringify(orderSpacing));
-       assert.ok(Math.abs(orderSpacing.quoteGap-16)<=2,name+' '+width+' purchase/quote gap is not 16px: '+JSON.stringify(orderSpacing));
-       if(orderSpacing.whatsGap!==null)assert.ok(Math.abs(orderSpacing.whatsGap-16)<=2,name+' '+width+' quote/WhatsApp gap is not 16px: '+JSON.stringify(orderSpacing));
-       assert.ok(orderSpacing.purchaseGap!==null && Math.abs(orderSpacing.purchaseGap-16)<=2,name+' '+width+' bag/buy buttons need a 16px gap: '+JSON.stringify(orderSpacing));
-       assert.ok(orderSpacing.quoteHeight>=44,name+' '+width+' quote button undersized');
+       assert.ok(Math.abs(orderSpacing.noteGap-16)<=2,name+' '+width+' note/purchase spacing: '+JSON.stringify(orderSpacing));
+       assert.ok(Math.abs(orderSpacing.contactGap-16)<=2,name+' '+width+' purchase/contact spacing: '+JSON.stringify(orderSpacing));
+       assert.ok(Math.abs(orderSpacing.quoteGap-16)<=2,name+' '+width+' contact/quote spacing: '+JSON.stringify(orderSpacing));
+       if(orderSpacing.whatsGap!==null)assert.ok(Math.abs(orderSpacing.whatsGap-8)<=2,name+' '+width+' website/WhatsApp button spacing: '+JSON.stringify(orderSpacing));
+       assert.ok(orderSpacing.purchaseGap!==null && Math.abs(orderSpacing.purchaseGap-12)<=2,name+' '+width+' bag/buy buttons need a 12px gap: '+JSON.stringify(orderSpacing));
+       assert.ok(orderSpacing.quoteHeight>=44&&orderSpacing.chatHeight>=44,name+' '+width+' quote or website chat button undersized');
        if(orderSpacing.whatsHeight!==null)assert.ok(orderSpacing.whatsHeight>=44,name+' '+width+' WhatsApp button undersized');
-       assert.ok(orderSpacing.extraWidth<=orderSpacing.viewportWidth,name+' '+width+' ordering controls overflow');
+       assert.ok(orderSpacing.contactWidth<=orderSpacing.viewportWidth,name+' '+width+' contact panel overflow');
        assert.equal(orderSpacing.notesOpen,false,name+' '+width+' note should start collapsed');
-       assert.equal(orderSpacing.hasOtherDetails,false,name+' '+width+' extra orders should not be collapsible');
+       assert.equal(orderSpacing.hasOtherDetails,false,name+' '+width+' contact actions should not be collapsible');
        await page.screenshot({path:path.join(out,name+'-orders-'+width+'.png'),fullPage:false});
        await page.goto('http://127.0.0.1:'+srv.address().port+'/');
        await page.getByRole('heading',{name:'Featured products'}).waitFor();
