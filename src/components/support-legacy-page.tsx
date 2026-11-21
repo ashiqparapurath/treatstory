@@ -42,7 +42,7 @@ export default function SupportPage() {
   const { data: targetSeller, isLoading: targetSellerLoading } = useDoc<{ id: string; businessName: string; status: string }>(sellerInfoRef);
   const supportSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'support') : null, [db]);
   const { data: supportSettings } = useDoc<{ contactEmail?: string; publicNotice?: string }>(supportSettingsRef);
-  const ref = useMemoFirebase(() => db && user ? query(collection(db, 'support_tickets'), where('ownerUid', '==', user.uid), limit(50)) : null, [db, user?.uid]);
+  const ref = useMemoFirebase(() => db && user ? query(collection(db, 'support_tickets'), where('ownerUid', '==', user.uid), orderBy('updatedAt', 'desc'), limit(50)) : null, [db, user?.uid]);
   const { data, error, isLoading } = useCollection<LegacyTicket>(ref);
 
   async function requestSupport(payload: Record<string, string>) {
