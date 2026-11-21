@@ -72,6 +72,8 @@ export interface MarketplaceProduct {
   name: string;
   description: string;
   price: number;
+  /** Optional per-product delivery fee; missing means use the store-wide fee. */
+  deliveryCharge?: number;
   category: string;
   imageUrls: string[];
   showPrice: boolean;
