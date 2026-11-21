@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowUp, Clock3, Info, MessageCircle, XCircle } from 'lucide-react';
+import Link from 'next/link';
 import type { SupportChatTicket } from '@/lib/support-conversation-types';
 
 type TicketTimestamp = { toDate?: () => Date };
