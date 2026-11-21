@@ -132,7 +132,7 @@ function SellerContent() {
     setEditing(product ?? null);
     setUploadProgress('');
     setDraft(product ? {
-      name: product.name, description: product.description, price: String(product.price), category: product.category,
+      name: product.name, description: product.description, price: String(product.price), deliveryCharge: product.deliveryCharge == null ? '' : String(product.deliveryCharge), category: product.category,
       imageUrls: product.imageUrls.join('\n'), availability: product.availability,
       stockQuantity: product.stockQuantity == null ? '' : String(product.stockQuantity),
       preparationDays: product.preparationDays == null ? '' : String(product.preparationDays),
@@ -246,6 +246,9 @@ function SellerContent() {
       return toast({variant:'destructive',title:'Check food information',description:'Use up to 12 allergen/dietary labels, and a shelf life between 0 and 365 days.'});
     }
 
+    const customDeliveryCharge = draft.deliveryCharge.trim() === '' ? null : Number(draft.deliveryCharge);
+    if (customDeliveryCharge !== null && (!Number.isFinite(customDeliveryCharge) || customDeliveryCharge < 0 || customDeliveryCharge > 5000 || !/^\d+(?:\.\d{1,2})?$/.test(draft.deliveryCharge.trim())))
+      return toast({ variant: 'destructive', title: 'Delivery charge must be between ₹0 and ₹5,000', description: 'Use at most two decimal places, or leave blank to use the store-wide fee.' });
     const preparationDays = draft.preparationDays.trim() === '' ? 0 : Number(draft.preparationDays);
     if (!Number.isInteger(preparationDays) || preparationDays < 0 || preparationDays > 365)
       return toast({ variant: 'destructive', title: 'Preparation days must be a whole number between 0 and 365' });
@@ -255,7 +258,7 @@ function SellerContent() {
     try {
       const data = {
         sellerId: user.uid, name: draft.name.trim(), description: draft.description.trim(), category: draft.category.trim(),
-        price, imageUrls, showPrice: draft.showPrice, availability: draft.availability,
+        price, ...(customDeliveryCharge !== null ? { deliveryCharge: customDeliveryCharge } : {}), imageUrls, showPrice: draft.showPrice, availability: draft.availability,
         stockQuantity: sharedStock,
         preparationDays,
         minimumOrderQuantity: minQty,
