@@ -10,6 +10,7 @@ import { addressText } from '@/components/default-delivery-address';
 import { useAccountData, useFirestore, useUser } from '@/firebase';
 import { useCart } from '@/context/cart-context';
 import { useToast } from '@/hooks/use-toast';
+import { applicableDeliveryCharge } from '@/lib/product-delivery-charge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -31,6 +32,7 @@ export function CreatorCheckout({ variant = 'card', onlyProductId, onlyLineId, i
   const [termsError, setTermsError] = useState(false);
   const [termsAttempt, setTermsAttempt] = useState(0);
   const [advanceProducts, setAdvanceProducts] = useState<string[]>([]);
+  const [deliveryEstimate, setDeliveryEstimate] = useState<number | null>(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -60,16 +62,38 @@ export function CreatorCheckout({ variant = 'card', onlyProductId, onlyLineId, i
     setAddress(selected?addressText(selected):'');setPincode(selected?.pincode||'');setName(selected?.recipient||'');setPhone(selected?.phone||'');
   }, [savedAddress,addressBook,addressBookLoading,addressChoice,user?.uid]);
   const productKey = JSON.stringify([...new Set(items.map(i => i.id.slice('seller:'.length)))]);
+  const itemsSubtotal = items.reduce((total, item) => total + item.price * item.quantity, 0);
+  const shownDeliveryCharge = fulfillment === 'pickup' ? 0 : deliveryEstimate;
+  const formatMoney = (value: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
   useEffect(() => {
     if (!db) return;
     let live = true;
-    setAdvanceProducts([]); setAdvanceAccepted(false); setTermsLoading(true); setTermsError(false);
-    Promise.all((JSON.parse(productKey) as string[]).map(id => getDoc(doc(db, 'marketplace_products', id)))).then(docs => { if (live) setAdvanceProducts(docs.filter(d => d.data()?.advancePaymentRequired === true).map(d => d.data()?.name as string)); }).catch(() => { if (live) setTermsError(true); }).finally(() => { if (live) setTermsLoading(false); });
+    setAdvanceProducts([]); setDeliveryEstimate(null); setAdvanceAccepted(false); setTermsLoading(true); setTermsError(false);
+    (async () => {
+      const docs = await Promise.all((JSON.parse(productKey) as string[]).map(id => getDoc(doc(db, 'marketplace_products', id))));
+      if (docs.some(d => !d.exists())) throw new Error('A product is no longer available.');
+      const records = docs.map(d => d.data()!);
+      const sellers = [...new Set(records.map(p => p.sellerId as string))];
+      const sellerDocs = await Promise.all(sellers.map(id => getDoc(doc(db, 'sellers', id))));
+      if (sellerDocs.some(d => !d.exists())) throw new Error('A seller is unavailable.');
+      const storeFees = new Map(sellers.map((id, i) => [id, sellerDocs[i].data()?.deliveryFee ?? 0] as const));
+      const perSeller = new Map<string, number>();
+      for (const p of records) {
+        const fallback = storeFees.get(p.sellerId) ?? 0;
+        const fee = applicableDeliveryCharge({ deliveryCharge: p.deliveryCharge }, fallback);
+        if (!Number.isFinite(fee) || fee < 0 || fee > 5000) throw new Error('A seller delivery fee is invalid.');
+        perSeller.set(p.sellerId, Math.max(perSeller.get(p.sellerId) || 0, fee));
+      }
+      if (live) {
+        setAdvanceProducts(records.filter(p => p.advancePaymentRequired === true).map(p => p.name as string));
+        setDeliveryEstimate([...perSeller.values()].reduce((sum, fee) => sum + fee, 0));
+      }
+    })().catch(() => { if (live) setTermsError(true); }).finally(() => { if (live) setTermsLoading(false); });
     return () => { live = false; };
   }, [db, productKey, termsAttempt]);
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!db || !user || busy || !items.length || paymentMethod !== 'cod' || priceChanges.length || termsLoading || termsError || (advanceProducts.length > 0 && !advanceAccepted)) return;
+    if (!db || !user || busy || !items.length || paymentMethod !== 'cod' || priceChanges.length || termsLoading || termsError || shownDeliveryCharge === null || (advanceProducts.length > 0 && !advanceAccepted)) return;
     if (name.trim().length < 2 || phone.trim().length < 5 || address.trim().length < 10) { setEditingAddress(true); return; }
     if (!/^\d{6}$/.test(pincode) && fulfillment === 'delivery') {
       setEditingAddress(true);
@@ -90,7 +114,7 @@ export function CreatorCheckout({ variant = 'card', onlyProductId, onlyLineId, i
         method: 'POST', cache: 'no-store',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          checkoutId, advancePaymentAcknowledged: advanceAccepted,
+          checkoutId, advancePaymentAcknowledged: advanceAccepted, expectedDeliveryTotal: shownDeliveryCharge,
           lines: items.map(item => ({
             productId: item.id.slice('seller:'.length), quantity: item.quantity,
             expectedPrice: item.price, customizationNote: item.customizationNote || '',
@@ -107,6 +131,10 @@ export function CreatorCheckout({ variant = 'card', onlyProductId, onlyLineId, i
         orderIds?: string[];
       };
       if (!response.ok) {
+        if (response.status === 409 && payload.error?.includes('Delivery charges changed')) {
+          setTermsAttempt(value => value + 1);
+          throw new ActionError('Delivery charge changed. Please review the refreshed estimate before placing your order.', 409);
+        }
         if (response.status === 409 && payload.details?.priceChanges?.length) {
           setPriceChanges(payload.details.priceChanges);
           throw new ActionError('Some prices changed. Review and accept the updated prices before placing the order.', 409);
@@ -175,7 +203,14 @@ export function CreatorCheckout({ variant = 'card', onlyProductId, onlyLineId, i
       <label className="flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-[#bda17b] bg-[#fcfaf6] p-4 sm:p-5"><input type="radio" name="payment-method" value="cod" required checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="mt-1 h-4 w-4 shrink-0 accent-[#846b49]" /><Banknote className="mt-0.5 h-5 w-5 text-[#846b49]" /><span><span className="block text-sm font-semibold">Cash on Delivery (COD)</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{paymentMethod === 'cod' && advanceProducts.length ? 'The seller arranges the advance; any remaining balance is payable on delivery.' : 'Pay when your order arrives. Select to review the payment terms.'} Availability and delivery charges are confirmed by the seller.</span></span></label>
       {paymentMethod === 'cod' && advanceProducts.length > 0 && <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm"><strong>Advance payment required</strong><p className="mt-1 text-xs">{advanceProducts.join(', ')}: the seller will arrange the advance and confirm payment before preparation. No payment is collected on this website.</p><label className="mt-3 flex items-start gap-2 text-xs"><input type="checkbox" required checked={advanceAccepted} onChange={e => setAdvanceAccepted(e.target.checked)} />I understand that these products require an advance before preparation.</label></div>}
       <div className="flex items-start gap-3 rounded-2xl border border-dashed p-4 text-muted-foreground"><CreditCard className="h-5 w-5 shrink-0" /><span className="text-xs leading-5"><strong className="block text-foreground">UPI / Cards / Net banking</strong>Coming soon. Online payments are not available yet, and no money will be collected now.</span></div></div>
-      <div className="space-y-3 border-t border-[#e8e0d5] pt-5"><p className="flex items-center gap-2 text-xs text-muted-foreground"><Truck className="h-4 w-4" />Shipping charges and COD availability are subject to seller confirmation.</p>{priceChanges.length > 0 && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm" role="alert"><strong>Prices changed since you added these products.</strong><ul className="mt-2 space-y-1">{priceChanges.map((change,i) => <li key={i}>{change.name}: ₹{change.expected} → ₹{change.current}</li>)}</ul><Button type="button" onClick={acceptUpdatedPrices} className="mt-3">Accept updated prices</Button></div>}<Button type="submit" disabled={busy || !db || paymentMethod !== 'cod' || termsLoading || termsError || (advanceProducts.length > 0 && !advanceAccepted) || priceChanges.length > 0} className="h-14 w-full rounded-full bg-[#29251f] text-sm font-semibold transition hover:bg-[#51463a]">{busy ? 'Placing your order…' : `Place ${items.length} order${items.length === 1 ? '' : 's'}`}</Button><p className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground"><ShieldCheck className="h-4 w-4" />No payment collected online</p></div>
+      <div className="space-y-3 border-t border-[#e8e0d5] pt-5">
+        <div className="rounded-2xl border border-[#e5dccf] bg-white p-4 text-sm" aria-label="Order total estimate">
+          <div className="flex justify-between gap-3 text-[#71675b]"><span>Products</span><span>{formatMoney(itemsSubtotal)}</span></div>
+          <div className="mt-2 flex justify-between gap-3 text-[#71675b]"><span>Delivery {fulfillment === 'pickup' ? '(pickup)' : ''}</span><span>{shownDeliveryCharge === null ? 'Calculating…' : shownDeliveryCharge === 0 ? 'Free' : formatMoney(shownDeliveryCharge)}</span></div>
+          <div className="mt-3 flex justify-between gap-3 border-t border-[#eee7dd] pt-3 text-base font-semibold text-[#302a24]"><span>Order request total</span><span>{shownDeliveryCharge === null ? '—' : formatMoney(itemsSubtotal + shownDeliveryCharge)}</span></div>
+          <p className="mt-2 text-xs leading-5 text-[#86796a]">Delivery is charged at most once per seller, using the highest applicable product or store fee. Pickup has no delivery charge. The seller will confirm fulfillment.</p>
+        </div>
+        <p className="flex items-center gap-2 text-xs text-muted-foreground"><Truck className="h-4 w-4" />Shipping feasibility and COD availability are subject to seller confirmation.</p>{priceChanges.length > 0 && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm" role="alert"><strong>Prices changed since you added these products.</strong><ul className="mt-2 space-y-1">{priceChanges.map((change,i) => <li key={i}>{change.name}: ₹{change.expected} → ₹{change.current}</li>)}</ul><Button type="button" onClick={acceptUpdatedPrices} className="mt-3">Accept updated prices</Button></div>}<Button type="submit" disabled={busy || !db || paymentMethod !== 'cod' || termsLoading || termsError || shownDeliveryCharge === null || (advanceProducts.length > 0 && !advanceAccepted) || priceChanges.length > 0} className="h-14 w-full rounded-full bg-[#29251f] text-sm font-semibold transition hover:bg-[#51463a]">{busy ? 'Placing your order…' : `Place ${items.length} order${items.length === 1 ? '' : 's'}`}</Button><p className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground"><ShieldCheck className="h-4 w-4" />No payment collected online</p></div>
     </form>}
   </section>;
 }

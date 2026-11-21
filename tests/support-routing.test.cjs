@@ -21,11 +21,14 @@ function fixture() {
   let uid = 'buyer-1';
   let idCounter = 0;
   const records = new Map([
-    ['sellers/shop-a', { ownerUid: 'shop-a', businessName: 'Bloom Studio', status: 'active' }],
-    ['sellers/shop-b', { ownerUid: 'shop-b', businessName: 'Clay Works', status: 'active' }],
+    ['sellers/shop-a', { ownerUid: 'shop-a', businessName: 'Bloom Studio', status: 'active', accessEndsAt: { toMillis: () => Date.now() + 86400000 } }],
+    ['sellers/shop-b', { ownerUid: 'shop-b', businessName: 'Clay Works', status: 'active', accessEndsAt: { toMillis: () => Date.now() + 86400000 } }],
     ['seller_orders/order-a', { buyerUid: 'buyer-1', sellerId: 'shop-a' }],
     ['seller_orders/order-b', { buyerUid: 'buyer-1', sellerId: 'shop-b' }],
     ['roles_admin/admin', {}],
+    ['custom_quotes/quote-a', { sellerId: 'shop-a', buyerUid: 'buyer-1', productName: 'Rose bouquet', occasion: 'Anniversary', status: 'requested' }],
+    ['custom_quotes/quote-b', { sellerId: 'shop-b', buyerUid: 'buyer-1', productName: 'Clay vase', status: 'quoted' }],
+    ['custom_quotes/quote-self', { sellerId: 'shop-a', buyerUid: 'shop-a', productName: 'Self request' }],
   ]);
   const notices = [], emails = [];
   const doc = path => ({ path, id: path.split('/').at(-1) });
@@ -120,6 +123,72 @@ test('seller support goes to platform administrators; previous admin tickets sti
   f.records.set('support_tickets/old-admin-ticket', { ownerUid: 'buyer-1', subject: 'Old request', message: 'Legacy help', status:'open', response:'' });
   assert.equal((await f.action({ action: 'reply', ticketId: 'old-admin-ticket', message: 'Your earlier request is handled.' }, 'admin')).status, 200);
   assert.ok(!f.notices.some(n => n.account === 'shop-b'));
+});
+
+test('a seller can open a private quote-linked buyer conversation without duplicate tickets', async () => {
+  const f = fixture();
+  const first = await f.action({ action: 'open_quote_chat', quoteId: 'quote-a' }, 'shop-a');
+  assert.equal(first.status, 200);
+  assert.equal(first.data.ticketId, 'quote_quote-a');
+  assert.equal(first.data.created, true);
+  const ticket = f.records.get('support_tickets/quote_quote-a');
+  assert.equal(ticket.route, 'seller');
+  assert.equal(ticket.quoteId, 'quote-a');
+  assert.equal(ticket.ownerUid, 'buyer-1');
+  assert.equal(ticket.sellerId, 'shop-a');
+  assert.equal(ticket.initialSender, 'system', 'opening a chat must not impersonate a written message from the seller');
+  assert.match(ticket.subject,/Rose bouquet/);
+  assert.equal(f.notices.filter(n => n.account === 'buyer-1' && n.notice.href === '/support?ticket=quote_quote-a').length, 1);
+  assert.ok(!f.notices.some(n => n.account === 'admin'));
+
+  const repeated = await f.action({ action: 'open_quote_chat', quoteId: 'quote-a' }, 'shop-a');
+  assert.equal(repeated.status, 200);
+  assert.equal(repeated.data.ticketId, first.data.ticketId);
+  assert.equal(repeated.data.created, false);
+  assert.equal(f.notices.filter(n => n.account === 'buyer-1').length, 1, 'reopening must not notify buyer again');
+  assert.equal(Array.from(f.records.keys()).filter(p => p.startsWith('support_tickets/')).length, 1);
+
+  const sellerReply = await f.action({ action: 'reply', ticketId: first.data.ticketId, message: 'We can confirm availability for this bouquet.' }, 'shop-a');
+  assert.equal(sellerReply.status, 200);
+  assert.ok(f.notices.some(n => n.account === 'buyer-1' && n.notice.template === 'support_reply'));
+  const buyerReply = await f.action({ action: 'followup', ticketId: first.data.ticketId, message: 'That sounds great, thank you!' }, 'buyer-1');
+  assert.equal(buyerReply.status, 200);
+  assert.ok(f.notices.some(n => n.account === 'shop-a' && n.notice.href === '/seller/messages'));
+  assert.equal((await f.action({ action: 'reply', ticketId: first.data.ticketId, message: 'Not my customer.' }, 'shop-b')).status, 403);
+  assert.equal((await f.action({ action: 'followup', ticketId: first.data.ticketId, message: 'Not my quotation.' }, 'shop-b')).status, 403);
+});
+
+test('quote chat open is restricted to the addressed active seller; no guessing other buyer IDs', async () => {
+  const f = fixture();
+  assert.equal((await f.action({ action: 'open_quote_chat', quoteId: 'quote-a' }, 'shop-b')).status, 403);
+  assert.equal((await f.action({ action: 'open_quote_chat', quoteId: 'quote-a' }, 'buyer-1')).status, 403);
+  assert.equal((await f.action({ action: 'open_quote_chat', quoteId: 'quote-a' }, 'admin')).status, 403);
+  assert.equal((await f.action({ action: 'open_quote_chat', quoteId: 'not-a-quote' }, 'shop-a')).status, 403);
+  assert.equal((await f.action({ action: 'open_quote_chat', quoteId: 'quote-self' }, 'shop-a')).status, 403);
+  assert.equal((await f.action({ action: 'open_quote_chat', quoteId: '../quote-a' }, 'shop-a')).status, 400);
+  f.records.set('sellers/shop-a', {...f.records.get('sellers/shop-a'),status:'suspended'});
+  assert.equal((await f.action({ action: 'open_quote_chat', quoteId: 'quote-a' }, 'shop-a')).status, 403);
+  f.records.set('sellers/shop-a', {...f.records.get('sellers/shop-a'),status:'active',accessEndsAt:{toMillis:()=>Date.now()-1000}});
+  assert.equal((await f.action({action:'open_quote_chat',quoteId:'quote-a'},'shop-a')).status,403,'expired seller must not initiate chat');
+  assert.equal(f.notices.length, 0);
+  assert.equal(Array.from(f.records.keys()).filter(p => p.startsWith('support_tickets/')).length, 0);
+});
+
+test('received quotation view and scoped seller chat are linked in one seller workflow', () => {
+  const dashboard = fs.readFileSync('src/app/seller/dashboard/page.tsx', 'utf8');
+  const quotes = fs.readFileSync('src/app/custom-orders/page.tsx', 'utf8');
+  const sellerInbox = fs.readFileSync('src/components/seller-message-inbox.tsx', 'utf8');
+  const buyerInbox = fs.readFileSync('src/components/support-legacy-page.tsx', 'utf8');
+  const thread = fs.readFileSync('src/components/support-ticket-thread.tsx', 'utf8');
+  assert.match(dashboard,/href="\/custom-orders\?view=received"/);
+  assert.match(quotes,/sellerReceivedView \? 'Received quotations'/);
+  assert.match(quotes,/href=\{'\/seller\/messages\?quote=' \+ encodeURIComponent\(q.id\)\}/);
+  assert.match(quotes,/Open buyer chat/);
+  assert.match(sellerInbox,/action: 'open_quote_chat', quoteId: requestedQuoteId/);
+  assert.match(sellerInbox,/openTicketId=\{openTicketId\}/);
+  assert.match(buyerInbox,/query.get\('ticket'\)/);
+  assert.match(thread,/ticket.initialSender \|\| 'customer'/);
+  assert.match(thread,/View linked quotation/);
 });
 
 test('seller and buyer interfaces are separated and Firestore access is scoped', () => {

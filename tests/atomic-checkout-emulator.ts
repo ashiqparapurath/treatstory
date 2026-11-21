@@ -133,6 +133,60 @@ async function run() {
   assert.equal(mails.docs[0].data().details.find((row:{label:string})=>row.label==='Payment').value,'Advance arranged with seller');
   await placeAtomicCheckout(db,'buyer-advance',advance);
   assert.equal((await db.collection('mail_outbox').where('uid','==','buyer-advance').get()).size,1,'idempotent checkout does not queue duplicate emails');
+  // Product-level delivery overrides store fees, charged once per seller
+  // even if the buyer orders different sizes, quantities, or products.
+  await sellerRef.update({ deliveryFee: 50, dailyOrderCapacity: 40 });
+  const feeProductId = 'test-product-fee-' + randomUUID();
+  const defaultFeeProductId = 'test-default-fee-' + randomUUID();
+  const freeProductId = 'test-free-fee-' + randomUUID();
+  const deliveryTestProduct = {
+    sellerId, status:'published', availability:'available', price:200,
+    showPrice:true, stockQuantity:10, minimumOrderQuantity:1, preparationDays:0,
+    weightOptions:[],
+  };
+  await db.collection('marketplace_products').doc(feeProductId).set({ ...deliveryTestProduct, name:'Custom-delivery bouquet', deliveryCharge:150 });
+  await db.collection('marketplace_products').doc(defaultFeeProductId).set({ ...deliveryTestProduct, name:'Default-delivery bouquet', price:100 });
+  await db.collection('marketplace_products').doc(freeProductId).set({ ...deliveryTestProduct, name:'Free-delivery bouquet', price:75, deliveryCharge:0 });
+  const freightRequest = (id:string, price:number, name:string):CheckoutPayload => {
+    const payload = request(name);
+    payload.lines=[{productId:id, quantity:1, expectedPrice:price, customizationNote:'', weight:null}];
+    return payload;
+  };
+  const highFee = freightRequest(feeProductId,200,'fee-high');
+  const inheritedFee = freightRequest(defaultFeeProductId,100,'fee-default');
+  inheritedFee.expectedDeliveryTotal = 50;
+  const inheritedResult = await placeAtomicCheckout(db,'buyer-fee-default',inheritedFee);
+  assert.equal(inheritedResult.total,150,'legacy products continue using the store delivery fee');
+  const freeFee = freightRequest(freeProductId,75,'fee-free');
+  freeFee.expectedDeliveryTotal = 0;
+  const freeResult = await placeAtomicCheckout(db,'buyer-fee-free',freeFee);
+  assert.equal(freeResult.total,75,'explicit zero overrides a paid store fee');
+
+  const combinedFee = request('buyer-fee-group');
+  combinedFee.lines=[
+    {productId:feeProductId,quantity:2,expectedPrice:200,customizationNote:'',weight:null},
+    {productId:defaultFeeProductId,quantity:1,expectedPrice:100,customizationNote:'',weight:null},
+  ];
+  combinedFee.expectedDeliveryTotal = 150;
+  const combined = await placeAtomicCheckout(db,'buyer-fee-group',combinedFee);
+  assert.equal(combined.total,650,'highest product fee is added once per seller, not per item or quantity');
+  const chargedOrders = await Promise.all(combined.orderIds.map(id => db.collection('seller_orders').doc(id).get()));
+  assert.deepEqual(chargedOrders.map(snap => snap.data()?.deliveryFee),[150,0],'delivery is attached to only one seller order');
+
+  const pickupFee = freightRequest(feeProductId,200,'fee-pickup');
+  pickupFee.deliveryMode='pickup';
+  pickupFee.expectedDeliveryTotal = 0;
+  const pickupResult = await placeAtomicCheckout(db,'buyer-fee-pickup',pickupFee);
+  assert.equal(pickupResult.total,200,'pickup never adds the product delivery fee');
+
+  const beforeRejected=(await db.collection('marketplace_products').doc(feeProductId).get()).data()?.stockQuantity;
+  highFee.expectedDeliveryTotal = 25;
+  await assert.rejects(() => placeAtomicCheckout(db,'buyer-fee-outdated',highFee),
+    /Delivery charges changed/i, 'stale delivery estimate requires the buyer to review it');
+  assert.equal((await db.collection('marketplace_products').doc(feeProductId).get()).data()?.stockQuantity,beforeRejected,
+    'a rejected stale fee must not reserve stock');
+  console.log('PASS per-product fee override, free delivery, store fallback, pickup, grouped maximum and stale-estimate validation');
+
   // The same database transaction must block new orders from buyers or stores
   // whose account deletion has started, even when a stale session exists.
   const closingBuyer = 'buyer-closing-' + randomUUID();

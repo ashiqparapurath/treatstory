@@ -3,7 +3,7 @@ import { QuoteCheckout } from '@/components/quote-checkout';
 import { PrivateReferencePhoto } from '@/components/private-reference-photo';
 import { getErrorNotice, ActionError } from '@/lib/user-notices';
 import { errorToast } from '@/lib/user-notices';
-import { Suspense, useEffect, useState, type FormEvent } from 'react';
+import { Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { collection, doc, query, where, limit } from 'firebase/firestore';
@@ -16,6 +16,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { MessageSquareText } from 'lucide-react';
+import { priceRequestDescription, quoteRequestSize } from '@/lib/quote-request-prefill';
 
 type Quote = { id:string;buyerUid:string;sellerId:string;productId?:string;sellerName?:string;productName?:string;occasion:string;description:string;budget:number;requestedDate:string;referenceUrl?:string;status:'requested'|'quoted'|'declined'|'accepted'|'cancelled'|'completed';orderId?:string;quotedPrice?:number;quotedNote?:string;expiresAt?:{toDate?:()=>Date} };
 const money = (v:number)=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(v);
@@ -25,6 +27,8 @@ function CustomOrderContent(){
   const {role}=useAccountRole();
   const db=useFirestore();
   const params=useSearchParams();
+  const requestedReceivedView = params.get('view') === 'received';
+  const sellerReceivedView = role === 'seller' && requestedReceivedView;
   const {toast}=useToast();
   const [sellerId,setSellerId]=useState(params.get('seller')||'');
   const [productId,setProductId]=useState(params.get('product')||'');
@@ -33,6 +37,8 @@ function CustomOrderContent(){
   const [budget,setBudget]=useState('');
   const [date,setDate]=useState('');
   const [referenceUrl,setReferenceUrl]=useState('');
+  const autoDescription = useRef('');
+  const requestedSize = params.get('size') || '';
   const validReference = referenceUrl.startsWith('/api/reference-media/');
   const [uploading,setUploading]=useState(false);
   const [serviceError,setServiceError]=useState('');
@@ -47,6 +53,17 @@ function CustomOrderContent(){
   const {data:creators,error:creatorsError}=useCollection<Seller>(creatorsRef);
   const {data:chosenCreator}=useDoc<Seller>(creatorRef);
   const {data:chosenProduct}=useDoc<MarketplaceProduct>(productRef);
+  const linkedProduct = chosenProduct?.id === productId && chosenProduct.sellerId === sellerId && chosenProduct.status === 'published'
+    ? chosenProduct : null;
+  const priceOnRequest = linkedProduct?.showPrice === false;
+  const selectedSize = linkedProduct ? quoteRequestSize(linkedProduct, requestedSize) : '';
+  useEffect(() => {
+    if (!linkedProduct || linkedProduct.showPrice !== false) return;
+    const generated = priceRequestDescription(linkedProduct, requestedSize);
+    setDescription(current => !current.trim() || current === autoDescription.current ? generated : current);
+    setOccasion(current => !current.trim() || current === 'Price enquiry' ? 'Price enquiry' : current);
+    autoDescription.current = generated;
+  }, [linkedProduct?.id, linkedProduct?.showPrice, linkedProduct?.name, linkedProduct?.description, linkedProduct?.sku, sellerId, requestedSize]);
   const {data:products,error:productsError}=useCollection<MarketplaceProduct>(productsRef);
   const creatorOptions=[...(creators || [])];
   if(chosenCreator && !creatorOptions.some(c=>c.id===sellerId)) creatorOptions.push({...chosenCreator,id:sellerId});
@@ -78,6 +95,11 @@ function CustomOrderContent(){
       await api({action:'create',sellerId:sellerId.trim(),productId:productId.trim(),occasion:occasion.trim(),description:description.trim(),budget:Number(budget),requestedDate:date,referenceUrl:referenceUrl.trim()});
       toast({title:'Custom request sent',description:'The creator can review your request and send a quote.'});
       setOccasion('');setDescription('');setBudget('');setDate('');setReferenceUrl('');
+      // Preserve the same product and a useful editable draft if the buyer asks again.
+      if (priceOnRequest && linkedProduct) {
+        const initial = priceRequestDescription(linkedProduct, requestedSize);
+        setOccasion('Price enquiry');setDescription(initial);autoDescription.current = initial;
+      } else autoDescription.current = '';
     }catch(error){toast(errorToast(error, 'quote'));}
     finally{setBusy(false);}
   }
@@ -87,30 +109,43 @@ function CustomOrderContent(){
     catch(error){toast(errorToast(error, 'quote'));}
     finally{setBusy(false);}
   }
-  return <div className="min-h-screen bg-[#f8f6f2]"><Header/><main className="section-shell pb-24 pt-10"><p className="eyebrow text-[#a68a64]">Made just for you</p><h1 className="mt-3 text-4xl font-medium">Custom creations & quotes</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Planning a birthday cake, custom painting or handmade gift? Ask a creator for a tailored price. Review a creator’s quote, then confirm fulfillment details to place a custom order.</p>
-    {!user&&!isUserLoading?<Link href="/login" className="editorial-button mt-7">Sign in to request a quote</Link>:<div className="mt-9 grid gap-8 lg:grid-cols-2">
-      <section className="rounded-3xl border bg-white p-5 sm:p-8"><h2 className="text-xl font-semibold">Request a custom creation</h2><form onSubmit={submit} className="mt-5 space-y-4">
+  return <div className="min-h-screen bg-[#f8f6f2]"><Header/><main className="section-shell pb-24 pt-10"><p className="eyebrow text-[#a68a64]">{sellerReceivedView ? 'Seller studio / requests' : 'Made just for you'}</p><h1 className="mt-3 text-3xl font-semibold sm:text-4xl">{sellerReceivedView ? 'Received quotations' : 'Custom creations & quotes'}</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">{sellerReceivedView ? 'Review customer quotation requests, send an offer and open a private conversation with each buyer.' : 'Planning a birthday cake, custom painting or handmade gift? Ask a creator for a tailored price. Review a creator’s quote, then confirm fulfillment details to place a custom order.'}</p>
+    {sellerReceivedView && <Link href="/seller/dashboard" className="mt-4 inline-flex min-h-10 items-center text-xs font-semibold text-[#775e42] underline underline-offset-4">Back to seller dashboard</Link>}
+    {!user&&!isUserLoading?<Link href={'/login?next=' + encodeURIComponent('/custom-orders?seller=' + encodeURIComponent(sellerId) + '&product=' + encodeURIComponent(productId) + (requestedSize ? '&size=' + encodeURIComponent(requestedSize) : ''))} className="editorial-button mt-7">Sign in to request a quote</Link>:<div className={sellerReceivedView ? 'mt-7' : 'mt-9 grid gap-8 lg:grid-cols-2'}>
+      {!sellerReceivedView && <section className="rounded-3xl border bg-white p-5 sm:p-8"><h2 className="text-xl font-semibold">{priceOnRequest ? 'Ask for the current price' : 'Request a custom creation'}</h2>
+      {priceOnRequest && <p className="mt-2 text-xs leading-5 text-[#776753]">We selected the product and filled its details for you. Review or edit the request, choose your preferred date, and send it to the seller for a confirmed price.</p>}
+      <form onSubmit={submit} className="mt-5 space-y-4">
         {serviceError && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm">{serviceError} Your request details are kept here; you can retry after the service is restored.</p>}
-        <div className="space-y-2"><label htmlFor="custom-quote-creator" className="block text-xs font-semibold">Creator</label><Select value={sellerId || undefined} onValueChange={value=>{setSellerId(value);setProductId('');}}>
+        <div className="space-y-2"><label htmlFor="custom-quote-creator" className="block text-xs font-semibold">Creator</label><Select value={sellerId || undefined} onValueChange={value=>{setSellerId(value);setProductId('');if(description===autoDescription.current){setDescription('');setOccasion('');autoDescription.current='';}}}>
             <SelectTrigger id="custom-quote-creator" aria-label="Creator" className="min-h-12"><SelectValue placeholder="Choose a creator" /></SelectTrigger>
             <SelectContent position="popper" sideOffset={6} className="max-h-[min(22rem,65dvh)]">{creatorOptions.map(c=><SelectItem key={c.id} value={c.id}>{c.businessName}</SelectItem>)}</SelectContent>
           </Select></div>
-        <div className="space-y-2"><label htmlFor="custom-quote-product" className="block text-xs font-semibold">Product (optional)</label><Select value={productId || '__custom__'} disabled={!sellerId} onValueChange={value=>setProductId(value === '__custom__' ? '' : value)}>
+        <div className="space-y-2"><label htmlFor="custom-quote-product" className="block text-xs font-semibold">Product (optional)</label><Select value={productId || '__custom__'} disabled={!sellerId} onValueChange={value=>{setProductId(value === '__custom__' ? '' : value);if(description===autoDescription.current){setDescription('');setOccasion('');autoDescription.current='';}}}>
             <SelectTrigger id="custom-quote-product" aria-label="Product" className="min-h-12"><SelectValue placeholder="A new custom creation" /></SelectTrigger>
             <SelectContent position="popper" sideOffset={6} className="max-h-[min(22rem,65dvh)]">
               <SelectItem value="__custom__">A new custom creation</SelectItem>
               {productOptions.map(p=><SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
             </SelectContent>
           </Select></div>
+        {priceOnRequest && linkedProduct && <div aria-label="Selected product details" className="rounded-2xl border border-[#eadccc] bg-[#fbf7f1] p-3.5">
+          <p className="text-[11px] font-semibold text-[#8c7258]">Selected product · Price on request</p>
+          <p className="mt-1 text-sm font-semibold text-[#382b20]">{linkedProduct.name}</p>
+          <p className="mt-1 text-xs text-[#766758]">{linkedProduct.category}{selectedSize ? ' · ' + selectedSize : ''}</p>
+          <p className="mt-2 text-[11px] text-[#8b7967]">The seller will confirm the current price. No fixed listing price is used.</p>
+        </div>}
         {(creatorsError||productsError) && <p role="alert" className="text-xs text-red-700">Could not load creators or products. Please refresh and try again.</p>}
         <label className="block space-y-1 text-xs font-semibold">Occasion<Input required minLength={2} maxLength={120} value={occasion} onChange={e=>setOccasion(e.target.value)} placeholder="Birthday, anniversary, wedding..."/></label>
         <label className="block space-y-1 text-xs font-semibold">Describe what you need<Textarea required minLength={15} maxLength={2000} rows={5} value={description} onChange={e=>setDescription(e.target.value)} placeholder="Size, ingredients, colours, materials, personalization..."/></label>
-        <div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-semibold">Approximate budget (₹)<Input required type="number" min={0} max={10000000} value={budget} onChange={e=>setBudget(e.target.value)}/></label><label className="block space-y-1 text-xs font-semibold">Preferred date<Input required type="date" value={date} onChange={e=>setDate(e.target.value)}/></label></div>
+        <div className="grid gap-3 sm:grid-cols-2"><label className="block space-y-1 text-xs font-semibold">{priceOnRequest ? 'Your budget (₹) · optional' : 'Approximate budget (₹)'}<Input required={!priceOnRequest} type="number" min={0} max={10000000} value={budget} onChange={e=>setBudget(e.target.value)} placeholder={priceOnRequest ? 'Leave blank for seller quote' : undefined} />{priceOnRequest && <span className="block text-[11px] font-normal text-[#8b7967]">No budget required to request the current price.</span>}</label><label className="block space-y-1 text-xs font-semibold">Preferred date<Input required type="date" value={date} onChange={e=>setDate(e.target.value)}/></label></div>
         <div className="space-y-3"><label className="block space-y-2 text-xs font-semibold">Reference photo (optional)<Input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploading||busy||!user} onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void uploadReference(file);}} /></label><p className="text-xs text-muted-foreground">JPG, PNG or WebP up to 2 MB. Photos are visible only to you and the chosen creator.</p>{uploading&&<p role="status" className="text-xs">Uploading reference photo…</p>}{validReference&&<div className="flex items-center gap-3"><PrivateReferencePhoto path={referenceUrl}/><Button type="button" variant="outline" onClick={()=>setReferenceUrl('')}>Remove photo</Button></div>}</div>
         <Button type="submit" disabled={busy||uploading||!user||!sellerId||!!creatorsError||!!productsError} className="h-12 w-full rounded-full">{busy?'Sending request…':uploading?'Uploading photo…':'Send to creator'}</Button>
-      </form></section>
-      <div className="space-y-6"><section className="rounded-3xl border bg-white p-5 sm:p-8"><h2 className="text-xl font-semibold">Your requests</h2>{buyerError?<p role="alert" className="mt-4 text-xs text-red-700">Unable to load requests.</p>:!buyerQuotes?.length?<p className="mt-4 text-sm text-muted-foreground">No requests yet.</p>:<div className="mt-5 space-y-4">{buyerQuotes.map(q=><article key={q.id} className="rounded-xl border p-4"><div className="flex items-center justify-between gap-3"><p className="font-semibold">{q.occasion}</p><span className="rounded-full bg-[#f4efe7] px-3 py-1 text-xs capitalize">{q.status}</span></div><p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">{q.description}</p><p className="mt-2 text-xs text-muted-foreground">{q.sellerName || 'Creator'}{q.productName ? ` · ${q.productName}` : ' · Custom creation'}</p><p className="mt-3 text-xs">Requested: {q.requestedDate} · Budget {money(q.budget)}</p>{q.status==='quoted'&&<div className="mt-3 rounded-lg bg-[#f7f3ec] p-3"><p className="font-semibold">Creator quote: {money(q.quotedPrice||0)}</p><p className="mt-1 text-xs">{q.quotedNote}</p><p className="mt-1 text-xs">Valid until {q.expiresAt?.toDate?.()?.toLocaleDateString('en-IN')||'7 days after issue'}</p><QuoteCheckout quote={q} busy={busy} onConfirm={action}/></div>}{(['requested','quoted'].includes(q.status)||(q.status==='accepted'&&!q.orderId))&&<Button className="mt-2" variant="outline" disabled={busy} onClick={()=>void action({action:'cancel',id:q.id})}>Cancel request</Button>}{q.status==='accepted'&&<p className="mt-3 text-xs text-green-800">{q.orderId?<Link href="/orders" className="underline">Order placed. View fulfillment and payment status in Orders.</Link>:'Legacy accepted quote: contact support to arrange fulfillment.'}</p>}</article>)}</div>}</section>
-        {role==='seller'&&<section className="rounded-3xl border bg-white p-5 sm:p-8"><h2 className="text-xl font-semibold">Creator quote requests</h2>{sellerError?<p role="alert" className="mt-4 text-xs text-red-700">Could not load creator quotes.</p>:!sellerQuotes?.length?<p className="mt-4 text-sm text-muted-foreground">No customer requests yet.</p>:<div className="mt-4 space-y-4">{sellerQuotes.map(q=><article key={q.id} className="rounded-xl border p-4"><h3 className="font-semibold">{q.occasion} <span className="text-xs font-normal capitalize text-muted-foreground">· {q.status}</span></h3><p className="mt-2 whitespace-pre-wrap text-xs">{q.description}</p>{q.productName&&<p className="mt-2 text-xs text-muted-foreground">{q.productName}</p>}<p className="mt-2 text-xs text-muted-foreground">Budget {money(q.budget)} · Requested date {q.requestedDate}</p>{q.referenceUrl&&<PrivateReferencePhoto path={q.referenceUrl}/>}{q.status==='requested'&&<div className="mt-3 space-y-2"><Input type="number" min={1} max={10000000} placeholder="Your quoted price (₹)" value={quotePrice[q.id]||''} onChange={e=>setQuotePrice(p=>({...p,[q.id]:e.target.value}))}/><Textarea maxLength={800} placeholder="What this quote includes, timing, delivery..." value={quoteNote[q.id]||''} onChange={e=>setQuoteNote(p=>({...p,[q.id]:e.target.value}))} rows={2}/><div className="flex flex-wrap gap-2"><Button disabled={busy||Number(quotePrice[q.id])<=0||!quoteNote[q.id]?.trim()} size="sm" onClick={()=>void action({action:'quote',id:q.id,price:Number(quotePrice[q.id]),note:quoteNote[q.id]})}>Send quote</Button><Button variant="outline" size="sm" disabled={busy} onClick={()=>void action({action:'decline',id:q.id})}>Decline</Button></div></div>}</article>)}</div>}</section>}
+      </form></section>}
+      <div className="space-y-6">{!sellerReceivedView && <section className="rounded-3xl border bg-white p-5 sm:p-8"><h2 className="text-xl font-semibold">Your requests</h2>{buyerError?<p role="alert" className="mt-4 text-xs text-red-700">Unable to load requests.</p>:!buyerQuotes?.length?<p className="mt-4 text-sm text-muted-foreground">No requests yet.</p>:<div className="mt-5 space-y-4">{buyerQuotes.map(q=><article key={q.id} className="rounded-xl border p-4"><div className="flex items-center justify-between gap-3"><p className="font-semibold">{q.occasion}</p><span className="rounded-full bg-[#f4efe7] px-3 py-1 text-xs capitalize">{q.status}</span></div><p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">{q.description}</p><p className="mt-2 text-xs text-muted-foreground">{q.sellerName || 'Creator'}{q.productName ? ` · ${q.productName}` : ' · Custom creation'}</p><p className="mt-3 text-xs">Requested: {q.requestedDate} · {q.budget > 0 ? 'Budget ' + money(q.budget) : 'Budget not specified'}</p>{q.status==='quoted'&&<div className="mt-3 rounded-lg bg-[#f7f3ec] p-3"><p className="font-semibold">Creator quote: {money(q.quotedPrice||0)}</p><p className="mt-1 text-xs">{q.quotedNote}</p><p className="mt-1 text-xs">Valid until {q.expiresAt?.toDate?.()?.toLocaleDateString('en-IN')||'7 days after issue'}</p><QuoteCheckout quote={q} busy={busy} onConfirm={action}/></div>}{(['requested','quoted'].includes(q.status)||(q.status==='accepted'&&!q.orderId))&&<Button className="mt-2" variant="outline" disabled={busy} onClick={()=>void action({action:'cancel',id:q.id})}>Cancel request</Button>}{q.status==='accepted'&&<p className="mt-3 text-xs text-green-800">{q.orderId?<Link href="/orders" className="underline">Order placed. View fulfillment and payment status in Orders.</Link>:'Legacy accepted quote: contact support to arrange fulfillment.'}</p>}</article>)}</div>}</section>}
+        {role==='seller'&&<section className="rounded-3xl border bg-white p-5 sm:p-8"><h2 className="text-xl font-semibold">{sellerReceivedView ? 'Requests from buyers' : 'Creator quote requests'}</h2>{sellerError?<p role="alert" className="mt-4 text-xs text-red-700">Could not load creator quotes.</p>:!sellerQuotes?.length?<p className="mt-4 text-sm text-muted-foreground">No customer requests yet.</p>:<div className="mt-4 space-y-4">{sellerQuotes.map(q=><article key={q.id} className="rounded-xl border p-4"><h3 className="font-semibold">{q.occasion} <span className="text-xs font-normal capitalize text-muted-foreground">· {q.status}</span></h3><p className="mt-2 whitespace-pre-wrap text-xs">{q.description}</p>{q.productName&&<p className="mt-2 text-xs text-muted-foreground">{q.productName}</p>}<p className="mt-2 text-xs text-muted-foreground">{q.budget > 0 ? 'Budget ' + money(q.budget) : 'Budget not specified'} · Requested date {q.requestedDate}</p>{q.referenceUrl&&<PrivateReferencePhoto path={q.referenceUrl}/>}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link href={'/seller/messages?quote=' + encodeURIComponent(q.id)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#d9ccb9] bg-[#fbf6ef] px-4 text-xs font-semibold text-[#60472e] transition hover:bg-[#f3e8d9]"><MessageSquareText aria-hidden="true" className="h-4 w-4" />Open buyer chat</Link>
+        </div>
+        {q.status==='requested'&&<div className="mt-3 space-y-2"><Input type="number" min={1} max={10000000} placeholder="Your quoted price (₹)" value={quotePrice[q.id]||''} onChange={e=>setQuotePrice(p=>({...p,[q.id]:e.target.value}))}/><Textarea maxLength={800} placeholder="What this quote includes, timing, delivery..." value={quoteNote[q.id]||''} onChange={e=>setQuoteNote(p=>({...p,[q.id]:e.target.value}))} rows={2}/><div className="flex flex-wrap gap-2"><Button disabled={busy||Number(quotePrice[q.id])<=0||!quoteNote[q.id]?.trim()} size="sm" onClick={()=>void action({action:'quote',id:q.id,price:Number(quotePrice[q.id]),note:quoteNote[q.id]})}>Send quote</Button><Button variant="outline" size="sm" disabled={busy} onClick={()=>void action({action:'decline',id:q.id})}>Decline</Button></div></div>}</article>)}</div>}</section>}
       </div></div>}
   </main></div>;
 }

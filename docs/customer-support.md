@@ -34,3 +34,17 @@ Sellers contact the platform via `/support` with no recipient seller ID. The ser
 6. Confirm that email and in-app notifications arrive; failed emails stay in the outbox for retry.
 
 The old single-device encrypted support pilot remains retired. Matrix production readiness is documented in [support implementation status](support-implementation-status.md).
+
+
+## Seller quotation chat (received quotations)
+
+Sellers access **Received quotations** directly from the seller dashboard, linking to `/custom-orders?view=received`. This focused view shows requests addressed to the seller (product name, buyer's description, budget if provided, preferred date, optional private reference photo, current status) and retains the existing send-quote/decline actions.
+
+Each received request has **Open buyer chat**:
+1. The browser goes to `/seller/messages?quote=<quoteId>`. The seller's authenticated session sends `open_quote_chat` with only that quote ID.
+2. The server transaction reads the quote, verifies it is addressed to the authenticated, active, **unexpired** seller and has a distinct buyer, and opens `support_tickets/quote_<quoteId>`. Repeated clicks return the same ticket with no duplicate conversation or duplicate buyer notification.
+3. The ticket has `route: seller`, `ownerUid` equal to the verified **buyer UID**, `sellerId` equal to the authenticated seller UID and `quoteId` as the private reference. Opening creates a neutral **system** notice, not an authored message impersonating the seller.
+4. The buyer receives an in-app notification linking directly to `/support?ticket=quote_<quoteId>`, which opens that buyer's existing full-screen ticket conversation after sign-in.
+5. Sellers and buyers reply via the existing role-checked support API. Firestore rules expose these tickets to the buyer, addressed seller and admin oversight, and block direct client edits. The seller's inbox provides a link back to received quotations; both sides can return to the quote from chat.
+
+Messages are **not end-to-end encrypted**. No unrestricted seller-to-buyer messaging endpoint was added; chat initiation requires an actual quotation received by that seller. The existing Matrix experimental flags stay off. No extra Firestore index is needed beyond the support ticket query indexes already included in the preceding routing PR.

@@ -5,6 +5,8 @@ export type SupportChatTicket = {
   route?: 'seller' | 'admin';
   sellerId?: string;
   sellerName?: string;
+  quoteId?: string;
+  initialSender?: 'customer' | 'support' | 'system';
   category: string;
   orderId?: string;
   subject?: string;

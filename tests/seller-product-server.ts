@@ -55,7 +55,28 @@ async function main() {
     saveProductRequest.safeParse({ product, expectedUpdatedAt: 123.5 }).success,
     true,
   );
-  const updatedMaximum = { ...product, preparationDays: 365, weightOptions: product.weightOptions.slice(0, 2) };
+  assert.equal(saveProductRequest.safeParse({ product: { ...product, deliveryCharge: 0 } }).success,true,'zero delivery charge is valid');
+  assert.equal(saveProductRequest.safeParse({ product: { ...product, deliveryCharge: 125.50 } }).success,true,'positive delivery charge is valid');
+  assert.equal(saveProductRequest.safeParse({ product: { ...product, deliveryCharge: -1 } }).success,false,'negative delivery charge is denied');
+  assert.equal(saveProductRequest.safeParse({ product: { ...product, deliveryCharge: 5001 } }).success,false,'fee beyond maximum is denied');
+
+  const withDeliveryCharge = saveProductRequest.parse({ product: { ...product, deliveryCharge: 125 } });
+  const customSaved = await saveSellerProduct(db, uid, withDeliveryCharge);
+  const chargeRef = db.doc('marketplace_products/' + customSaved.productId);
+  assert.equal((await chargeRef.get()).data()?.deliveryCharge,125,'product-specific fee is saved');
+  const firstVersion=(await chargeRef.get()).data()!.updatedAt.toMillis();
+  await saveSellerProduct(db,uid,saveProductRequest.parse({
+    productId: customSaved.productId, expectedUpdatedAt: firstVersion,
+    product: { ...product, deliveryCharge: 0 },
+  }));
+  assert.equal((await chargeRef.get()).data()?.deliveryCharge,0,'free delivery override must persist');
+  const secondVersion=(await chargeRef.get()).data()!.updatedAt.toMillis();
+  await saveSellerProduct(db,uid,saveProductRequest.parse({
+    productId: customSaved.productId, expectedUpdatedAt: secondVersion, product,
+  }));
+  assert.equal((await chargeRef.get()).data()?.deliveryCharge,undefined,'clearing override restores store default');
+
+    const updatedMaximum = { ...product, preparationDays: 365, weightOptions: product.weightOptions.slice(0, 2) };
   assert.equal(saveProductRequest.safeParse({ product: updatedMaximum }).success, true, "Two sizes and 365 preparation days are valid");
   assert.equal(saveProductRequest.safeParse({ product: { ...updatedMaximum, preparationDays: 366 } }).success, false);
   const withTwoSizes = {

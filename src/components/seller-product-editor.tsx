@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
-import { Plus, Trash2, X, ChevronDown, ImagePlus, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Plus, Trash2, X, ChevronDown, ImagePlus, ArrowLeft, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import type { MarketplaceProduct } from '@/lib/marketplace-types';
 import type { User } from 'firebase/auth';
 import { ConfirmActionDialog } from './confirm-action-dialog';
@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 export type WeightUnit = 'g' | 'kg' | 'ml' | 'l' | 'pieces';
 export type WeightOptionDraft = { value: string; unit: WeightUnit; price: string; stockQuantity: string };
 export type ProductDraft = {
-  name: string; description: string; category: string; price: string;
+  name: string; description: string; category: string; price: string; deliveryCharge: string;
   imageUrls: string; availability: MarketplaceProduct['availability']; stockQuantity: string;
   preparationDays: string; minimumOrderQuantity: string; weightValue: string; weightUnit: WeightUnit;
   weightOptions: WeightOptionDraft[]; customizationOptions: string; careInstructions: string;
@@ -28,7 +28,7 @@ export type ProductDraft = {
   showPrice: boolean; status: 'draft' | 'published';
 };
 export const emptyDraft: ProductDraft = {
-  name: '', description: '', category: '', price: '', imageUrls: '', availability: 'available',
+  name: '', description: '', category: '', price: '', deliveryCharge: '', imageUrls: '', availability: 'available',
   stockQuantity: '', preparationDays: '', minimumOrderQuantity: '1', weightValue: '', weightUnit: 'g',
   weightOptions: [], customizationOptions: '', careInstructions: '',
   ingredients: '', allergens: '', dietaryTags: '', shelfLifeDays: '', storageInstructions: '',
@@ -120,6 +120,21 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
     window.addEventListener('popstate', handleBack);
     return () => window.removeEventListener('popstate', handleBack);
   }, [step, dirty, blocked, confirmDiscard, onClose]);
+  // Nested Radix dialogs can leave keyboard focus on the editor after browser
+  // Back (notably in WebKit). Escape must always cancel the discard prompt
+  // without closing the editor or losing the unsaved draft.
+  useEffect(() => {
+    if (!confirmDiscard || blocked) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setConfirmDiscard(false);
+      }
+    };
+    window.addEventListener('keydown', onEscape, true);
+    return () => window.removeEventListener('keydown', onEscape, true);
+  }, [confirmDiscard, blocked]);
+
   function close() {
     if (blocked || confirmDiscard) return;
     if (dirty) setConfirmDiscard(true);
@@ -324,13 +339,27 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
               </details>
             </section>
             <section data-step hidden={step !== 2} aria-label="Pricing and availability" className="space-y-5">
-              {!draft.weightOptions.length && <label className="block space-y-1.5 rounded-2xl border border-[#e9dfd3] bg-white p-3.5 text-sm font-semibold sm:p-4">Price (₹)<Input required={!draft.weightOptions.length} type="number" inputMode="decimal" min={0} max={10000000} step="0.01" value={draft.price} onChange={e=>set('price',e.target.value)}/></label>}
+              <div className="rounded-2xl border border-[#e9dfd3] bg-white p-3.5 sm:p-4" aria-label="Price visibility">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[#403329]">Show a fixed price?</p>
+                    <p className="mt-1 text-xs leading-5 text-[#817164]">For market-dependent prices, turn this off. Buyers see “Price on request” and can ask for a current quote.</p>
+                  </div>
+                  <label className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-[#e1d4c3] bg-[#faf7f2] px-3 text-xs font-semibold text-[#564331]">
+                    <input type="checkbox" role="switch" aria-label="Show price publicly" aria-checked={draft.showPrice} className="size-4 accent-[#754328]" checked={draft.showPrice} onChange={e=>set('showPrice',e.target.checked)} />
+                    {draft.showPrice ? <Eye aria-hidden="true" className="h-4 w-4" /> : <EyeOff aria-hidden="true" className="h-4 w-4" />}
+                    {draft.showPrice ? 'Visible' : 'Hidden'}
+                  </label>
+                </div>
+                {!draft.showPrice && <p role="status" className="mt-3 rounded-xl bg-[#f6efe5] px-3 py-2.5 text-xs leading-5 text-[#745939]">Prices can be left blank while hidden. Shoppers cannot purchase at an outdated price; they will request the latest price from you instead.</p>}
+              </div>
+              {!draft.weightOptions.length && <label className="block space-y-1.5 rounded-2xl border border-[#e9dfd3] bg-white p-3.5 text-sm font-semibold sm:p-4">{draft.showPrice ? 'Price (₹)' : 'Reference price (₹) · optional'}<Input required={draft.showPrice} type="number" inputMode="decimal" min={0} max={10000000} step="0.01" value={draft.price} onChange={e=>set('price',e.target.value)} placeholder={draft.showPrice ? 'e.g. 450' : 'Not shown to shoppers'} />{!draft.showPrice && <span className="block text-xs font-normal leading-5 text-[#827164]">Leave this blank if the market price has not been confirmed.</span>}</label>}
           <details className="group rounded-2xl border border-[#e4d6c5] bg-white p-3.5 sm:p-5" open={draft.weightOptions.length > 0 ? true : undefined} aria-labelledby="variant-pricing-title">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden"><span id="variant-pricing-title">Weight, size & variant pricing</span><span className="flex items-center gap-2 text-xs font-normal text-[#8b795e]">{draft.weightOptions.length} sizes <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180"/></span></summary><div className="mt-4 space-y-4">
-            <p className="text-xs leading-5 text-[#6d6050]">Example: add <strong>500 g at ₹450</strong> and <strong>1 kg at ₹800</strong> under the same cake product. Enter a price for each size. Each size can also have its own stock; leaving stock blank uses the product's shared stock.</p>
+            <p className="text-xs leading-5 text-[#6d6050]">{draft.showPrice ? <>Example: add <strong>500 g at ₹450</strong> and <strong>1 kg at ₹800</strong> under the same cake product. Enter a price for each size.</> : <>Add each size normally. Price entries are optional and will not appear on the public listing while the price is hidden.</>} Each size can have its own stock; leaving stock blank uses the product's shared stock.</p>
             <div className="space-y-3">
               {draft.weightOptions.map((option,i) => <div key={i} className="relative grid min-w-0 grid-cols-2 items-end gap-3 rounded-xl border border-[#e3d1ba] bg-[#fcfaf7] p-3 sm:grid-cols-[minmax(0,1fr)_80px_minmax(0,100px)_minmax(0,95px)_44px]">
-                <p className="col-span-2 pr-12 text-xs font-semibold text-[#82623e] sm:hidden">Size {i+1} · set its selling price</p>
+                <p className="col-span-2 pr-12 text-xs font-semibold text-[#82623e] sm:hidden">Size {i+1}{draft.showPrice ? ' · set its selling price' : ' · price on request'}</p>
                 <label className="space-y-1 text-xs font-medium">Weight / count<Input id={'size-value-' + i} required type="number" inputMode="decimal" min="0.01" max="100000" step="any" value={option.value} placeholder="500" onChange={e => set('weightOptions', draft.weightOptions.map((v,n)=>n===i?{...v,value:e.target.value}:v))}/></label>
                 <div className="space-y-1 text-xs font-medium"><Label htmlFor={`seller-unit-${i}`} className="text-xs">Unit</Label>
                   <Select value={option.unit} onValueChange={value=>set('weightOptions',draft.weightOptions.map((v,n)=>n===i?{...v,unit:value as WeightUnit}:v))}>
@@ -338,16 +367,20 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
                     <SelectContent position="popper" sideOffset={6}>{units.map(unit=><SelectItem key={unit} value={unit}>{unit}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <label className="space-y-1 text-xs font-semibold text-[#685139]">Price for this size (₹) *<Input required type="number" inputMode="decimal" min={0} max={10000000} step="0.01" value={option.price} placeholder="e.g. 450" onChange={e => set('weightOptions', draft.weightOptions.map((v,n)=>n===i?{...v,price:e.target.value}:v))}/></label>
+                <label className="space-y-1 text-xs font-semibold text-[#685139]">Price for this size (₹) {draft.showPrice ? '*' : '· optional'}<Input required={draft.showPrice} type="number" inputMode="decimal" min={0} max={10000000} step="0.01" value={option.price} placeholder="e.g. 450" onChange={e => set('weightOptions', draft.weightOptions.map((v,n)=>n===i?{...v,price:e.target.value}:v))}/></label>
                 <label className="space-y-1 text-xs font-medium">Size stock<Input type="number" inputMode="numeric" min={0} max={1000000} step={1} value={option.stockQuantity} placeholder="Total stock" onChange={e => set('weightOptions', draft.weightOptions.map((v,n)=>n===i?{...v,stockQuantity:e.target.value}:v))}/></label>
                 <button type="button" aria-label={`Remove weight option ${i+1}`} className="absolute right-2 top-2 flex size-10 items-center justify-center rounded-xl border border-[#edd9d4] bg-white text-red-700 sm:static" onClick={()=>set('weightOptions',draft.weightOptions.filter((_,n)=>n!==i))}><Trash2 className="h-4 w-4"/></button>
               </div>)}
               <Button type="button" variant="outline" className="min-h-11 w-full rounded-xl border-dashed border-[#bfae95] sm:w-auto sm:rounded-full" disabled={draft.weightOptions.length>=8} onClick={()=>set('weightOptions',[...draft.weightOptions,{value:'',unit:'g',price:'',stockQuantity:''}])}><Plus className="mr-2 h-4 w-4"/>Add another size & price</Button>
-              {!!draft.weightOptions.length && <div role="status" className="min-w-0 break-words rounded-xl bg-[#f5ede2] p-3 text-xs leading-6 text-[#5e503f]"><strong>Price preview:</strong> {draft.weightOptions.map((option,i) => `${option.value || 'Size '+(i+1)} ${option.unit}: ₹${option.price.trim() === '' ? 'set price' : option.price}`).join(' · ')}. Each size is saved under this single product.</div>}
+              {!!draft.weightOptions.length && <div role="status" className="min-w-0 break-words rounded-xl bg-[#f5ede2] p-3 text-xs leading-6 text-[#5e503f]"><strong>{draft.showPrice ? 'Price preview:' : 'Size preview:'}</strong> {draft.weightOptions.map((option,i) => `${option.value || 'Size '+(i+1)} ${option.unit}${draft.showPrice ? ': ₹' + (option.price.trim() === '' ? 'set price' : option.price) : ': price on request'}`).join(' · ')}. Each size is saved under this single product.</div>}
               <label className="block max-w-xs space-y-1 text-xs font-medium">Minimum order quantity (units)<Input required type="number" inputMode="numeric" min={1} max={99} value={draft.minimumOrderQuantity} onChange={e=>set('minimumOrderQuantity',e.target.value)}/></label>
             </div>
           </div></details>
-              <label className="flex min-h-12 items-center gap-3 rounded-xl border border-[#e9dfd3] bg-white p-3 text-xs font-medium"><input className="size-4 accent-[#836847]" type="checkbox" checked={draft.showPrice} onChange={e=>set('showPrice',e.target.checked)} />Show price publicly</label>
+              <div className="rounded-2xl border border-[#e9dfd3] bg-white p-3.5 sm:p-4">
+                <label htmlFor="seller-editor-delivery-charge" className="block text-sm font-semibold text-[#4a3b2d]">Product delivery charge (₹) <span className="font-normal text-[#928575]">· optional</span></label>
+                <Input id="seller-editor-delivery-charge" type="number" inputMode="decimal" min={0} max={5000} step="0.01" value={draft.deliveryCharge} onChange={e => set('deliveryCharge', e.target.value)} placeholder="Use your store's delivery charge" className="mt-2 min-h-11" />
+                <p className="mt-2 text-xs leading-5 text-[#817568]">Leave blank to use your store's delivery charge. Enter 0 for free delivery on this product. When multiple products from your store are ordered together, only the highest applicable delivery charge is added once. Pickup is free.</p>
+              </div>
               <div className="grid min-w-0 items-start gap-4 rounded-2xl border border-[#e9dfd3] bg-white p-3.5 sm:grid-cols-2 sm:p-4">
               <div className="flex min-w-0 flex-col gap-1.5 text-xs font-medium"><Label htmlFor="seller-editor-availability" className="text-xs leading-5">Availability</Label>
                   <Select value={draft.availability} onValueChange={value=>set('availability',value as ProductDraft['availability'])}>
@@ -370,7 +403,9 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
                 <p className="mt-2 whitespace-pre-line break-words text-sm leading-6 text-[#655547]">{draft.description}</p></div>
               <div className="min-w-0 rounded-2xl border border-[#e9dfd3] bg-white p-4 text-sm">
                 {draft.weightOptions.length ? <ul>{draft.weightOptions.map((w,i) => <li key={i} className="flex flex-wrap justify-between gap-2 py-1">
-                  <span>{w.value} {w.unit}</span><span>₹{w.price} · {w.stockQuantity || draft.stockQuantity || '0'} in stock</span></li>)}</ul> : <p>₹{draft.price}</p>}
+                  <span>{w.value} {w.unit}</span><span>{draft.showPrice ? '₹' + w.price : 'Price on request'} · {w.stockQuantity || draft.stockQuantity || '0'} in stock</span></li>)}</ul> : <p>{draft.showPrice ? '₹' + draft.price : 'Price on request'}</p>}
+                {!draft.showPrice && <p className="mt-1 text-xs leading-5 text-[#806b53]">Customers will request a quote rather than check out at a fixed price.</p>}
+                <p className="mt-2 text-xs text-[#786550]">Delivery: {draft.deliveryCharge.trim() === '' ? 'Uses store delivery charge' : Number(draft.deliveryCharge) === 0 ? 'Free delivery' : `₹${draft.deliveryCharge} (product override)`}</p>
                 <p className="mt-2 capitalize">{draft.availability.replaceAll('-', ' ')}{(!draft.weightOptions.length || draft.weightOptions.some(size => !size.stockQuantity)) && ` · ${draft.stockQuantity || '0'} in stock`}</p>
                 {editing && <p className="mt-2">Current listing status: {draft.status}</p>}
                 {sku && <ProductSkuCopy sku={sku}/>}

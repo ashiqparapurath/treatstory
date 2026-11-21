@@ -82,6 +82,8 @@ export async function saveSellerProduct(
           // listing fields are intentionally cleared when absent from the editor.
           const previous = existing.data() || {};
           delete previous.shelfLifeDays;
+          // Missing delivery charge means inherit the store fee, not keep a stale override.
+          delete previous.deliveryCharge;
           if (!input.product.weightOptions.some(option =>
             option.value === previous.weightValue && option.unit === previous.weightUnit)) {
             delete previous.weightValue;

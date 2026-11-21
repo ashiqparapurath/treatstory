@@ -1,6 +1,7 @@
 'use client';
 
 import { collection, limit, orderBy, query, where } from 'firebase/firestore';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useAccountRole, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,42 @@ export function SellerMessageInbox() {
   const { user } = useUser();
   const { role, roleError, isRoleLoading } = useAccountRole();
   const { toast } = useToast();
+  const [requestedQuoteId, setRequestedQuoteId] = useState('');
+  const [openTicketId, setOpenTicketId] = useState<string | null>(null);
+  const [quoteError, setQuoteError] = useState('');
+  const startedQuote = useRef('');
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('quote') || '';
+    setRequestedQuoteId(/^[A-Za-z0-9_-]{1,120}$/.test(id) ? id : '');
+    const ticket = params.get('ticket') || '';
+    if (/^[A-Za-z0-9_-]{1,160}$/.test(ticket)) setOpenTicketId(ticket);
+  }, []);
+  useEffect(() => {
+    if (!requestedQuoteId || !user || role !== 'seller' || startedQuote.current === requestedQuoteId) return;
+    startedQuote.current = requestedQuoteId;
+    let active = true;
+    setQuoteError('');
+    (async () => {
+      try {
+        const response = await fetch('/api/support', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await user.getIdToken() },
+          body: JSON.stringify({ action: 'open_quote_chat', quoteId: requestedQuoteId }),
+        });
+        const result = await response.json().catch(() => ({})) as { error?: string; ticketId?: string };
+        if (!response.ok || !result.ticketId)
+          throw new ActionError(result.error || 'Unable to open this quotation chat.', response.status);
+        if (active) setOpenTicketId(result.ticketId);
+      } catch (cause) {
+        if (active) {
+          setQuoteError(cause instanceof Error ? cause.message : 'Unable to open this quotation chat.');
+          startedQuote.current = '';
+        }
+      }
+    })();
+    return () => { active = false; if (startedQuote.current === requestedQuoteId) startedQuote.current = ''; };
+  }, [requestedQuoteId, user?.uid, role]);
   const listRef = useMemoFirebase(
     () => db && user && role === 'seller'
       ? query(collection(db, 'support_tickets'), where('sellerId', '==', user.uid), where('route', '==', 'seller'), orderBy('updatedAt', 'desc'), limit(100))
@@ -48,13 +85,14 @@ export function SellerMessageInbox() {
 
   return <SupportChatWorkspace
     tickets={tickets}
+    openTicketId={openTicketId}
     title="Customer messages"
     secure={false}
-    backHref="/seller/dashboard"
-    backLabel="Back to seller dashboard"
+    backHref={requestedQuoteId ? '/custom-orders?view=received' : '/seller/dashboard'}
+    backLabel={requestedQuoteId ? 'Back to received quotations' : 'Back to seller dashboard'}
     isLoading={isLoading}
     error={!!error}
-    topNotice={<div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2"><Info className="h-4 w-4" /><span>Messages sent to your store only. These conversations are private, but not end-to-end encrypted.</span>{error && <Button size="sm" variant="outline" onClick={retry}>Retry</Button>}</div>}
+    topNotice={<div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2"><Info className="h-4 w-4" /><span>Messages sent to your store only. These conversations are private, but not end-to-end encrypted.</span>{quoteError && <span role="alert" className="text-red-700">{quoteError} <Link href="/custom-orders?view=received" className="underline">Back to quotations</Link></span>}{error && <Button size="sm" variant="outline" onClick={retry}>Retry</Button>}</div>}
     renderConversation={ticket => {
       const selected = tickets.find(item => item.id === ticket.id);
       return selected ? <SupportTicketThread key={selected.id} ticket={selected} perspective="support"

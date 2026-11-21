@@ -336,7 +336,7 @@ service cloud.firestore {
     }
     function validMarketplaceProduct(p, changed, previousWeights) {
       return p.keys().hasOnly([
-        'sellerId', 'name', 'description', 'price', 'category', 'imageUrls',
+        'sellerId', 'name', 'description', 'price', 'deliveryCharge', 'category', 'imageUrls',
         'showPrice', 'availability', 'stockQuantity', 'preparationDays',
         'minimumOrderQuantity', 'weightValue', 'weightUnit', 'weightOptions', 'customizationOptions',
         'advancePaymentRequired', 'careInstructions', 'ingredients', 'allergens', 'dietaryTags', 'shelfLifeDays', 'storageInstructions',
@@ -348,6 +348,8 @@ service cloud.firestore {
       p.description is string && p.description.size() <= 2000 &&
       p.category is string && p.category.size() > 0 && p.category.size() <= 80 &&
       p.price is number && p.price >= 0 && p.price <= 10000000 &&
+      (!('deliveryCharge' in p) ||
+        (p.deliveryCharge is number && p.deliveryCharge >= 0 && p.deliveryCharge <= 5000)) &&
       p.imageUrls is list && p.imageUrls.size() <= 10 &&
       (!changed.hasAny(['imageUrls']) || validProductImages(p.imageUrls)) &&
       p.showPrice is bool &&

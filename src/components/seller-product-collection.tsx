@@ -60,6 +60,10 @@ export function SellerProductCollection({ products }: { products: MarketplacePro
   };
 
   const preparePurchase = (product: MarketplaceProduct, intent: 'cart' | 'direct') => {
+    if (!product.showPrice) {
+      router.push('/custom-orders?seller=' + encodeURIComponent(product.sellerId) + '&product=' + encodeURIComponent(product.id));
+      return;
+    }
     const choices = sellerCardWeightChoices(product);
     if (choices.length > 1) {
       setSelectedWeightIndex(null);

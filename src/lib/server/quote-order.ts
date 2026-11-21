@@ -8,6 +8,7 @@ import {
 import type { QuoteFulfillment } from '../quote-checkout-schema';
 import { ApiError } from './firebase-admin';
 import { acceptsDeliveryRequest } from '@/lib/delivery-coverage';
+import { applicableDeliveryCharge } from '@/lib/product-delivery-charge';
 import { orderReference } from './order-email';
 import { queueNotification } from './mail';
 /** Called inside the quote transaction, before any writes. One quote reserves one order. */
@@ -74,19 +75,6 @@ export async function convertQuote(
     !seller.deliverySlots.includes(input.requestedSlot)
   )
     throw new ApiError(409, 'Choose an available time slot.');
-  const fee = input.deliveryMode === 'delivery' ? seller.deliveryFee || 0 : 0;
-  const total = q.quotedPrice + fee;
-  if (
-    !Number.isFinite(total) ||
-    q.quotedPrice <= 0 ||
-    fee < 0 ||
-    total > 10000000 ||
-    input.expectedTotal !== total
-  )
-    throw new ApiError(
-      409,
-      'The total changed. Review the quote and delivery fee.',
-    );
   const bookingRef = db.doc(
     'seller_bookings/' + q.sellerId + '_' + q.requestedDate,
   );
@@ -145,6 +133,15 @@ export async function convertQuote(
       stockSource = 'product';
     }
   }
+  // A product-specific delivery charge also applies to seller-confirmed quotes.
+  // Validate before committing the order, using the same fee as the buyer review.
+  const fee = input.deliveryMode === 'delivery'
+    ? applicableDeliveryCharge({ deliveryCharge: p?.deliveryCharge }, seller.deliveryFee || 0)
+    : 0;
+  const total = q.quotedPrice + fee;
+  if (!Number.isFinite(total) || q.quotedPrice <= 0 || fee < 0 || fee > 5000 ||
+      total > 10000000 || input.expectedTotal !== total)
+    throw new ApiError(409, 'The total changed. Review the quote and delivery fee.');
   const now = Timestamp.now();
   if (productRef && stockSource === 'option')
     tx.update(productRef, { weightOptions: options, updatedAt: now });

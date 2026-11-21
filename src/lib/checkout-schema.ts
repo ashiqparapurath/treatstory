@@ -16,6 +16,8 @@ export const checkoutLineSchema = z.object({
 
 export const checkoutRequestSchema = z.object({
   advancePaymentAcknowledged: z.boolean().default(false),
+  // Optional for backward-compatible clients; new checkout verifies the buyer saw the fee.
+  expectedDeliveryTotal: z.number().finite().min(0).max(50000).optional(),
   checkoutId: z.string().uuid(),
   lines: z.array(checkoutLineSchema).min(1).max(10),
   customerName: z.string().trim().min(2).max(120),

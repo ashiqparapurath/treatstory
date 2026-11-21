@@ -15,6 +15,7 @@ import {
 import type { CheckoutPayload, CheckoutLine } from "@/lib/checkout-schema";
 import { ApiError } from "@/lib/server/firebase-admin";
 import { acceptsDeliveryRequest, type DeliveryCoverage } from '@/lib/delivery-coverage';
+import { applicableDeliveryCharge } from '@/lib/product-delivery-charge';
 
 type SellerRecord = {
   ownerUid?: string;
@@ -45,6 +46,8 @@ type Listing = {
   status: string;
   availability: string;
   price: number;
+  /** Optional per-product override of the seller's default delivery fee. */
+  deliveryCharge?: number;
   showPrice: boolean;
   minimumOrderQuantity?: number;
   stockQuantity: number;
@@ -334,7 +337,7 @@ export async function placeAtomicCheckout(
             }> = [];
             let itemSubtotal = 0;
             const qtyBySeller = new Map<string, number>();
-            const sellersWithDeliveryFee = new Set<string>();
+            const deliveryBySeller = new Map<string, number>();
             for (const [idx, line] of input.lines.entries()) {
               const work = working.get(line.productId)!;
               const p = work.listing;
@@ -405,13 +408,14 @@ export async function placeAtomicCheckout(
                 (qtyBySeller.get(p.sellerId) || 0) + 1,
               );
               const seller = storeById.get(p.sellerId)!;
-              // One delivery charge per seller per grouped checkout, not per product line.
-              const fee =
-                input.deliveryMode === "delivery" &&
-                !sellersWithDeliveryFee.has(p.sellerId)
-                  ? positiveNumber(seller.deliveryFee)
-                  : 0;
-              sellersWithDeliveryFee.add(p.sellerId);
+              // A product's fee overrides the store default, including zero for free delivery.
+              // For a combined seller order, charge only the highest applicable fee once.
+              const fee = input.deliveryMode === "delivery"
+                ? applicableDeliveryCharge(p, positiveNumber(seller.deliveryFee))
+                : 0;
+              if (!Number.isFinite(fee) || fee < 0 || fee > 5000)
+                throw new ApiError(409, "A seller's delivery charge is invalid. Contact the seller.");
+              deliveryBySeller.set(p.sellerId, Math.max(deliveryBySeller.get(p.sellerId) || 0, fee));
               const amount = price * line.quantity;
               itemSubtotal += amount;
               const id = uid + "_" + input.checkoutId + "_" + idx;
@@ -439,7 +443,7 @@ export async function placeAtomicCheckout(
                     .filter(Boolean)
                     .join("\n\n"),
                   deliveryMode: input.deliveryMode,
-                  deliveryFee: fee,
+                  deliveryFee: 0, // assigned once per seller after all line fees are known
                   requestedDate: input.requestedDate,
                   requestedSlot: input.requestedSlot,
                   giftRecipient: input.giftRecipient,
@@ -484,10 +488,21 @@ export async function placeAtomicCheckout(
                 );
               }
             }
+            const chargedSellers = new Set<string>();
+            for (const order of orders) {
+              const sellerId = order.record.sellerId as string;
+              if (!chargedSellers.has(sellerId)) {
+                order.record.deliveryFee = deliveryBySeller.get(sellerId) || 0;
+                chargedSellers.add(sellerId);
+              }
+            }
             const deliveryTotal = orders.reduce(
               (s, o) => s + (o.record.deliveryFee as number),
               0,
             );
+            if (input.expectedDeliveryTotal !== undefined &&
+                Math.round(input.expectedDeliveryTotal * 100) !== Math.round(deliveryTotal * 100))
+              throw new ApiError(409, "Delivery charges changed. Review the latest delivery fee before placing the order.");
             const total = itemSubtotal + deliveryTotal;
             if (!validValue(total))
               throw new ApiError(

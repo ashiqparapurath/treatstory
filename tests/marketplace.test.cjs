@@ -23,7 +23,7 @@ function sharedModule(id) {
 function load(file, mocks = {}, globals = {}) {
   const output = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   const module = { exports: {} };
-  vm.runInNewContext(output, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id==='@/lib/server/request-body'?load('src/lib/server/request-body.ts',mocks):id==='@/lib/account-mail'?accountMailMock : ['@/lib/addresses','@/lib/image-source','@/lib/document-id','@/lib/user-notices', '@/lib/order-feedback','@/lib/server/mail'].includes(id) ? sharedModule(id) : id === 'lucide-react' ? new Proxy({}, { get: () => () => null }) : id === '@/components/ui/select' ? selectMock : require(id), console,
+  vm.runInNewContext(output, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id==='@/lib/server/request-body'?load('src/lib/server/request-body.ts',mocks):id==='@/lib/account-mail'?accountMailMock : ['@/lib/addresses','@/lib/image-source','@/lib/document-id','@/lib/user-notices', '@/lib/order-feedback','@/lib/server/mail','@/lib/product-delivery-charge'].includes(id) ? sharedModule(id) : id === 'lucide-react' ? new Proxy({}, { get: () => () => null }) : id === '@/components/ui/select' ? selectMock : require(id), console,
     setTimeout: (...args) => { const timer = setTimeout(...args); timer.unref(); return timer; }, clearTimeout, AbortSignal, TextDecoder, URL, URLSearchParams, ...globals }, { filename: file });
   return module.exports;
 }
@@ -304,7 +304,7 @@ test('a single seller listing supports separately priced weight and unit variant
   assert.match(editor, /Price for this size/);
   assert.match(editor, /Add another size & price/);
   assert.match(editor, /Price preview/);
-  assert.match(editor, /required=\{!draft.weightOptions.length\}/);
+  assert.match(editor, /required=\{draft.showPrice\}/);
   assert.match(save, /weights\.some\(w => w\.price === undefined\)/);
   assert.match(save, /weights\.map\(w => w\.price!/);
   assert.match(editor, /required type="number"/);
@@ -344,7 +344,7 @@ test('checkout reuses the saved PIN and accepts address changes from a popup', a
     '@/components/checkout-address-dialog': { CheckoutAddressDialog: AddressDialog },
     '@/components/loading-states': { SectionSkeleton: () => null },
     '@/components/default-delivery-address': { addressText: a => `${a.line1}, ${a.pincode}` },
-    'firebase/firestore': { doc: () => ({}), getDoc: async () => ({ data: () => ({name:'Cake',advancePaymentRequired:requiresAdvance}) }) },
+    'firebase/firestore': { doc: (_db, type, id) => ({ type, id }), getDoc: async ref => ref.type === 'sellers' ? {exists: () => true, data: () => ({deliveryFee:35})} : {exists: () => true, data: () => ({sellerId:'shop-1', name:'Cake',advancePaymentRequired:requiresAdvance})} },
     '@/firebase': { useAccountData: () => ({ address: saved }), useFirestore: () => db, useUser: () => ({user, isUserLoading:false}) },
     '@/context/cart-context': { useCart: () => ({ cartItems: items, directItem: directLine, clearDirectCheckout() { directClears++; directLine = null; }, removeFromCart(key) {cartRemovals.push(key);}, updateLinePrice() {} }) },
     '@/hooks/use-toast': { useToast: () => ({ toast: v => { notice = v; } }) },
@@ -367,6 +367,7 @@ test('checkout reuses the saved PIN and accepts address changes from a popup', a
   await act(async () => { await tree.root.findByType('form').props.onSubmit({preventDefault(){}}); });
   // A valid PIN passes local validation and reaches checkout, rather than the PIN error.
   assert.equal(sent.pincode, '680001');
+  assert.equal(sent.expectedDeliveryTotal,35,'customer reviews the seller delivery fee before placing an order');
   assert.equal(sent.deliveryAddress, 'House 123 Main Street, 673001');
   assert.equal(notice.title, 'Order request sent');
   act(() => tree.unmount());

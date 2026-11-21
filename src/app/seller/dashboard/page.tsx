@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { MarketplaceProduct, SellerApplication } from '@/lib/marketplace-types';
-import { LayoutDashboard, Package, Settings, ShoppingBag, Plus, ArrowUpRight, Clock3, Store, Trash2, Pencil, CheckCircle2, AlertCircle, LogOut, Search, ImageIcon, LifeBuoy, MessageSquareText } from 'lucide-react';
+import { LayoutDashboard, Package, Settings, ShoppingBag, Plus, ArrowUpRight, Clock3, Store, Trash2, Pencil, CheckCircle2, AlertCircle, LogOut, Search, ImageIcon, LifeBuoy, MessageSquareText, FileText } from 'lucide-react';
 import { SellerProductEditor, emptyDraft, type ProductDraft } from '@/components/seller-product-editor';
 import { parseProductImageUrls } from '@/lib/product-image-urls';
 import { saveProductRequest, invalidProductMessage } from '@/lib/seller-product-validation';
@@ -132,7 +132,7 @@ function SellerContent() {
     setEditing(product ?? null);
     setUploadProgress('');
     setDraft(product ? {
-      name: product.name, description: product.description, price: String(product.price), category: product.category,
+      name: product.name, description: product.description, price: product.showPrice === false && product.price === 0 ? '' : String(product.price), deliveryCharge: product.deliveryCharge == null ? '' : String(product.deliveryCharge), category: product.category,
       imageUrls: product.imageUrls.join('\n'), availability: product.availability,
       stockQuantity: product.stockQuantity == null ? '' : String(product.stockQuantity),
       preparationDays: product.preparationDays == null ? '' : String(product.preparationDays),
@@ -145,7 +145,7 @@ function SellerContent() {
       ingredients: product.ingredients ?? '', allergens: (product.allergens??[]).join(', '),
       dietaryTags: (product.dietaryTags??[]).join(', '), shelfLifeDays: product.shelfLifeDays == null ? '' : String(product.shelfLifeDays),
       storageInstructions: product.storageInstructions ?? '',
-      weightOptions: (product.weightOptions?.length ? product.weightOptions : product.weightValue && product.weightUnit ? [{ value: product.weightValue, unit: product.weightUnit }] : []).map(w => ({ value: String(w.value), unit: w.unit, price: 'price' in w && typeof w.price === 'number' ? String(w.price) : String(product.price), stockQuantity: 'stockQuantity' in w && typeof w.stockQuantity === 'number' ? String(w.stockQuantity) : '' })),
+      weightOptions: (product.weightOptions?.length ? product.weightOptions : product.weightValue && product.weightUnit ? [{ value: product.weightValue, unit: product.weightUnit }] : []).map(w => ({ value: String(w.value), unit: w.unit, price: 'price' in w && typeof w.price === 'number' ? String(w.price) : (product.showPrice === false && product.price === 0 ? '' : String(product.price)), stockQuantity: 'stockQuantity' in w && typeof w.stockQuantity === 'number' ? String(w.stockQuantity) : '' })),
       showPrice: product.showPrice, status: product.status === 'published' ? 'published' : 'draft'
     } : recovered?.draft ?? emptyDraft);
     setSaveError('');
@@ -204,7 +204,7 @@ function SellerContent() {
     // Size-specific prices are stored on the same listing. Its base price
     // is the lowest effective variant price for catalog previews.
     const baseEntered = !draft.weightOptions.length && draft.price.trim() !== '';
-    const basePrice = baseEntered ? Number(draft.price) : null;
+    const basePrice = baseEntered ? Number(draft.price) : (!draft.showPrice ? 0 : null);
     if (baseEntered && (!Number.isFinite(basePrice) || basePrice! < 0 || basePrice! > 10000000))
       return toast({ variant: 'destructive', title: 'Enter a valid base price' });
     const imageUrls = parseProductImageUrls(draft.imageUrls);
@@ -215,7 +215,7 @@ function SellerContent() {
     const minQty = Number(draft.minimumOrderQuantity);
     if (!Number.isInteger(minQty) || minQty < 1 || minQty > 99) return toast({ variant: 'destructive', title: 'Minimum order quantity must be 1–99' });
     const weights = draft.weightOptions.map(w => ({ value: Number(w.value), unit: w.unit,
-      ...(w.price.trim() !== '' ? { price: Number(w.price) } : {}),
+      ...(w.price.trim() !== '' ? { price: Number(w.price) } : !draft.showPrice ? { price: 0 } : {}),
       ...(w.stockQuantity.trim() !== '' ? { stockQuantity: Number(w.stockQuantity) } : {}) }));
     if (weights.length > 8 || weights.some(w => !Number.isFinite(w.value) || w.value <= 0 || w.value > 100000 || !['g','kg','ml','l','pieces'].includes(w.unit) ||
       ('price' in w && (!Number.isFinite(w.price) || (w.price ?? -1) < 0 || (w.price ?? 10000001) > 10000000)) ||
@@ -223,9 +223,9 @@ function SellerContent() {
       return toast({ variant: 'destructive', title: 'Check size options, prices and stock (maximum 8 sizes)' });
     if (new Set(weights.map(w => `${w.value}:${w.unit}`)).size !== weights.length)
       return toast({ variant: 'destructive', title: 'Duplicate sizes', description: 'Each weight and unit combination must be unique.' });
-    if (weights.length && weights.some(w => w.price === undefined))
+    if (draft.showPrice && weights.length && weights.some(w => w.price === undefined))
       return toast({ variant: 'destructive', title: 'Price required for every size', description: 'Enter an individual selling price for each weight or unit.' });
-    if (!weights.length && basePrice === null)
+    if (draft.showPrice && !weights.length && basePrice === null)
       return toast({ variant: 'destructive', title: 'Enter a selling price' });
     const price = weights.length
       ? Math.min(...weights.map(w => w.price!))
@@ -246,6 +246,9 @@ function SellerContent() {
       return toast({variant:'destructive',title:'Check food information',description:'Use up to 12 allergen/dietary labels, and a shelf life between 0 and 365 days.'});
     }
 
+    const customDeliveryCharge = draft.deliveryCharge.trim() === '' ? null : Number(draft.deliveryCharge);
+    if (customDeliveryCharge !== null && (!Number.isFinite(customDeliveryCharge) || customDeliveryCharge < 0 || customDeliveryCharge > 5000 || !/^\d+(?:\.\d{1,2})?$/.test(draft.deliveryCharge.trim())))
+      return toast({ variant: 'destructive', title: 'Delivery charge must be between ₹0 and ₹5,000', description: 'Use at most two decimal places, or leave blank to use the store-wide fee.' });
     const preparationDays = draft.preparationDays.trim() === '' ? 0 : Number(draft.preparationDays);
     if (!Number.isInteger(preparationDays) || preparationDays < 0 || preparationDays > 365)
       return toast({ variant: 'destructive', title: 'Preparation days must be a whole number between 0 and 365' });
@@ -255,7 +258,7 @@ function SellerContent() {
     try {
       const data = {
         sellerId: user.uid, name: draft.name.trim(), description: draft.description.trim(), category: draft.category.trim(),
-        price, imageUrls, showPrice: draft.showPrice, availability: draft.availability,
+        price, ...(customDeliveryCharge !== null ? { deliveryCharge: customDeliveryCharge } : {}), imageUrls, showPrice: draft.showPrice, availability: draft.availability,
         stockQuantity: sharedStock,
         preparationDays,
         minimumOrderQuantity: minQty,
@@ -332,6 +335,7 @@ function SellerContent() {
       <aside className="min-w-0 space-y-3 lg:space-y-5">
         <div className="rounded-2xl border border-[#e6dfd5] bg-white p-4 sm:p-5"><div className="flex items-center gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#29251f] text-[#f5eadb]"><Store className="h-5 w-5" /></div><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9a8061]">Seller workspace</p><h2 className="mt-0.5 truncate text-base font-semibold text-[#29251f]" title={seller.businessName}>{seller.businessName}</h2></div></div><div className="mt-4 flex items-center gap-2 border-t border-[#f0ece6] pt-3 text-xs text-[#63594c]"><span className={`h-2 w-2 shrink-0 rounded-full ${active ? 'bg-emerald-500' : 'bg-amber-500'}`} />{active ? 'Store active' : 'Access restricted'}</div><p className="mt-1 text-[11px] text-[#87796a]">{seller.accessType === 'full' && seller.approvalPlan === 'full' && ((seller.accessEndsAt as { toMillis?: () => number } | null)?.toMillis?.() ?? 0) > Date.UTC(2099, 0, 1) ? 'Full access · No trial expiry' : `${seller.accessType === 'trial' ? 'Trial' : 'Full'} access · Until ${dateText(seller.accessEndsAt)}`}</p></div>
         <nav aria-label="Seller workspace" className="grid grid-cols-4 gap-1 rounded-2xl border border-[#e6dfd5] bg-white p-1.5 lg:flex lg:flex-col lg:gap-1 lg:border-0 lg:bg-transparent lg:p-0">{menu.map(item => <button key={item.key} aria-current={section === item.key ? "page" : undefined} onClick={() => setSection(item.key)} className={`flex min-h-[66px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl px-1 py-2 text-center text-[10px] font-medium transition sm:text-xs lg:min-h-11 lg:w-full lg:flex-row lg:justify-start lg:gap-3 lg:px-4 lg:py-3 lg:text-left lg:text-sm ${section === item.key ? 'bg-[#eae2d7] font-semibold text-[#29251f]' : 'text-[#756a5d] hover:bg-[#eee8e0]'}`}><item.icon className="h-5 w-5 shrink-0 lg:h-4 lg:w-4" /><span className="break-words">{item.label}</span></button>)}</nav>
+        <Link href="/custom-orders?view=received" className="flex min-h-11 items-center gap-2 rounded-xl border border-[#e6dfd5] bg-white px-4 text-sm font-medium text-[#665544] transition hover:border-[#baa48a] hover:bg-[#faf7f2]"><FileText className="h-4 w-4 text-[#a68a64]" />Received quotations <ArrowUpRight className="ml-auto h-4 w-4" /></Link>
         <Link href="/seller/messages" className="flex min-h-11 items-center gap-2 rounded-xl border border-[#e6dfd5] bg-white px-4 text-sm font-medium text-[#665544] transition hover:border-[#baa48a] hover:bg-[#faf7f2]"><MessageSquareText className="h-4 w-4 text-[#a68a64]" />Customer messages <ArrowUpRight className="ml-auto h-4 w-4" /></Link>
         <Link href="/support" className="hidden min-h-11 items-center gap-2 rounded-xl border border-[#e6dfd5] bg-white px-4 text-sm font-medium text-[#665544] transition hover:border-[#baa48a] hover:bg-[#faf7f2] lg:flex"><LifeBuoy className="h-4 w-4 text-[#a68a64]" />Help &amp; Support <ArrowUpRight className="ml-auto h-4 w-4" /></Link>
         <Link href="/account" className="hidden items-center gap-2 px-4 text-xs text-muted-foreground hover:text-foreground lg:inline-flex"><LogOut className="h-4 w-4" />Account & sign out</Link>
