@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { getErrorNotice, validateEmail, type UserNotice } from '@/lib/user-notices';
-import { requestAccountMail } from '@/lib/account-mail';
+import { requestFirebasePasswordReset } from '@/lib/firebase-password-reset';
 import { ToastAction } from '@/components/ui/toast';
 import { GoogleSignInButton } from '@/components/google-sign-in-button';
 import { Button } from '@/components/ui/button';
@@ -79,7 +79,7 @@ export default function LoginPage() {
     if(emailError){setFormError(emailError);toast({variant:'destructive',title:emailError.title,description:emailError.description});return;}
     if(!auth){showError({code:'app/service-unavailable'},true);return;}
     setIsLoading(true);
-    try {await requestAccountMail('reset-password',{email:email.trim()});resetSuccess();}
+    try {await requestFirebasePasswordReset(auth,email,window.location.origin);resetSuccess();}
     catch(error) {if((error as {code?:string})?.code==='auth/user-not-found')resetSuccess();else showError(error,true);}
     finally {setIsLoading(false);}
   };

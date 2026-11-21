@@ -30,7 +30,7 @@ test('redesign leaves desktop editorial image and secure auth flow unchanged', (
   assert.match(src, /bg-\[url\('\/img\/login-side\.avif'\)\]/);
   assert.match(src, /lg:grid lg:grid-cols-\[minmax\(0,1fr\)_minmax\(0,1fr\)\]/);
   assert.match(src, /signInWithEmailAndPassword\(auth,email\.trim\(\),password\)/);
-  assert.match(src, /requestAccountMail\('reset-password',\{email:email\.trim\(\)\}\)/);
+  assert.match(src, /requestFirebasePasswordReset\(auth,email,window\.location\.origin\)/);
   assert.match(src, /getErrorNotice\(error,reset\?'reset-password':'sign-in'\)/);
   assert.match(src, /autoComplete="email"/);
   assert.match(src, /autoComplete="current-password"/);

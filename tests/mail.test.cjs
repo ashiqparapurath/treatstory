@@ -26,13 +26,16 @@ test('relay configuration rejects endpoints that could receive the signing secre
     const {mailConfig}=load('src/lib/server/mail.ts',{}, {process:{env:{APP_URL:'https://treatstory.vercel.app',APPS_SCRIPT_MAIL_SECRET:relayConfig.secret,APPS_SCRIPT_MAIL_URL:endpoint}}});assert.throws(mailConfig);
   }
 });
-test('account client sends only actions/email and bearer tokens to its own server',async()=>{
+test('account client sends welcome and verification only with a bearer token',async()=>{
   const calls=[];let status=200;
   class ActionError extends Error{constructor(message,status){super(message);this.status=status;}}
   const {requestAccountMail}=load('src/lib/account-mail.ts',{'@/lib/user-notices':{ActionError}}, {fetch:async(url,options)=>{calls.push({url,...options});return Response.json(status===200?{ok:true}:{error:'Please wait'},{status});}});
-  await requestAccountMail('reset-password',{email:' buyer@example.com '});assert.equal(calls[0].url,'/api/email/account');assert.deepEqual(JSON.parse(calls[0].body),{action:'reset-password',email:'buyer@example.com'});
-  await requestAccountMail('verify-email',{user:{getIdToken:async()=> 'fixture-token'}});assert.equal(calls[1].headers.Authorization,'Bearer fixture-token');assert.deepEqual(JSON.parse(calls[1].body),{action:'verify-email'});
-  status=429;await assert.rejects(()=>requestAccountMail('reset-password',{email:'buyer@example.com'}),e=>e.status===429);
+  await requestAccountMail('verify-email',{user:{getIdToken:async()=> 'fixture-token'}});
+  assert.equal(calls[0].url,'/api/email/account');assert.equal(calls[0].headers.Authorization,'Bearer fixture-token');
+  assert.deepEqual(JSON.parse(calls[0].body),{action:'verify-email'});
+  await requestAccountMail('welcome',{user:{getIdToken:async()=> 'fixture-token'}});
+  assert.deepEqual(JSON.parse(calls[1].body),{action:'welcome'});
+  status=429;await assert.rejects(()=>requestAccountMail('verify-email',{user:{getIdToken:async()=> 'fixture-token'}}),e=>e.status===429);
 });
 function accountFixture(){
   let queued=0,existing=false,authenticated=true,known=true,limited=false,disabled=false,verified=false;const jobs=[];
@@ -58,12 +61,13 @@ test('welcome and verification require a session and queue private intents befor
   f.verified=true;const queuedBefore=f.queued;const already=await f.request({action:'verify-email'});
   assert.deepEqual(await already.json(),{ok:true,alreadyVerified:true});assert.equal(f.queued,queuedBefore,'Google-verified or previously verified accounts must not get duplicate verification mail');
 });
-test('password reset preserves account privacy and reports throttling instead of false success',async()=>{
-  const f=accountFixture();const body=await (await f.request({action:'reset-password',email:'buyer@example.com'})).json();assert.equal(f.jobs[0][3].template,'password_reset');assert.equal(f.jobs[0][5],true);
-  f.known=false;assert.deepEqual(await (await f.request({action:'reset-password',email:'missing@example.com'})).json(),body);
-  f.known=true;f.disabled=true;assert.deepEqual(await (await f.request({action:'reset-password',email:'buyer@example.com'})).json(),body);
-  f.disabled=false;f.limited=true;const limited=await f.request({action:'reset-password',email:'buyer@example.com'});assert.equal(limited.status,429);assert.match((await limited.json()).error,/wait/);assert.equal(f.queued,3);
+test('legacy account email endpoint rejects reset requests without queuing mail',async()=>{
+  const f=accountFixture();
+  const response=await f.request({action:'reset-password',email:'buyer@example.com'});
+  assert.equal(response.status,400);
+  assert.equal(f.queued,0);
   assert.equal((await f.request({action:'reset-password',email:'buyer@example.com'},'https://evil.example')).status,403);
+  assert.equal(f.queued,0);
 });
 
 test('seller email content and recipients come from authorized committed records',async()=>{
@@ -108,8 +112,8 @@ test('account client rejects HTTP-200 HTML and malformed success bodies',async()
   class ActionError extends Error{constructor(message,status){super(message);this.status=status;}}
   let mode='html';
   const {requestAccountMail}=load('src/lib/account-mail.ts',{'@/lib/user-notices':{ActionError}},{fetch:async()=>mode==='html'?new Response('<html>Sign in</html>'):Response.json({})});
-  await assert.rejects(()=>requestAccountMail('reset-password',{email:'buyer@example.com'}),e=>e.status===503);
-  mode='json';await assert.rejects(()=>requestAccountMail('reset-password',{email:'buyer@example.com'}),e=>e.status===503);
+  await assert.rejects(()=>requestAccountMail('welcome',{user:{getIdToken:async()=> 'fixture-token'}}),e=>e.status===503);
+  mode='json';await assert.rejects(()=>requestAccountMail('welcome',{user:{getIdToken:async()=> 'fixture-token'}}),e=>e.status===503);
 });
 test('read-only account endpoint reports the deployed queue flow without touching account data',async()=>{
   const f=accountFixture();const response=await f.health();assert.deepEqual(await response.json(),{ok:true,flow:'outbox-v2'});assert.equal(response.headers.get('X-TreatStory-Email-Flow'),'outbox-v2');assert.equal(f.queued,0);
