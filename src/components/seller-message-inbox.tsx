@@ -50,7 +50,7 @@ export function SellerMessageInbox() {
         }
       }
     })();
-    return () => { active = false; };
+    return () => { active = false; if (startedQuote.current === requestedQuoteId) startedQuote.current = ''; };
   }, [requestedQuoteId, user?.uid, role]);
   const listRef = useMemoFirebase(
     () => db && user && role === 'seller'
