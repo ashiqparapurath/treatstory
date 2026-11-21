@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { initializeApp as initializeAdminApp, deleteApp as deleteAdminApp } from 'firebase-admin/app';
 import { getFirestore as adminFirestore, Timestamp } from 'firebase-admin/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { connectFirestoreEmulator, getFirestore, terminate, collection, doc, getDoc, getDocs, limit, query, updateDoc, where, addDoc } from 'firebase/firestore';
+import { connectFirestoreEmulator, getFirestore, terminate, collection, doc, getDoc, getDocs, limit, orderBy, query, updateDoc, where, addDoc } from 'firebase/firestore';
 
 async function main() {
   if (!/^(127\.0\.0\.1|localhost):\d+$/.test(process.env.FIRESTORE_EMULATOR_HOST || ''))
@@ -73,7 +73,7 @@ async function main() {
 
     const sellerInbox = await getDocs(query(
       collection(seller.db, 'support_tickets'),
-      where('sellerId', '==', sellerId), where('route', '==', 'seller'), limit(100),
+      where('sellerId', '==', sellerId), where('route', '==', 'seller'), orderBy('updatedAt', 'desc'), limit(100),
     ));
     assert.equal(sellerInbox.docs.filter(x => x.id === sellerTicket).length, 1);
     await assert.rejects(() => getDocs(query(
@@ -82,10 +82,16 @@ async function main() {
     )), denied);
 
     const buyerInbox = await getDocs(query(
-      collection(buyer.db, 'support_tickets'), where('ownerUid', '==', buyerId), limit(50),
+      collection(buyer.db, 'support_tickets'), where('ownerUid', '==', buyerId), orderBy('updatedAt','desc'), limit(50),
     ));
     assert.ok(buyerInbox.docs.some(x => x.id === sellerTicket));
     assert.ok(buyerInbox.docs.some(x => x.id === oldTicket));
+
+    const platformInbox = await getDocs(query(
+      collection(admin.db, 'support_tickets'), where('route', '==', 'admin'), orderBy('updatedAt', 'desc'), limit(100),
+    ));
+    assert.ok(platformInbox.docs.some(x => x.id === platformTicket));
+    assert.ok(!platformInbox.docs.some(x => x.id === sellerTicket));
 
     // All writes are server-only, including attempts by the addressed seller.
     for (const account of everyone) {
