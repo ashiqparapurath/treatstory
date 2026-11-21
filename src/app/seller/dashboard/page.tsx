@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { MarketplaceProduct, SellerApplication } from '@/lib/marketplace-types';
-import { LayoutDashboard, Package, Settings, ShoppingBag, Plus, ArrowUpRight, Clock3, Store, Trash2, Pencil, CheckCircle2, AlertCircle, LogOut, Search, ImageIcon, LifeBuoy } from 'lucide-react';
+import { LayoutDashboard, Package, Settings, ShoppingBag, Plus, ArrowUpRight, Clock3, Store, Trash2, Pencil, CheckCircle2, AlertCircle, LogOut, Search, ImageIcon, LifeBuoy, MessageSquareText } from 'lucide-react';
 import { SellerProductEditor, emptyDraft, type ProductDraft } from '@/components/seller-product-editor';
 import { parseProductImageUrls } from '@/lib/product-image-urls';
 import { saveProductRequest, invalidProductMessage } from '@/lib/seller-product-validation';
