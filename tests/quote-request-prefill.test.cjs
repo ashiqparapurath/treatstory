@@ -51,3 +51,15 @@ test('long product details are capped to quote schema limit; no price is invente
   assert.match(bare, /Product: Flowers/);
   assert.doesNotMatch(bare, /Product details: /);
 });
+
+test('legacy single-size listing auto-fills its verified size too', () => {
+  const previousListing = {
+    ...product,
+    weightOptions: [],
+    weightValue: 500,
+    weightUnit: 'g',
+  };
+  assert.equal(quoteRequestSize(previousListing,'500 g'),'500 g');
+  assert.match(priceRequestDescription(previousListing,'500 g'),/Selected size: 500 g/);
+  assert.equal(quoteRequestSize(previousListing,'1 kg'),'');
+});
