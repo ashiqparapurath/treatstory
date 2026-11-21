@@ -610,16 +610,17 @@ test('seller access confirmation opens without a write, awaits acknowledgment an
 });
 
 test('sign-in validates fields before requesting authentication and preserves password whitespace', async () => {
-  let attempts=0,args,code='auth/invalid-credential';const notices=[];
+  let attempts=0,args,code='auth/invalid-credential';const notices=[],resetCalls=[];
   const {default:Login}=load('src/app/login/page.tsx',{
     'next/navigation':{useRouter:()=>({replace(){}})},'next/link':'a',
     '@/firebase':{useAuth:()=>({}),useUser:()=>({user:null,isUserLoading:false})},
     'firebase/auth':{signInWithEmailAndPassword:async(...values)=>{attempts++;args=values;throw {code,message:'Firebase private diagnostic'};}},
+    '@/lib/firebase-password-reset':{requestFirebasePasswordReset:async(...values)=>{resetCalls.push(values);}},
     '@/components/google-sign-in-button':{GoogleSignInButton:() => null},
     '@/components/ui/toast':{ToastAction:'button'},'@/components/ui/button':{Button:'button'},
     '@/components/ui/input':{Input:React.forwardRef((props,ref)=>React.createElement('input',{...props,ref}))},'@/components/ui/label':{Label:'label'},
     '@/hooks/use-toast':{useToast:()=>({toast:n=>notices.push(n)})},
-  });
+  },{window:{location:{origin:'https://treatstory.in',search:''}}});
   let tree;act(()=>{tree=create(React.createElement(Login));});
   const input=id=>tree.root.findByProps({id});
   const submit=()=>tree.root.findByType('form').props.onSubmit({preventDefault(){}});
@@ -629,6 +630,7 @@ test('sign-in validates fields before requesting authentication and preserves pa
   code='auth/too-many-requests';await act(submit);assert.match(notices.at(-1).title,/pause/);
   act(()=>tree.root.findAllByType('button').find(n=>n.children.includes('Forgot password?')).props.onClick());
   await act(submit);assert.equal(notices.at(-1).title,'Check your inbox');assert.match(notices.at(-1).description,/If an account uses/);
+  assert.equal(resetCalls.length,1);assert.equal(resetCalls[0][2],'https://treatstory.in');
   act(()=>tree.unmount());
 });
 
