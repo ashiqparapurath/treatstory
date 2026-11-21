@@ -26,7 +26,7 @@ Sellers contact the platform via `/support` with no recipient seller ID. The ser
 
 ## Rollout
 
-1. Deploy updated **Firestore rules and indexes** from this PR, including the composite `support_tickets (sellerId, route)` index. Check that the index is ready. Database rules and indexes are not automatically deployed by a Vercel app build.
+1. Deploy updated **Firestore rules and indexes** from this PR, including the composite `support_tickets (sellerId, route, updatedAt)`, `(route, updatedAt)` and `(ownerUid, updatedAt)` indexes. Check that the index is ready. Database rules and indexes are not automatically deployed by a Vercel app build.
 2. Deploy the Next.js app with both experimental Matrix flags left **off**: `NEXT_PUBLIC_ENCRYPTED_SUPPORT_ENABLED=false` and `NEXT_PUBLIC_SUPPORT_MATRIX_ENABLED=false`. The independent Matrix feature is not production-enabled and follows a different encrypted routing design; do not turn it on expecting this ticket routing to apply.
 3. Test buyer A contacting store A; confirm only store A sees the ticket. Try store B and an unrelated account, and verify access is denied. Check that the admin inbox does not list the buyer-to-seller ticket.
 4. Test seller A contacting admin, and verify it appears in Admin → Customer support and that the admin can reply.
