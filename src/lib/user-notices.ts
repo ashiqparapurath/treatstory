@@ -46,8 +46,8 @@ export function getErrorNotice(error: unknown, context: NoticeContext = 'save'):
     return {title:'Email or password does not match', description:'Check both details and try again, or use Forgot password to reset your password.', field:'credentials'};
   if (['auth/email-already-in-use','auth/credential-already-in-use'].includes(code))
     return {title:'Try signing in instead',description:'This email cannot be used to create another account. Sign in or use Forgot password to recover access.',field:'email'};
-  if (code === 'auth/weak-password') return {title:'Choose a stronger password',description:'Use at least six characters. A longer password with letters, numbers and symbols is better.',field:'password'};
-  if (code === 'auth/password-does-not-meet-requirements') return {title:'This password needs to be stronger',description:'Try a longer password with uppercase and lowercase letters, a number and a symbol.',field:'password'};
+  if (code === 'auth/weak-password') return {title:'Choose a stronger password',description:'Use 12–4,096 characters, including uppercase and lowercase letters, a number and a special character.',field:'password'};
+  if (code === 'auth/password-does-not-meet-requirements') return {title:'This password needs to be stronger',description:'Use 12–4,096 characters, including uppercase and lowercase letters, a number and a special character.',field:'password'};
   if (code === 'auth/missing-password') return {title:'Enter your password',description:'Use the password for your TreatStory account.',field:'password'};
   if (code === 'auth/user-disabled') return {title:'This account cannot sign in',description:'Contact TreatStory support for help with your account.'};
   if (['auth/requires-recent-login','auth/user-token-expired','auth/id-token-expired','auth/invalid-user-token','unauthenticated'].includes(code) || status === 401)
