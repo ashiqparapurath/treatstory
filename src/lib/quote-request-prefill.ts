@@ -4,16 +4,17 @@ import type { MarketplaceProduct } from '@/lib/marketplace-types';
  * Only recognize a size that belongs to the selected published product.
  */
 export function quoteRequestSize(
-  product: Pick<MarketplaceProduct, 'weightOptions'>,
+  product: Pick<MarketplaceProduct, 'weightOptions' | 'weightValue' | 'weightUnit'>,
   requestedSize: string,
 ): string {
-  return product.weightOptions?.some(option => option.value + ' ' + option.unit === requestedSize)
-    ? requestedSize
-    : '';
+  const optionsMatch = product.weightOptions?.some(option => option.value + ' ' + option.unit === requestedSize);
+  const legacyMatch = product.weightValue && product.weightUnit
+    && product.weightValue + ' ' + product.weightUnit === requestedSize;
+  return optionsMatch || legacyMatch ? requestedSize : '';
 }
 
 export function priceRequestDescription(
-  product: Pick<MarketplaceProduct, 'name' | 'category' | 'description' | 'sku' | 'weightOptions'>,
+  product: Pick<MarketplaceProduct, 'name' | 'category' | 'description' | 'sku' | 'weightOptions' | 'weightValue' | 'weightUnit'>,
   requestedSize = '',
 ): string {
   const size = quoteRequestSize(product, requestedSize);
