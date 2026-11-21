@@ -73,7 +73,7 @@ export function SupportTicketThread({ ticket, perspective, onSend, onClose }: Pr
     <div ref={viewport} aria-label="Support message history" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-8 sm:py-7">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
         <div className="mx-auto min-w-0 max-w-full [overflow-wrap:anywhere] sm:max-w-xl rounded-2xl border border-[#ebe2d6] bg-white p-4 text-center sm:p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9a805d]">TreatStory customer care</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9a805d]">{ticket.route === 'seller' ? 'Seller conversation' : 'TreatStory customer care'}</p>
           <h3 className="mt-2 break-words text-base font-semibold text-[#302a24]">{ticket.subject}</h3>
           <p className="mt-2 text-xs capitalize text-[#867a6c]">{ticket.category} · {ticket.status === 'closed' ? 'Closed' : ticket.status === 'responded' ? 'Replied' : 'Open'}{ticket.orderId ? ' · Order linked' : ''}</p>
           {ticket.orderId && <p className="mt-2 break-all text-xs text-[#887b6c]">Order reference: {ticket.orderId}</p>}
