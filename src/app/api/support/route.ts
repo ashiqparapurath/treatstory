@@ -12,6 +12,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const requestSchema = z.discriminatedUnion('action', [
+  // A seller can open a private conversation only for a quote addressed to them.
+  z.object({ action: z.literal('open_quote_chat'), quoteId: firestoreDocumentId(120) }).strict(),
   z.object({
     action: z.literal('create'),
     subject: z.string().trim().min(5).max(140),
@@ -46,6 +48,49 @@ export async function POST(request: NextRequest) {
     const parsed = requestSchema.safeParse(await readJsonBody(request, 5000));
     if (!parsed.success) throw new ApiError(400, 'Review the support details.');
     const data = parsed.data;
+
+    if (data.action === 'open_quote_chat') {
+      const result = await db.runTransaction(async tx => {
+        const quoteRef = db.collection('custom_quotes').doc(data.quoteId);
+        const sellerRef = db.collection('sellers').doc(uid);
+        // A stable ticket ID makes repeat clicks and retries idempotent.
+        const ticketRef = db.collection('support_tickets').doc('quote_' + data.quoteId);
+        const [quoteSnap, sellerSnap, ticketSnap] = await Promise.all([
+          tx.get(quoteRef), tx.get(sellerRef), tx.get(ticketRef),
+        ]);
+        const quote = quoteSnap.data();
+        if (!quoteSnap.exists || quote?.sellerId !== uid || typeof quote.buyerUid !== 'string' ||
+            !quote.buyerUid || quote.buyerUid === uid)
+          throw new ApiError(403, 'This quotation does not belong to your store.');
+        if (!sellerSnap.exists || sellerSnap.data()?.ownerUid !== uid || sellerSnap.data()?.status !== 'active')
+          throw new ApiError(403, 'An active seller account is required.');
+        if (ticketSnap.exists) {
+          const existing = ticketSnap.data()!;
+          if (existing.route !== 'seller' || existing.sellerId !== uid ||
+              existing.ownerUid !== quote.buyerUid || existing.quoteId !== data.quoteId)
+            throw new ApiError(409, 'This quotation conversation cannot be opened.');
+          return { ticketId: ticketRef.id, status: existing.status, created: false };
+        }
+        const title = String(quote.productName || quote.occasion || 'Custom creation').slice(0, 100);
+        const subject = ('Quotation: ' + title).slice(0, 140);
+        const now = Timestamp.now();
+        tx.create(ticketRef, {
+          ownerUid: quote.buyerUid, sellerId: uid, sellerName: String(sellerSnap.data()?.businessName || 'Seller').slice(0, 120),
+          route: 'seller', quoteId: data.quoteId, category: 'seller', orderId: '',
+          subject, message: 'A private conversation has been opened for this quotation.',
+          initialSender: 'system', status: 'open', response: '', createdAt: now, updatedAt: now,
+        });
+        queueNotification(tx, db, quote.buyerUid, {
+          template: 'support_new',
+          title: 'Your seller opened a quotation chat',
+          message: 'Your seller is available to discuss “' + title + '”. Open the conversation to reply.',
+          href: '/support?ticket=' + encodeURIComponent(ticketRef.id),
+          kind: 'support', createdAt: now, read: false,
+        });
+        return { ticketId: ticketRef.id, status: 'open', created: true };
+      });
+      return Response.json(result);
+    }
 
     if (data.action === 'create') {
       const date = new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
