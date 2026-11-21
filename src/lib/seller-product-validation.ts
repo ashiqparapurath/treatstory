@@ -104,6 +104,7 @@ export function invalidProductMessage(issues: Array<{ path: PropertyKey[] }>) {
     description: "description (up to 2,000 characters)",
     category: "category",
     price: "selling price",
+    deliveryCharge: "product delivery charge (₹0–₹5,000)",
     imageUrls: "product photo links (public HTTPS addresses only; no localhost or private network URLs)",
     showPrice: "price visibility",
     availability: "availability",
