@@ -92,8 +92,11 @@ function CustomOrderContent(){
       await api({action:'create',sellerId:sellerId.trim(),productId:productId.trim(),occasion:occasion.trim(),description:description.trim(),budget:Number(budget),requestedDate:date,referenceUrl:referenceUrl.trim()});
       toast({title:'Custom request sent',description:'The creator can review your request and send a quote.'});
       setOccasion('');setDescription('');setBudget('');setDate('');setReferenceUrl('');
-      // Keep product context for a follow-up while clearing the submitted notes.
-      autoDescription.current = '';
+      // Preserve the same product and a useful editable draft if the buyer asks again.
+      if (priceOnRequest && linkedProduct) {
+        const initial = priceRequestDescription(linkedProduct, requestedSize);
+        setOccasion('Price enquiry');setDescription(initial);autoDescription.current = initial;
+      } else autoDescription.current = '';
     }catch(error){toast(errorToast(error, 'quote'));}
     finally{setBusy(false);}
   }
@@ -104,7 +107,7 @@ function CustomOrderContent(){
     finally{setBusy(false);}
   }
   return <div className="min-h-screen bg-[#f8f6f2]"><Header/><main className="section-shell pb-24 pt-10"><p className="eyebrow text-[#a68a64]">Made just for you</p><h1 className="mt-3 text-4xl font-medium">Custom creations & quotes</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Planning a birthday cake, custom painting or handmade gift? Ask a creator for a tailored price. Review a creator’s quote, then confirm fulfillment details to place a custom order.</p>
-    {!user&&!isUserLoading?<Link href={'/login?next=' + encodeURIComponent('/custom-orders?seller=' + encodeURIComponent(sellerId) + '&product=' + encodeURIComponent(productId))} className="editorial-button mt-7">Sign in to request a quote</Link>:<div className="mt-9 grid gap-8 lg:grid-cols-2">
+    {!user&&!isUserLoading?<Link href={'/login?next=' + encodeURIComponent('/custom-orders?seller=' + encodeURIComponent(sellerId) + '&product=' + encodeURIComponent(productId) + (requestedSize ? '&size=' + encodeURIComponent(requestedSize) : ''))} className="editorial-button mt-7">Sign in to request a quote</Link>:<div className="mt-9 grid gap-8 lg:grid-cols-2">
       <section className="rounded-3xl border bg-white p-5 sm:p-8"><h2 className="text-xl font-semibold">{priceOnRequest ? 'Ask for the current price' : 'Request a custom creation'}</h2>
       {priceOnRequest && <p className="mt-2 text-xs leading-5 text-[#776753]">We selected the product and filled its details for you. Review or edit the request, choose your preferred date, and send it to the seller for a confirmed price.</p>}
       <form onSubmit={submit} className="mt-5 space-y-4">
