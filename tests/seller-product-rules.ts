@@ -2,7 +2,7 @@
 import { initializeApp as initializeAdmin } from 'firebase-admin/app';
 import { getFirestore as adminFirestore, Timestamp } from 'firebase-admin/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, updateDoc, serverTimestamp, terminate } from 'firebase/firestore';
+import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, updateDoc, serverTimestamp, deleteField, terminate } from 'firebase/firestore';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 
@@ -29,7 +29,16 @@ async function run(){
  console.log('PASS edit detailed product and every variant price with advance requirement');
  await updateDoc(target,{allergens:['Milk','Eggs'],customizationOptions:['Message on cake'],updatedAt:serverTimestamp()});
  console.log('PASS edit food labels and personalization');
+ await updateDoc(target,{ deliveryCharge: 149.50, updatedAt:serverTimestamp() });
+ assert.equal((await getDoc(target)).data()?.deliveryCharge,149.50,'positive custom delivery fee is readable');
+ await updateDoc(target,{ deliveryCharge: 0, updatedAt:serverTimestamp() });
+ assert.equal((await getDoc(target)).data()?.deliveryCharge,0,'explicit free delivery is allowed');
+ await updateDoc(target,{ deliveryCharge: deleteField(), updatedAt:serverTimestamp() });
+ assert.equal((await getDoc(target)).data()?.deliveryCharge,undefined,'removing custom fee falls back to store setting');
  const denied=(error:unknown)=>(error as {code?:string}).code==='permission-denied';
+ await assert.rejects(()=>updateDoc(target,{deliveryCharge:-1,updatedAt:serverTimestamp()}),denied,'negative shipping must be rejected');
+ await assert.rejects(()=>updateDoc(target,{deliveryCharge:5001,updatedAt:serverTimestamp()}),denied,'shipping above the cap must be rejected');
+ await assert.rejects(()=>updateDoc(target,{deliveryCharge:'149',updatedAt:serverTimestamp()}),denied,'shipping must be a number');
  await assert.rejects(()=>updateDoc(target,{weightOptions:[{value:1,unit:'g',price:-1}],updatedAt:serverTimestamp()}),denied,'price-only fast path must reject negative prices');
  await assert.rejects(()=>updateDoc(target,{weightOptions:[{value:1,unit:'g',price:null}],updatedAt:serverTimestamp()}),denied,'price-only fast path must reject null prices');
  await assert.rejects(()=>updateDoc(target,{createdAt:serverTimestamp(),updatedAt:serverTimestamp()}),denied,'creation time must stay immutable');
