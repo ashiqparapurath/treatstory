@@ -88,8 +88,8 @@ export function SellerMessageInbox() {
     openTicketId={openTicketId}
     title="Customer messages"
     secure={false}
-    backHref="/seller/dashboard"
-    backLabel="Back to seller dashboard"
+    backHref={requestedQuoteId ? '/custom-orders?view=received' : '/seller/dashboard'}
+    backLabel={requestedQuoteId ? 'Back to received quotations' : 'Back to seller dashboard'}
     isLoading={isLoading}
     error={!!error}
     topNotice={<div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2"><Info className="h-4 w-4" /><span>Messages sent to your store only. These conversations are private, but not end-to-end encrypted.</span>{quoteError && <span role="alert" className="text-red-700">{quoteError} <Link href="/custom-orders?view=received" className="underline">Back to quotations</Link></span>}{error && <Button size="sm" variant="outline" onClick={retry}>Retry</Button>}</div>}
