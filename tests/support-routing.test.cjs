@@ -21,8 +21,8 @@ function fixture() {
   let uid = 'buyer-1';
   let idCounter = 0;
   const records = new Map([
-    ['sellers/shop-a', { ownerUid: 'shop-a', businessName: 'Bloom Studio', status: 'active' }],
-    ['sellers/shop-b', { ownerUid: 'shop-b', businessName: 'Clay Works', status: 'active' }],
+    ['sellers/shop-a', { ownerUid: 'shop-a', businessName: 'Bloom Studio', status: 'active', accessEndsAt: { toMillis: () => Date.now() + 86400000 } }],
+    ['sellers/shop-b', { ownerUid: 'shop-b', businessName: 'Clay Works', status: 'active', accessEndsAt: { toMillis: () => Date.now() + 86400000 } }],
     ['seller_orders/order-a', { buyerUid: 'buyer-1', sellerId: 'shop-a' }],
     ['seller_orders/order-b', { buyerUid: 'buyer-1', sellerId: 'shop-b' }],
     ['roles_admin/admin', {}],
@@ -168,6 +168,8 @@ test('quote chat open is restricted to the addressed active seller; no guessing 
   assert.equal((await f.action({ action: 'open_quote_chat', quoteId: '../quote-a' }, 'shop-a')).status, 400);
   f.records.set('sellers/shop-a', {...f.records.get('sellers/shop-a'),status:'suspended'});
   assert.equal((await f.action({ action: 'open_quote_chat', quoteId: 'quote-a' }, 'shop-a')).status, 403);
+  f.records.set('sellers/shop-a', {...f.records.get('sellers/shop-a'),status:'active',accessEndsAt:{toMillis:()=>Date.now()-1000}});
+  assert.equal((await f.action({action:'open_quote_chat',quoteId:'quote-a'},'shop-a')).status,403,'expired seller must not initiate chat');
   assert.equal(f.notices.length, 0);
   assert.equal(Array.from(f.records.keys()).filter(p => p.startsWith('support_tickets/')).length, 0);
 });
