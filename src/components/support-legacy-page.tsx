@@ -79,7 +79,7 @@ export default function SupportPage() {
       <MessageSquareText className="h-10 w-10 text-[#a88c69]" />
       <h1 className="mt-5 text-3xl font-semibold">TreatStory support</h1>
       <p className="mt-3 max-w-md text-sm text-[#85796b]">{isUserLoading ? 'Checking your account…' : 'Sign in to view your private support requests and conversations.'}</p>
-      {!isUserLoading && <Link href="/login" className="editorial-button mt-7">Sign in to request support</Link>}
+      {!isUserLoading && <Link href={'/login?next=' + encodeURIComponent('/support' + (targetSellerId ? '?seller=' + encodeURIComponent(targetSellerId) + (queryOrderId ? '&order=' + encodeURIComponent(queryOrderId) : '') : ''))} className="editorial-button mt-7">Sign in to request support</Link>}
     </main>
   </div>;
 
@@ -124,7 +124,7 @@ export default function SupportPage() {
   const topNotice = <div className="mx-auto flex min-w-0 max-w-5xl flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
     <span className="inline-flex min-w-0 items-start gap-1.5"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Messages are not end-to-end encrypted. {isSeller ? 'TreatStory support handles your requests.' : 'Each message is delivered to the selected seller.'}</span>
     {supportSettings?.publicNotice && <span className="min-w-0 max-w-md [overflow-wrap:anywhere]">{supportSettings.publicNotice}</span>}
-    {supportSettings?.contactEmail && <a href={'mailto:' + encodeURIComponent(supportSettings.contactEmail)} className="inline-flex min-h-8 items-center gap-1 underline"><Mail className="h-3.5 w-3.5 shrink-0" /> Email support</a>}
+    {isSeller && supportSettings?.contactEmail && <a href={'mailto:' + encodeURIComponent(supportSettings.contactEmail)} className="inline-flex min-h-8 items-center gap-1 underline"><Mail className="h-3.5 w-3.5 shrink-0" /> Email support</a>}
   </div>;
 
   return <SupportChatWorkspace
