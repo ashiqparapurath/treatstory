@@ -46,6 +46,7 @@ export const sellerProductSchema = z
     description: z.string().max(2000),
     category: z.string().trim().min(1).max(80),
     price,
+    deliveryCharge: z.number().finite().min(0).max(5000).optional(),
     imageUrls: z.array(image).max(10),
     showPrice: z.boolean(),
     availability: z.enum(["available", "unavailable", "made-to-order"]),
