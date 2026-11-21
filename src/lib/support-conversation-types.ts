@@ -2,6 +2,9 @@
 export type SupportChatTicket = {
   id: string;
   ownerUid: string;
+  route?: 'seller' | 'admin';
+  sellerId?: string;
+  sellerName?: string;
   category: string;
   orderId?: string;
   subject?: string;
