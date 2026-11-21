@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 export type WeightUnit = 'g' | 'kg' | 'ml' | 'l' | 'pieces';
 export type WeightOptionDraft = { value: string; unit: WeightUnit; price: string; stockQuantity: string };
 export type ProductDraft = {
-  name: string; description: string; category: string; price: string;
+  name: string; description: string; category: string; price: string; deliveryCharge: string;
   imageUrls: string; availability: MarketplaceProduct['availability']; stockQuantity: string;
   preparationDays: string; minimumOrderQuantity: string; weightValue: string; weightUnit: WeightUnit;
   weightOptions: WeightOptionDraft[]; customizationOptions: string; careInstructions: string;
@@ -28,7 +28,7 @@ export type ProductDraft = {
   showPrice: boolean; status: 'draft' | 'published';
 };
 export const emptyDraft: ProductDraft = {
-  name: '', description: '', category: '', price: '', imageUrls: '', availability: 'available',
+  name: '', description: '', category: '', price: '', deliveryCharge: '', imageUrls: '', availability: 'available',
   stockQuantity: '', preparationDays: '', minimumOrderQuantity: '1', weightValue: '', weightUnit: 'g',
   weightOptions: [], customizationOptions: '', careInstructions: '',
   ingredients: '', allergens: '', dietaryTags: '', shelfLifeDays: '', storageInstructions: '',
@@ -347,6 +347,11 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
               <label className="block max-w-xs space-y-1 text-xs font-medium">Minimum order quantity (units)<Input required type="number" inputMode="numeric" min={1} max={99} value={draft.minimumOrderQuantity} onChange={e=>set('minimumOrderQuantity',e.target.value)}/></label>
             </div>
           </div></details>
+              <div className="rounded-2xl border border-[#e9dfd3] bg-white p-3.5 sm:p-4">
+                <label htmlFor="seller-editor-delivery-charge" className="block text-sm font-semibold text-[#4a3b2d]">Product delivery charge (₹) <span className="font-normal text-[#928575]">· optional</span></label>
+                <Input id="seller-editor-delivery-charge" type="number" inputMode="decimal" min={0} max={5000} step="0.01" value={draft.deliveryCharge} onChange={e => set('deliveryCharge', e.target.value)} placeholder="Use your store's delivery charge" className="mt-2 min-h-11" />
+                <p className="mt-2 text-xs leading-5 text-[#817568]">Leave blank to use your store's delivery charge. Enter 0 for free delivery on this product. When multiple products from your store are ordered together, only the highest applicable delivery charge is added once. Pickup is free.</p>
+              </div>
               <label className="flex min-h-12 items-center gap-3 rounded-xl border border-[#e9dfd3] bg-white p-3 text-xs font-medium"><input className="size-4 accent-[#836847]" type="checkbox" checked={draft.showPrice} onChange={e=>set('showPrice',e.target.checked)} />Show price publicly</label>
               <div className="grid min-w-0 items-start gap-4 rounded-2xl border border-[#e9dfd3] bg-white p-3.5 sm:grid-cols-2 sm:p-4">
               <div className="flex min-w-0 flex-col gap-1.5 text-xs font-medium"><Label htmlFor="seller-editor-availability" className="text-xs leading-5">Availability</Label>
@@ -371,6 +376,7 @@ export function SellerProductEditor({ user, open, editing, sku, busy, enabled, d
               <div className="min-w-0 rounded-2xl border border-[#e9dfd3] bg-white p-4 text-sm">
                 {draft.weightOptions.length ? <ul>{draft.weightOptions.map((w,i) => <li key={i} className="flex flex-wrap justify-between gap-2 py-1">
                   <span>{w.value} {w.unit}</span><span>₹{w.price} · {w.stockQuantity || draft.stockQuantity || '0'} in stock</span></li>)}</ul> : <p>₹{draft.price}</p>}
+                <p className="mt-2 text-xs text-[#786550]">Delivery: {draft.deliveryCharge.trim() === '' ? 'Uses store delivery charge' : Number(draft.deliveryCharge) === 0 ? 'Free delivery' : `₹${draft.deliveryCharge} (product override)`}</p>
                 <p className="mt-2 capitalize">{draft.availability.replaceAll('-', ' ')}{(!draft.weightOptions.length || draft.weightOptions.some(size => !size.stockQuantity)) && ` · ${draft.stockQuantity || '0'} in stock`}</p>
                 {editing && <p className="mt-2">Current listing status: {draft.status}</p>}
                 {sku && <ProductSkuCopy sku={sku}/>}
