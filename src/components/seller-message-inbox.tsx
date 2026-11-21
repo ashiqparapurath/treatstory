@@ -17,7 +17,7 @@ export function SellerMessageInbox() {
   const { toast } = useToast();
   const listRef = useMemoFirebase(
     () => db && user && role === 'seller'
-      ? query(collection(db, 'support_tickets'), where('sellerId', '==', user.uid), limit(100))
+      ? query(collection(db, 'support_tickets'), where('sellerId', '==', user.uid), where('route', '==', 'seller'), limit(100))
       : null,
     [db, user?.uid, role],
   );
