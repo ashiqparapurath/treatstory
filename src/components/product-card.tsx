@@ -26,6 +26,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const formatPrice = (price: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(price);
 
   const handleAddToCart = () => {
+    if (!product.showPrice) return; // No order can use an unpublished or variable price.
     addToCart(product);
     toast({ title: "Added to your bag", description: `${product.name} is waiting in your TreatStory bag.` });
   };
@@ -58,9 +59,9 @@ export function ProductCard({ product }: ProductCardProps) {
             {product.description && <p className="hidden text-[11px] leading-snug text-white/85 sm:line-clamp-2 sm:text-xs">{product.description}</p>}
             <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 text-white">{product.showPrice ? <p className="text-lg font-semibold tracking-tight sm:text-xl">{formatPrice(product.price)}</p> : <p className="text-xs font-medium">Price on request</p>}</div>
-            <Button onClick={handleAddToCart} size="icon" aria-label={`Add ${product.name} to bag`} className="pointer-events-auto relative z-20 h-11 w-11 shrink-0 rounded-full bg-white text-[#29251f] shadow-sm transition-colors hover:bg-[#f4eee5]">
-            <ShoppingBag className="h-4 w-4" />
-            </Button>
+            {product.showPrice ? <Button onClick={handleAddToCart} size="icon" aria-label={`Add ${product.name} to bag`} className="pointer-events-auto relative z-20 h-11 w-11 shrink-0 rounded-full bg-white text-[#29251f] shadow-sm transition-colors hover:bg-[#f4eee5]">
+              <ShoppingBag className="h-4 w-4" />
+            </Button> : <Link href={'/product/' + encodeURIComponent(product.id)} aria-label={'View ' + product.name + ' details and enquire about price'} className="pointer-events-auto relative z-20 inline-flex min-h-11 items-center rounded-full border border-white/70 bg-white/15 px-3 text-[11px] font-semibold text-white backdrop-blur-sm transition hover:bg-white/25">View details</Link>}
             </div>
           </div>
           <div className="pointer-events-none absolute inset-x-2.5 bottom-3 z-20 flex flex-col gap-1.5 text-white sm:hidden">
