@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
         if (!quoteSnap.exists || quote?.sellerId !== uid || typeof quote.buyerUid !== 'string' ||
             !quote.buyerUid || quote.buyerUid === uid)
           throw new ApiError(403, 'This quotation does not belong to your store.');
-        if (!sellerSnap.exists || sellerSnap.data()?.ownerUid !== uid || sellerSnap.data()?.status !== 'active')
+        if (!sellerSnap.exists || sellerSnap.data()?.ownerUid !== uid || sellerSnap.data()?.status !== 'active' ||
+            !sellerSnap.data()?.accessEndsAt?.toMillis || sellerSnap.data()!.accessEndsAt.toMillis() <= Date.now())
           throw new ApiError(403, 'An active seller account is required.');
         if (ticketSnap.exists) {
           const existing = ticketSnap.data()!;
