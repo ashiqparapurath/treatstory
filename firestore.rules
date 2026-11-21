@@ -407,8 +407,13 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
     match /support_tickets/{ticketId} {
+      // A seller sees only tickets explicitly addressed to their own store.
+      // Old admin tickets remain visible to their owner and authorized admins.
       allow get, list: if isAdmin() ||
-        (isSignedIn() && resource.data.ownerUid == request.auth.uid);
+        (isSignedIn() && resource.data.ownerUid == request.auth.uid) ||
+        (isSignedIn() && resource.data.get('route', '') == 'seller' &&
+          resource.data.get('sellerId', '') == request.auth.uid &&
+          exists(/databases/$(database)/documents/sellers/$(request.auth.uid)));
       allow create, update, delete: if false;
     }
     // Matrix stores encrypted bodies on the messaging service. These documents
