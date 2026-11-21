@@ -93,7 +93,7 @@ export function SupportTicketThread({ ticket, perspective, onSend, onClose }: Pr
           </div>;
         })}
         {ticket.status === 'closed' && <p className="mx-auto flex items-center gap-2 text-center text-xs text-[#8e7f6c]"><XCircle className="h-4 w-4" /> This request is closed. Start a new request if you still need help.</p>}
-        {ticket.status !== 'closed' && <p className="mx-auto flex items-center gap-2 text-center text-xs text-[#8e7f6c]"><Clock3 className="h-4 w-4" /> Support replies are handled by the team and may not arrive immediately.</p>}
+        {ticket.status !== 'closed' && <p className="mx-auto flex items-center gap-2 text-center text-xs text-[#8e7f6c]"><Clock3 className="h-4 w-4" /> {ticket.route === 'seller' ? 'Seller replies may not arrive immediately.' : 'Support replies are handled by the team and may not arrive immediately.'}</p>}
       </div>
     </div>
     <form onSubmit={submit} className="shrink-0 border-t border-[#e9e1d6] bg-white px-4 py-3 sm:px-8">
