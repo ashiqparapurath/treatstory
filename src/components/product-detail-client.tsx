@@ -176,6 +176,10 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
             {creator?.availability === 'made-to-order' && <span className="rounded-full bg-[#f6e8dd] px-2.5 py-1 text-[10px] font-medium text-[#995b35]">Made to order</span>}
           </div>
           {creator?.sku && <div className="mt-3 hidden md:block"><ProductSkuCopy sku={creator.sku} /></div>}
+          {creator && typeof creator.deliveryCharge === 'number' && <p className="mt-2 text-xs font-medium text-[#78644b]">
+            {creator.deliveryCharge === 0 ? 'Free delivery for this product' : 'Product delivery charge: ' + formatPrice(creator.deliveryCharge)}
+            <span className="block font-normal text-[#968575]">Applied once per seller at checkout; pickup has no delivery fee.</span>
+          </p>}}
           {sellerName && <>
             <div className="mt-5 md:hidden">
               <p className="text-[12px] font-semibold text-[#3b3029]">Seller</p>
