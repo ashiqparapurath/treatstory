@@ -105,7 +105,10 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
   const hasStock = !creator || creator.availability !== 'available' || selectedStock >= minQty;
   const available = !!product?.showPrice && (!creator || creator.availability !== 'unavailable') && hasStock;
   const askPrice = !!creator && creator.showPrice === false;
-  const quoteHref = creator ? '/custom-orders?seller=' + encodeURIComponent(creator.sellerId) + '&product=' + encodeURIComponent(creator.id) : '';
+  const quoteHref = creator ? '/custom-orders?seller=' + encodeURIComponent(creator.sellerId)
+    + '&product=' + encodeURIComponent(creator.id)
+    + (askPrice ? '&mode=price' : '')
+    + (selectedWeight ? '&size=' + encodeURIComponent(selectedWeight.value + ' ' + selectedWeight.unit) : '') : '';
   const sellerChatHref = creator ? '/support?seller=' + encodeURIComponent(creator.sellerId) : '';
   const whatsAppHref = whatsappNumber && product
     ? 'https://wa.me/' + whatsappNumber + '?text=' + encodeURIComponent(
@@ -204,9 +207,10 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
                     <span className="mt-0.5 block text-[11px] text-[#a49a91]">Creator · View shop</span>
                   </span>
                 </Link>
-                {whatsappNumber && <>
-                  <a href={'https://wa.me/' + whatsappNumber + '?text=' + encodeURIComponent('Hello! I am interested in ' + product.name + ' on TreatStory.')} target="_blank" rel="noopener noreferrer" aria-label={'Message ' + sellerName + ' on WhatsApp'} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7f1eb] text-[#8d5130] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]"><WhatsAppIcon className="h-5 w-5"/></a>
-                </>}
+                <div className="flex shrink-0 items-center gap-2" role="group" aria-label={'Message ' + sellerName}>
+                  <Link href={sellerChatHref} aria-label={'Chat with ' + sellerName + ' on TreatStory'} title="Chat on TreatStory" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#e6dbcb] bg-[#f8f4ee] text-[#684d35] transition hover:bg-[#efe7db] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#754328]"><MessageSquareText aria-hidden="true" className="h-5 w-5" /></Link>
+                  {whatsAppHref && <a href={whatsAppHref} target="_blank" rel="noopener noreferrer" aria-label={'Chat with ' + sellerName + ' on WhatsApp'} title="Chat on WhatsApp" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#cbe9d2] bg-[#e9f7ed] text-[#16834b] transition hover:bg-[#dcf2e2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#16834b]"><WhatsAppIcon className="h-5 w-5" /></a>}
+                </div>
               </div>
             </div>
             <p className="mt-4 hidden min-h-14 w-full items-center gap-3 rounded-xl bg-[#f7efe6] px-3 py-2.5 text-xs text-[#6b5342] md:inline-flex md:min-h-0 md:w-auto md:bg-transparent md:px-0 md:py-0">
@@ -266,7 +270,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
         </>}
       </div>
       <div className="hidden justify-start sm:flex"><FavoriteToggle productId={creator ? 'seller:' + product.id : product.id} title={product.name} imageUrl={photos[0]}/></div>
-      {creator && <div aria-label="Contact seller" className="rounded-2xl border border-[#e9ded2] bg-[#fbf8f3] p-3.5 sm:p-4">
+      {creator && <div aria-label="Contact seller" className="hidden rounded-2xl border border-[#e9ded2] bg-[#fbf8f3] p-4 md:block">
         <p className="mb-3 text-xs font-semibold text-[#554535]">Contact {sellerName || 'this seller'}</p>
         <div className={'grid gap-2 ' + (whatsAppHref ? 'sm:grid-cols-2' : 'grid-cols-1')}>
           <Link href={sellerChatHref} className="flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-xl border border-[#dbceb9] bg-white px-3 py-2 text-center text-[12px] font-semibold text-[#554432] transition hover:bg-[#f3ebdf] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#9e7653]">
