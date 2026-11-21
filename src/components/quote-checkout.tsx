@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Seller, MarketplaceProduct } from '@/lib/marketplace-types';
+import { applicableDeliveryCharge } from '@/lib/product-delivery-charge';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import {
@@ -43,9 +44,10 @@ export function QuoteCheckout({
   const [mode, setMode] = useState('delivery');
   const [slot, setSlot] = useState('');
   const [weight, setWeight] = useState('');
-  const total =
-    (quote.quotedPrice || 0) +
-    (mode === 'delivery' ? seller?.deliveryFee || 0 : 0);
+  const deliveryFee = mode === 'delivery'
+    ? applicableDeliveryCharge({ deliveryCharge: product?.deliveryCharge }, seller?.deliveryFee || 0)
+    : 0;
+  const total = (quote.quotedPrice || 0) + deliveryFee;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
