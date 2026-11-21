@@ -1,6 +1,10 @@
-# TreatStory: complete Google Apps Script email setup
+# TreatStory: Firebase password resets and Google Apps Script event emails
 
-All email delivery uses your Google Apps Script deployment: welcome, verification, password reset, order stages, custom quotes, support, seller applications and seller access. Firebase still authenticates users and generates/validates secure account links; it does not send these app-triggered messages. No custom domain, SMTP password or separate email provider is required.
+**Current flow (November 2026):** Password-reset emails are delivered **directly by Firebase Authentication** using `sendPasswordResetEmail`. They no longer require the Google Apps Script relay, mail outbox, Admin SDK link generation, or the `/api/email/account` reset action. Welcome, email verification, orders, quotes, seller notifications, and support continue using Apps Script. Existing `password_reset` templates and worker support remain for previously queued jobs.
+
+For the Firebase password reset setup, open **Firebase Console → Authentication → Settings → Authorized domains** and add `treatstory.in` (and `www.treatstory.in` if used). Ensure the Email/Password provider is enabled. Under **Authentication → Templates → Password reset**, customize the Firebase email. For branded `noreply@treatstory.in` sending, choose **Customize domain** and use only the exact TXT/CNAME records Firebase provides; do not replace Vercel's `www` DNS record. See [Firebase custom email domain](https://firebase.google.com/docs/auth/email-custom-domain) and [password recovery](./firebase-password-reset.md).
+
+**Historical note:** References below to Google Apps Script sending `password_reset` mail, reset-outbox quotas, and reset-outbox troubleshooting are for pre-migration queued jobs only; they no longer describe newly requested resets.
 
 The full [Code.gs](../apps-script/Code.gs) contains the signed relay, **31 custom HTML/plain-text templates**, a preview gallery, and the automatic retry trigger. There are no separate HTML files to paste. Sender address is the Google account that deploys the script; its display name defaults to TreatStory.
 
