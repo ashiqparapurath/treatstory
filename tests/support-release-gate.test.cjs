@@ -9,8 +9,9 @@ test('the production support route uses the working legacy ticket system unless 
   assert.match(layout,/<LegacySupportPage/);
   const legacy=read('src/components/support-legacy-page.tsx');
   assert.match(legacy, /\/api\/support/);
-  assert.match(legacy, /Submit request/);
-  assert.match(legacy,/Your support requests/);
+  assert.match(legacy, /Message a seller/);
+  assert.match(legacy, /Contact TreatStory support/);
+  assert.match(legacy,/Your seller conversations/);
 });
 
 test('the admin inbox defaults to the working ticket responder and cannot activate E2EE implicitly',()=>{

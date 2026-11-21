@@ -199,6 +199,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
               <Link href={'/shop/' + encodeURIComponent(product.sellerId || '')} className="underline underline-offset-4">Made by {sellerName} · View creator shop</Link>
             </p>
           </>}
+          {creator?.sellerId && <Link href={'/support?seller=' + encodeURIComponent(creator.sellerId)} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#e4d8c7] bg-[#fbf7f0] px-4 text-xs font-semibold text-[#74583a] hover:bg-[#f4ebdc]"><MessageCircle aria-hidden="true" className="h-4 w-4" />Message seller on TreatStory</Link>}
           <p className="mt-5 hidden text-3xl font-semibold md:block">{product.showPrice ? formatPrice(selectedPrice) : 'Price on request'}</p>
         </div>
         <section className="border-b border-[#eee9e4] py-4 md:rounded-2xl md:border md:border-[#e8e0d5] md:bg-white md:p-5" aria-labelledby="product-description-title">

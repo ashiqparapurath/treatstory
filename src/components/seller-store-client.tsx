@@ -8,7 +8,7 @@ import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase
 import { Header } from '@/components/header';
 import { SellerProductCollection } from '@/components/seller-product-collection';
 import type { Seller, MarketplaceProduct } from '@/lib/marketplace-types';
-import { BadgeCheck, Instagram, MapPin, Package, Store, Truck } from 'lucide-react';
+import { BadgeCheck, Instagram, MapPin, MessageSquareText, Package, Store, Truck } from 'lucide-react';
 import { StoreShareButton } from '@/components/store-share-button';
 import { sellerCoverageLabel } from '@/lib/delivery-coverage';
 
@@ -102,6 +102,7 @@ export default function SellerStoreClient({ initialSeller = null, initialProduct
                       Instagram
                     </a>
                   )}
+                  <Link href={'/support?seller=' + encodeURIComponent(visibleSeller!.id || id)} className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[#ded4c7] bg-[#fbf9f6] px-3 text-xs font-semibold text-[#4e4030] hover:bg-[#f3ede4] sm:min-h-11 sm:px-4"><MessageSquareText aria-hidden="true" className="h-4 w-4" />Message seller</Link>
                   <StoreShareButton sellerId={visibleSeller!.slug || id} storeName={visibleSeller!.businessName} compact />
                 </div>
                 {(visibleSeller!.businessCity || visibleSeller!.businessState ||

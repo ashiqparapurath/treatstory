@@ -73,11 +73,11 @@ export function SupportTicketThread({ ticket, perspective, onSend, onClose }: Pr
     <div ref={viewport} aria-label="Support message history" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-8 sm:py-7">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
         <div className="mx-auto min-w-0 max-w-full [overflow-wrap:anywhere] sm:max-w-xl rounded-2xl border border-[#ebe2d6] bg-white p-4 text-center sm:p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9a805d]">TreatStory customer care</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9a805d]">{ticket.route === 'seller' ? 'Seller conversation' : 'TreatStory customer care'}</p>
           <h3 className="mt-2 break-words text-base font-semibold text-[#302a24]">{ticket.subject}</h3>
           <p className="mt-2 text-xs capitalize text-[#867a6c]">{ticket.category} · {ticket.status === 'closed' ? 'Closed' : ticket.status === 'responded' ? 'Replied' : 'Open'}{ticket.orderId ? ' · Order linked' : ''}</p>
           {ticket.orderId && <p className="mt-2 break-all text-xs text-[#887b6c]">Order reference: {ticket.orderId}</p>}
-          {perspective === 'support' && <p className="mt-2 break-all text-[11px] text-[#9b8e80]">Customer UID: {ticket.ownerUid}</p>}
+          {perspective === 'support' && ticket.route !== 'seller' && <p className="mt-2 break-all text-[11px] text-[#9b8e80]">Customer UID: {ticket.ownerUid}</p>}
         </div>
         <p className="mx-auto flex max-w-xl items-start gap-2 text-xs leading-5 text-[#857566]"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Support tickets are not end-to-end encrypted. Do not share passwords, payment card numbers or recovery codes.</p>
         {history.map(item => {
@@ -85,7 +85,7 @@ export function SupportTicketThread({ ticket, perspective, onSend, onClose }: Pr
           return <div key={item.id} className={'flex ' + (mine ? 'justify-end' : 'justify-start')}>
             <div className={'min-w-0 max-w-[90%] [overflow-wrap:anywhere] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[75%] ' + (mine ? 'rounded-br-md bg-[#302a24] text-white' : 'rounded-bl-md border border-[#e8e1d7] bg-white text-[#332d27]')}>
               <div className={'flex items-center gap-2 text-[11px] font-semibold ' + (mine ? 'text-[#ecdbc8]' : 'text-[#866d52]')}>
-                <MessageCircle className="h-3 w-3" />{mine ? 'You' : item.sender === 'support' ? 'TreatStory support' : 'Customer'}
+                <MessageCircle className="h-3 w-3" />{mine ? 'You' : item.sender === 'support' ? (ticket.route === 'seller' ? ticket.sellerName || 'Seller' : 'TreatStory support') : 'Customer'}
               </div>
               <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6">{item.body}</p>
               {time(item.sentAt) && <p className={'mt-2 text-right text-[10px] ' + (mine ? 'text-[#d1c1af]' : 'text-[#988b7d]')}>{time(item.sentAt)}</p>}
@@ -93,7 +93,7 @@ export function SupportTicketThread({ ticket, perspective, onSend, onClose }: Pr
           </div>;
         })}
         {ticket.status === 'closed' && <p className="mx-auto flex items-center gap-2 text-center text-xs text-[#8e7f6c]"><XCircle className="h-4 w-4" /> This request is closed. Start a new request if you still need help.</p>}
-        {ticket.status !== 'closed' && <p className="mx-auto flex items-center gap-2 text-center text-xs text-[#8e7f6c]"><Clock3 className="h-4 w-4" /> Support replies are handled by the team and may not arrive immediately.</p>}
+        {ticket.status !== 'closed' && <p className="mx-auto flex items-center gap-2 text-center text-xs text-[#8e7f6c]"><Clock3 className="h-4 w-4" /> {ticket.route === 'seller' ? 'Seller replies may not arrive immediately.' : 'Support replies are handled by the team and may not arrive immediately.'}</p>}
       </div>
     </div>
     <form onSubmit={submit} className="shrink-0 border-t border-[#e9e1d6] bg-white px-4 py-3 sm:px-8">
