@@ -17,7 +17,7 @@ export type PublicListingResult =
 // Only return explicitly public display fields to browser components.
 // Do not serialize a full Firestore document or timestamps to the client.
 const publicFields = [
-  'name', 'description', 'price', 'category', 'categoryId', 'imageUrls',
+  'name', 'description', 'price', 'deliveryCharge', 'category', 'categoryId', 'imageUrls',
   'showPrice', 'sellerId', 'status', 'availability', 'sku',
   'minimumOrderQuantity', 'weightOptions', 'weightValue', 'weightUnit',
   'stockQuantity', 'customizationOptions', 'ingredients', 'allergens',
