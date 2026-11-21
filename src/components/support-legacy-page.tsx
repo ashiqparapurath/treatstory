@@ -119,7 +119,7 @@ export default function SupportPage() {
     <label className="block space-y-2 text-xs font-semibold">Your message
       <Textarea rows={5} required minLength={15} maxLength={2000} value={message} onChange={event => setMessage(event.target.value)} placeholder="Describe your issue and what outcome would help." className="resize-none rounded-xl" />
     </label>
-    <Button type="submit" disabled={busy || isRoleLoading || (!isSeller && (targetSellerLoading || targetSeller?.status !== 'active' || targetSeller.id === user.uid))} className="h-12 w-full rounded-full">{busy ? 'Sending…' : isSeller ? 'Contact TreatStory' : 'Send to seller'}</Button>
+    <Button type="submit" disabled={busy || isRoleLoading || (!isSeller && (targetSellerLoading || targetSeller?.status !== 'active' || targetSellerId === user.uid))} className="h-12 w-full rounded-full">{busy ? 'Sending…' : isSeller ? 'Contact TreatStory' : 'Send to seller'}</Button>
   </form>;
   const topNotice = <div className="mx-auto flex min-w-0 max-w-5xl flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
     <span className="inline-flex min-w-0 items-start gap-1.5"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Messages are not end-to-end encrypted. {isSeller ? 'TreatStory support handles your requests.' : 'Each message is delivered to the selected seller.'}</span>
