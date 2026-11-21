@@ -8,7 +8,7 @@ import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase
 import { Header } from '@/components/header';
 import { SellerProductCollection } from '@/components/seller-product-collection';
 import type { Seller, MarketplaceProduct } from '@/lib/marketplace-types';
-import { BadgeCheck, Instagram, MapPin, Package, Store, Truck } from 'lucide-react';
+import { BadgeCheck, Instagram, MapPin, MessageSquareText, Package, Store, Truck } from 'lucide-react';
 import { StoreShareButton } from '@/components/store-share-button';
 import { sellerCoverageLabel } from '@/lib/delivery-coverage';
 
