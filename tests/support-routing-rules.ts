@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { initializeApp as initializeAdminApp, deleteApp as deleteAdminApp } from 'firebase-admin/app';
 import { getFirestore as adminFirestore, Timestamp } from 'firebase-admin/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { connectFirestoreEmulator, getFirestore, collection, doc, getDoc, getDocs, limit, query, updateDoc, where, addDoc } from 'firebase/firestore';
+import { connectFirestoreEmulator, getFirestore, terminate, collection, doc, getDoc, getDocs, limit, query, updateDoc, where, addDoc } from 'firebase/firestore';
 
 async function main() {
   if (!/^(127\.0\.0\.1|localhost):\d+$/.test(process.env.FIRESTORE_EMULATOR_HOST || ''))
@@ -101,7 +101,7 @@ async function main() {
     console.log('PASS ticket owner, exact seller and admin access; deny other sellers and all direct writes');
   } finally {
     await Promise.all(everyone.map(async item => {
-      await item.db.terminate();
+      await terminate(item.db);
       await deleteApp(item.app);
     }));
     await server.terminate();
