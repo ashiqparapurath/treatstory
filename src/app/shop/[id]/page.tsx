@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import SellerStoreClient from '@/components/seller-store-client';
 import { CatalogMaintenanceGate } from '@/components/catalog-maintenance-gate';
 import { getPublicStore } from '@/lib/server/public-store';
-import { siteOrigin } from '@/lib/social-metadata';
+import { storefrontShareUrl } from '@/lib/storefront-share';
 
 export const dynamic = 'force-dynamic';
 type Params = { params: Promise<{ id: string }> };
@@ -11,7 +11,7 @@ type Params = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const result = await getPublicStore(id);
-  const canonical = '/shop/' + encodeURIComponent(result.kind === 'found' ? result.data.seller.slug || id : id);
+  const canonical = storefrontShareUrl(result.kind === 'found' ? result.data.seller.slug || id : id);
   if (result.kind === 'missing')
     return { title: 'Store unavailable', robots: { index: false, follow: false } };
   if (result.kind === 'unavailable')
@@ -43,7 +43,7 @@ export default async function SellerStorePage({ params }: Params) {
     '@type': 'Store',
     name: data.seller.businessName,
     description: data.seller.description,
-    url: new URL('/shop/' + encodeURIComponent(id), siteOrigin()).href,
+    url: storefrontShareUrl(data.seller.slug || id),
     ...(data.seller.logoUrl?.startsWith('https://') ? { image: data.seller.logoUrl } : {}),
   } : null;
   return <>

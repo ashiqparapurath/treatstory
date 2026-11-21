@@ -25,6 +25,7 @@ export const getPublicStore = cache(async (id: string):Promise<PublicStoreResult
     try {
       const { db } = getServerFirebase();
       const mapping = await db.doc('store_slugs/' + id).get();
+      if (mapping.data()?.retired === true) return { kind: 'missing' };
       const sellerId = mapping.data()?.sellerId || id;
       const snapshot = await db.collection('sellers').doc(sellerId).get();
       if (!snapshot.exists) return { kind: 'missing' };

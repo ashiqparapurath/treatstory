@@ -26,7 +26,7 @@ function uniqueDocs(...groups: Array<{ docs: QueryDocumentSnapshot[] }>) {
 
 async function purgePersonalData(db: FirebaseDb, uid: string) {
   // Queries are UID-scoped. Never iterate all accounts or touch unrelated customers.
-  const [buyerOrders, sellerOrders, checkouts, products, reviews, support, quoteBuyer, quoteSeller, bookings, mail, quoteLimits, supportLimits] = await Promise.all([
+  const [buyerOrders, sellerOrders, checkouts, products, reviews, support, quoteBuyer, quoteSeller, bookings, mail, quoteLimits, supportLimits, storeAliases] = await Promise.all([
     fetchByUid(db, 'seller_orders', 'buyerUid', uid),
     fetchByUid(db, 'seller_orders', 'sellerId', uid),
     fetchByUid(db, 'checkout_orders', 'buyerUid', uid),
@@ -39,6 +39,7 @@ async function purgePersonalData(db: FirebaseDb, uid: string) {
     fetchByUid(db, 'mail_outbox', 'uid', uid),
     fetchByUid(db, 'quote_limits', 'buyerUid', uid),
     fetchByUid(db, 'support_limits', 'ownerUid', uid),
+    fetchByUid(db, 'store_slugs', 'sellerId', uid),
   ]);
   if ([...buyerOrders.docs, ...sellerOrders.docs].some(order => !FINAL_ORDERS.has(order.data().status))) {
     throw new ApiError(409, 'You still have an active order. Complete or cancel it before deleting your account.');
@@ -62,6 +63,9 @@ async function purgePersonalData(db: FirebaseDb, uid: string) {
     }));
   }
   for (const order of sellerOrders.docs) watch(writer.update(order.ref, {sellerId:'deleted-account'}));
+  // Preserve old public URLs as unavailable tombstones, never reassign them to another seller.
+  // Remove the former Firebase UID from these public-readable alias documents.
+  for (const alias of storeAliases.docs) watch(writer.update(alias.ref, { sellerId: FieldValue.delete(), retired: true }));
   for (const checkout of checkouts.docs) {
     watch(writer.update(checkout.ref, {
       buyerUid: 'deleted-account',

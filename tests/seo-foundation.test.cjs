@@ -12,6 +12,7 @@ test('robots and sitemap advertise public pages without exposing private dashboa
   assert.match(sitemap,/where\('status', '==', 'published'\)/);
   assert.match(sitemap,/where\('status','==','active'\)/);
   assert.match(sitemap,/encodeURIComponent\(routeId\)/);
+  assert.match(sitemap,/storefrontShareUrl/);
   assert.doesNotMatch(sitemap,/\/admin\//);
 });
 
@@ -49,6 +50,7 @@ test('product and store pages render public data, schemas, and preserve client s
  assert.match(product,/product\.showPrice === true/);
  assert.match(product,/initialProduct=/);
  assert.match(shop,/getPublicStore/);
+ assert.match(shop,/storefrontShareUrl/);
  assert.match(shop,/application\/ld\+json/);
  assert.match(shop,/initialSeller=/);
  assert.match(publicProduct,/data\.status !== 'published'/);

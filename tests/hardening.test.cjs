@@ -159,7 +159,7 @@ test('guest submissions cannot set privileges; admin chooses plan before verifie
   const seller = records.get('sellers/new-seller');
   assert.equal(seller.accessType, 'trial');
   assert.equal(seller.approvalPlan, 'six_months');
-  assert.match(seller.slug, /^a-bakery-/);
+  assert.equal(seller.slug, 'a-bakery', 'first business with the name gets a clean URL');
   const { sellerTrialEnd } = load('src/lib/seller-policy.ts');
   assert.equal(seller.accessEndsAt.toMillis(), sellerTrialEnd(seller.accessStartsAt.toDate()).getTime());
   assert.equal(records.get(entry[0]).ownerUid, 'new-seller');

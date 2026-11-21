@@ -157,7 +157,7 @@ test('activation persists the admin-selected access plan with existing seller fi
   const activation = load('src/lib/server/seller-activation.ts', {
     '@/lib/server/firebase-admin': { ApiError },
     '@/lib/server/mail': { queueNotification: (...args) => notices.push(args) },
-    '@/lib/server/store-slug': { storeSlug: (name, uid) => 'studio-' + uid },
+    '@/lib/server/store-slug': { reserveFriendlyStoreSlug: async (tx, db, name, uid) => { tx.set(db.doc('store_slugs/studio-' + uid), {sellerId:uid}); return 'studio-' + uid; } },
     '@/lib/seller-policy': policy,
   });
   const db = { doc: path => ({ path }) };

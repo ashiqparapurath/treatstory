@@ -1,5 +1,5 @@
 /** Canonical public store URL, independent of temporary Vercel preview domains. */
-const STORE_ORIGIN = 'https://treatstory.vercel.app';
+const STORE_ORIGIN = 'https://treatstory.in';
 
 export function storefrontShareUrl(sellerId: string): string {
   return new URL('/shop/' + encodeURIComponent(sellerId), STORE_ORIGIN).href;
@@ -7,6 +7,6 @@ export function storefrontShareUrl(sellerId: string): string {
 
 export function storefrontWhatsAppUrl(sellerId: string, storeName: string): string {
   return 'https://wa.me/?text=' + encodeURIComponent(
-    'Explore ' + storeName + ' on TreatStory\n' + storefrontShareUrl(sellerId),
+    'Discover ' + storeName.trim().replace(/\s+/g, ' ').slice(0, 120) + ' on TreatStory. Shop their handmade creations:\n' + storefrontShareUrl(sellerId),
   );
 }
