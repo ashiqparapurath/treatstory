@@ -92,7 +92,7 @@ export default function SupportPage() {
       <p className="mt-2 text-xs leading-5 text-[#827568]">{isSeller ? 'Tell our support team what happened. Replies will appear here.' : 'Ask the shop directly about its products, delivery or your order.'}</p>
     </div>
     {!isSeller && <div className="rounded-xl border border-[#e8ded2] bg-[#faf6ef] p-3 text-sm">
-      {targetSellerLoading ? 'Checking selected store…' : targetSeller?.status === 'active' && targetSeller.id !== user.uid
+      {targetSellerLoading ? 'Checking selected store…' : targetSeller?.status === 'active' && targetSellerId !== user.uid
         ? <>Messaging <strong>{targetSeller.businessName}</strong></>
         : <><p className="font-medium">Select a store to message</p><p className="mt-1 text-xs leading-5 text-[#857565]">Visit a seller's storefront and tap Message seller. Each message goes only to that particular store.</p><Link href="/products" className="mt-2 inline-flex min-h-9 items-center text-xs font-semibold underline">Explore stores and products</Link></>}
     </div>}
