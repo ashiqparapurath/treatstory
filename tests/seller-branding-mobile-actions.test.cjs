@@ -54,7 +54,7 @@ test('seller storefront presents a compact responsive approved creator identity'
 test('seller settings exposes public storefront link and sharing without saving store settings', () => {
   const settings = fs.readFileSync('src/components/seller-store-settings.tsx', 'utf8');
   assert.match(settings, /Preview public storefront/);
-  assert.match(settings, /<StoreShareButton sellerId=\{seller.slug \|\| user.uid\} storeName=\{seller.businessName\} dark/);
+  assert.match(settings, /<StoreShareButton sellerId=\{shareSlug\} storeName=\{seller.businessName\} dark/);
   const share = fs.readFileSync('src/components/store-share-button.tsx', 'utf8');
   assert.match(share, /type="button"/);
   assert.match(share, /navigator\.clipboard\?\.writeText/);
@@ -72,12 +72,12 @@ test('storefront shared URL stays canonical and encodes seller IDs', () => {
   const module = { exports: {} };
   vm.runInNewContext(js, { module, exports: module.exports, URL, encodeURIComponent });
   const { storefrontShareUrl, storefrontWhatsAppUrl } = module.exports;
-  assert.equal(storefrontShareUrl('seller-test-1'), 'https://treatstory.vercel.app/shop/seller-test-1');
-  assert.equal(storefrontShareUrl('seller/name'), 'https://treatstory.vercel.app/shop/seller%2Fname');
+  assert.equal(storefrontShareUrl('seller-test-1'), 'https://treatstory.in/shop/seller-test-1');
+  assert.equal(storefrontShareUrl('seller/name'), 'https://treatstory.in/shop/seller%2Fname');
   const whatsapp = storefrontWhatsAppUrl('seller-test-1', 'As Production');
   assert.ok(whatsapp.startsWith('https://wa.me/?text='));
-  assert.match(decodeURIComponent(whatsapp), /Explore As Production on TreatStory/);
-  assert.match(decodeURIComponent(whatsapp), /https:\/\/treatstory.vercel.app\/shop\/seller-test-1/);
+  assert.match(decodeURIComponent(whatsapp), /Discover As Production on TreatStory/);
+  assert.match(decodeURIComponent(whatsapp), /https:\/\/treatstory.in\/shop\/seller-test-1/);
 });
 
 test('public seller identity card stays compact on phones without hiding approval, delivery or share actions', () => {
