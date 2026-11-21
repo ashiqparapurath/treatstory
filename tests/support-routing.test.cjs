@@ -139,7 +139,10 @@ test('seller and buyer interfaces are separated and Firestore access is scoped',
   assert.match(admin,/ticket.route !== 'seller'/);
   assert.match(seller,/where\('sellerId', '==', user.uid\)/);
   assert.match(seller,/where\('route', '==', 'seller'\)/);
-  assert.match(buyer,/sellerId: isSeller \? '' : targetSellerId/);
+  assert.match(buyer,/sellerId: supportToAdmin \? '' : targetSellerId/);
+  assert.match(buyer,/const supportToAdmin = isSeller && !targetSellerId/);
+  assert.match(buyer,/\^\[A-Za-z0-9_-\]/);
+  assert.match(fs.readFileSync('src/components/support-ticket-thread.tsx','utf8'),/ticket.route !== 'seller'/);
   assert.match(store,/Message seller/);
   assert.match(order,/Message seller about this order/);
   assert.match(fs.readFileSync('src/app/seller/dashboard/page.tsx','utf8'),/href="\/seller\/messages"/);
