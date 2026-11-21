@@ -70,6 +70,8 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
   const [settingsTab, setSettingsTab] = useState<'profile' | 'delivery' | 'operations'>('profile');
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [shareSlug, setShareSlug] = useState(seller.slug || user.uid);
+  const [linkLoading, setLinkLoading] = useState(false);
   const [error, setError] = useState('');
   const loadedVersion = useRef<number | null>(version(seller.updatedAt));
   const logoInput = useRef<HTMLInputElement>(null);
@@ -80,6 +82,35 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
       loadedVersion.current = version(seller.updatedAt);
     }
   }, [seller, dirty, busy, uploading]);
+
+  useEffect(() => {
+    setShareSlug(seller.slug || user.uid);
+  }, [seller.slug, user.uid]);
+
+  // Old sellers may have a UID/hashed address. Claim a stable, readable URL
+  // through a server-verified transaction before offering the share button.
+  useEffect(() => {
+    if (!active || (seller.slug && seller.slug !== user.uid && !/-[a-f0-9]{12}$/.test(seller.slug))) return;
+    let mounted = true;
+    setLinkLoading(true);
+    async function upgradeLink() {
+      try {
+        const response = await fetch('/api/seller/storefront-link', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${await user.getIdToken()}` },
+        });
+        if (!response.ok) return;
+        const result: { slug?: unknown } = await response.json();
+        if (mounted && typeof result.slug === 'string' && result.slug) setShareSlug(result.slug);
+      } catch {
+        // Keep existing, still-working links if the upgrade is temporarily unavailable.
+      } finally {
+        if (mounted) setLinkLoading(false);
+      }
+    }
+    void upgradeLink();
+    return () => { mounted = false; };
+  }, [active, seller.slug, user.uid]);
 
   function update<K extends keyof StoreDraft>(key: K, value: StoreDraft[K]) {
     setDraft(previous => ({ ...previous, [key]: value }));
@@ -181,7 +212,7 @@ export function SellerStoreSettings({ seller, user, db, active }: { seller: Sell
           </button>
         </div>
         <div className="min-w-0 flex-1"><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#d2b58b]">Store identity</p><h2 className="mt-2 break-words text-2xl font-semibold sm:text-3xl">{seller.businessName}</h2><p className="mt-2 max-w-xl text-xs leading-5 text-white/70">Tap the pencil on your logo to upload a JPG, PNG or WebP (up to 2 MB). Save your changes when you're ready.</p>
-        <div className="mt-3 flex flex-wrap items-center gap-3"><Link href={'/shop/' + (seller.slug || user.uid)} className="inline-flex min-h-11 items-center text-xs font-medium text-[#eacda6] underline underline-offset-4">Preview public storefront</Link><StoreShareButton sellerId={seller.slug || user.uid} storeName={seller.businessName} dark />{draft.logoUrl && <button type="button" onClick={() => update('logoUrl', '')} disabled={!active || busy || uploading} className="text-xs text-white/70 underline underline-offset-4 hover:text-white disabled:opacity-50">Remove logo</button>}</div>
+        <div className="mt-3 flex flex-wrap items-center gap-3"><Link href={'/shop/' + encodeURIComponent(shareSlug)} className="inline-flex min-h-11 items-center text-xs font-medium text-[#eacda6] underline underline-offset-4">Preview public storefront</Link>{linkLoading ? <span role="status" className="inline-flex min-h-11 items-center text-xs text-white/70">Preparing store link…</span> : <StoreShareButton sellerId={shareSlug} storeName={seller.businessName} dark />}{draft.logoUrl && <button type="button" onClick={() => update('logoUrl', '')} disabled={!active || busy || uploading} className="text-xs text-white/70 underline underline-offset-4 hover:text-white disabled:opacity-50">Remove logo</button>}</div>
         {uploading && <p role="status" className="mt-2 text-xs text-[#eacda6]">Uploading logo…</p>}</div>
       </div>
     </div>
