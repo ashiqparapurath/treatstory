@@ -1,6 +1,6 @@
 'use client';
 
-import { collection, limit, orderBy, query } from 'firebase/firestore';
+import { collection, limit, orderBy, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { ActionError, errorToast } from '@/lib/user-notices';
@@ -13,10 +13,21 @@ export function SupportLegacyInbox() {
   const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
-  // Update-time sorting brings active follow-ups to the top of the admin inbox.
-  const ref = useMemoFirebase(() => db ? query(collection(db, 'support_tickets'), orderBy('updatedAt', 'desc'), limit(100)) : null, [db]);
-  const { data, error, isLoading, retry } = useCollection<LegacyTicket>(ref);
-  const visibleTickets = (data ?? []).filter(ticket => ticket.encrypted !== true && ticket.route !== 'seller');
+  // Query platform tickets separately. Customer-to-seller traffic must never
+  // displace new seller-to-admin requests from the 100-ticket admin window.
+  const ref = useMemoFirebase(() => db ? query(collection(db, 'support_tickets'), where('route', '==', 'admin'), orderBy('updatedAt', 'desc'), limit(100)) : null, [db]);
+  const { data: platformTickets, error: platformError, isLoading: platformLoading, retry: retryPlatform } = useCollection<LegacyTicket>(ref);
+  // Older tickets have no route field. Preserve them while upgrading gradually,
+  // without reclassifying or exposing buyer-to-seller conversations in the inbox.
+  const historicalRef = useMemoFirebase(() => db ? query(collection(db, 'support_tickets'), orderBy('updatedAt', 'desc'), limit(100)) : null, [db]);
+  const { data: historical, error: historicalError, isLoading: historicalLoading, retry: retryHistorical } = useCollection<LegacyTicket>(historicalRef);
+  const visibleTickets = [...new Map([
+    ...(platformTickets ?? []).filter(ticket => ticket.encrypted !== true && ticket.route === 'admin'),
+    ...(historical ?? []).filter(ticket => ticket.encrypted !== true && !ticket.route),
+  ].map(ticket => [ticket.id, ticket] as const)).values()];
+  const error = platformError || historicalError;
+  const isLoading = platformLoading || historicalLoading;
+  const retry = () => { retryPlatform(); retryHistorical(); };
 
   async function change(ticketId: string, action: 'reply' | 'close', message?: string) {
     if (!user) throw new Error('Sign in as an administrator to respond.');
