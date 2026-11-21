@@ -2,7 +2,7 @@ import { Timestamp, type Firestore, type Transaction } from 'firebase-admin/fire
 import { z } from 'zod';
 import { ApiError } from '@/lib/server/firebase-admin';
 import { queueNotification } from '@/lib/server/mail';
-import { storeSlug } from '@/lib/server/store-slug';
+import { reserveFriendlyStoreSlug } from '@/lib/server/store-slug';
 import { sellerApprovalEnd } from '@/lib/seller-policy';
 
 const approvedApplicationSchema = z.object({
@@ -31,21 +31,17 @@ export async function activateApprovedSeller(
   const details = parsed.data;
   const plan = details.approvalPlan;
   const sellerRef = db.doc('sellers/' + ownerUid);
-  const slug = storeSlug(details.businessName, ownerUid);
-  const slugRef = db.doc('store_slugs/' + slug);
-  const [seller, reserved, deleting] = await Promise.all([
+  const [seller, deleting] = await Promise.all([
     tx.get(sellerRef),
-    tx.get(slugRef),
     tx.get(db.doc('account_deletions/' + ownerUid)),
   ]);
   if (seller.exists || deleting.exists)
     throw new ApiError(409, 'Account already has seller access or is closing.');
-  if (reserved.exists && reserved.data()?.sellerId !== ownerUid)
-    throw new ApiError(409, 'Store address unavailable.');
+  // Reserve the plain business-name URL, using a short suffix only on collision.
+  const slug = await reserveFriendlyStoreSlug(tx, db, details.businessName, ownerUid);
 
   const accessType = plan === 'full' ? 'full' : 'trial';
   const accessEndsAt = Timestamp.fromDate(sellerApprovalEnd(now.toDate(), plan));
-  tx.set(slugRef, { sellerId: ownerUid });
   tx.create(sellerRef, {
     ownerUid,
     slug,
