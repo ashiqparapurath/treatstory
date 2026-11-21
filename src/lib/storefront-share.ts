@@ -7,6 +7,6 @@ export function storefrontShareUrl(sellerId: string): string {
 
 export function storefrontWhatsAppUrl(sellerId: string, storeName: string): string {
   return 'https://wa.me/?text=' + encodeURIComponent(
-    'Discover ' + storeName.trim().replace(/\\s+/g, ' ').slice(0, 120) + ' on TreatStory. Shop their handmade creations:\n' + storefrontShareUrl(sellerId),
+    'Discover ' + storeName.trim().replace(/\s+/g, ' ').slice(0, 120) + ' on TreatStory. Shop their handmade creations:\n' + storefrontShareUrl(sellerId),
   );
 }
