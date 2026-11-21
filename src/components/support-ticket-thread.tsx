@@ -39,7 +39,7 @@ export function SupportTicketThread({ ticket, perspective, onSend, onClose }: Pr
   const [error, setError] = useState('');
   const viewport = useRef<HTMLDivElement>(null);
   const history: TicketMessage[] = [
-    { id: 'initial-request', sender: 'customer', body: ticket.message, sentAt: ticket.createdAt },
+    { id: 'initial-request', sender: ticket.initialSender || 'customer', body: ticket.message, sentAt: ticket.createdAt },
     ...(ticket.thread || []),
   ];
   // The pre-thread ticket model stored only the latest administrator response.
