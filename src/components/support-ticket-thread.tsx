@@ -8,7 +8,7 @@ import type { SupportChatTicket } from '@/lib/support-conversation-types';
 type TicketTimestamp = { toDate?: () => Date };
 export type TicketMessage = {
   id: string;
-  sender: 'customer' | 'support';
+  sender: 'customer' | 'support' | 'system';
   body: string;
   sentAt?: TicketTimestamp;
 };
