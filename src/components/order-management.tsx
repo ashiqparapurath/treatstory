@@ -4,6 +4,7 @@ import { getErrorNotice, errorToast } from '@/lib/user-notices';
 import { SectionSkeleton } from '@/components/loading-states';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { collection, doc, query, where, orderBy, limit, startAfter, onSnapshot, getDocs, type QueryDocumentSnapshot, type DocumentData } from 'firebase/firestore';
 import { useAccountData, useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
