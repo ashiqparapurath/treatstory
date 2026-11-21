@@ -179,7 +179,7 @@ export default function ProductDetailClient({ initialProduct = null, initialSell
           {creator && typeof creator.deliveryCharge === 'number' && <p className="mt-2 text-xs font-medium text-[#78644b]">
             {creator.deliveryCharge === 0 ? 'Free delivery for this product' : 'Product delivery charge: ' + formatPrice(creator.deliveryCharge)}
             <span className="block font-normal text-[#968575]">Applied once per seller at checkout; pickup has no delivery fee.</span>
-          </p>}}
+          </p>}
           {sellerName && <>
             <div className="mt-5 md:hidden">
               <p className="text-[12px] font-semibold text-[#3b3029]">Seller</p>
