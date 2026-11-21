@@ -336,7 +336,7 @@ service cloud.firestore {
     }
     function validMarketplaceProduct(p, changed, previousWeights) {
       return p.keys().hasOnly([
-        'sellerId', 'name', 'description', 'price', 'category', 'imageUrls',
+        'sellerId', 'name', 'description', 'price', 'deliveryCharge', 'category', 'imageUrls',
         'showPrice', 'availability', 'stockQuantity', 'preparationDays',
         'minimumOrderQuantity', 'weightValue', 'weightUnit', 'weightOptions', 'customizationOptions',
         'advancePaymentRequired', 'careInstructions', 'ingredients', 'allergens', 'dietaryTags', 'shelfLifeDays', 'storageInstructions',
