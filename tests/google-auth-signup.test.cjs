@@ -77,7 +77,10 @@ test('signup matches mobile iOS-style login, has Google and preserves account se
   assert.match(signup,/updateProfile\(result\.user, \{displayName:name\.trim\(\)\}\)/);
   assert.match(signup,/requestAccountMail\('verify-email'/);
   assert.match(signup,/requestAccountMail\('welcome'/);
-  assert.match(signup,/minLength=\{6\}/);
+  assert.match(signup,/minLength=\{12\} maxLength=\{4096\}/);
+  assert.match(signup,/validatePassword\(auth, password\)/);
+  assert.match(signup,/signupPasswordRequirements\(password\)/);
+  assert.match(signup,/signupPasswordNotice\(password\)/);
   assert.match(signup,/autoComplete="new-password"/);
   assert.match(signup,/router\.replace\(nextDestination\(\)\)/);
   assert.match(signup,/next\.startsWith\('\/'\) && !next\.startsWith\('\/\/'\)/);

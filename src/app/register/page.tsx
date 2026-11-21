@@ -2,17 +2,18 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, validatePassword } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/firebase';
 import { getErrorNotice, validateEmail, type UserNotice } from '@/lib/user-notices';
 import { requestAccountMail } from '@/lib/account-mail';
+import { signupPasswordRequirements, signupPasswordNotice } from '@/lib/signup-password-policy';
 import { GoogleSignInButton } from '@/components/google-sign-in-button';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Circle, Eye, EyeOff, ShieldCheck, Sparkles, ShoppingBag } from 'lucide-react';
 
 export default function RegisterPage() {
   const auth = useAuth();
@@ -25,6 +26,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [signInHref, setSignInHref] = useState('/login');
+  const passwordRequirements = signupPasswordRequirements(password);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const next = new URLSearchParams(window.location.search).get('next');
@@ -39,11 +41,18 @@ export default function RegisterPage() {
   async function register(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if(submitting)return;setFormError(null);
-    const invalid = name.trim().length < 2 || name.trim().length > 80 ? {title:'Check your name',description:'Use 2–80 characters for the name on your profile.',field:'name' as const} : validateEmail(email) || (password.length<6?{title:'Choose a longer password',description:'Use at least six characters for your new password.',field:'password' as const}:null);
+    const invalid = name.trim().length < 2 || name.trim().length > 80 ? {title:'Check your name',description:'Use 2–80 characters for the name on your profile.',field:'name' as const} : validateEmail(email) || signupPasswordNotice(password);
     if(invalid){setFormError(invalid);toast({variant:'destructive',title:invalid.title,description:invalid.description});return;}
     if(!auth){const notice=getErrorNotice({code:'app/service-unavailable'},'register');setFormError(notice);toast({variant:'destructive',title:notice.title,description:notice.description});return;}
     setSubmitting(true);
     try {
+      const firebaseValidation = await validatePassword(auth, password);
+      if (!firebaseValidation.isValid) {
+        const notice = {title:'Password needs an update',description:'Review the password requirements below and try again.',field:'password' as const};
+        setFormError(notice);
+        toast({variant:'destructive',title:notice.title,description:notice.description});
+        return;
+      }
       const result = await createUserWithEmailAndPassword(auth, email.trim(), password);
       try {
         await updateProfile(result.user, {displayName:name.trim()});
@@ -107,10 +116,21 @@ export default function RegisterPage() {
               <div className="space-y-1 border-t border-[#eeeef0] px-4 py-2.5 sm:space-y-2 sm:border-0 sm:px-0 sm:py-0">
                 <Label htmlFor="password" className="text-[12px] font-medium text-[#8e8e93] sm:text-xs sm:font-semibold sm:text-[#443b31]">Password</Label>
                 <div className="relative">
-                  <Input aria-invalid={formError?.field==='password'} aria-describedby={formError?'registration-error':undefined} id="password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={6} value={password} onChange={e => {setPassword(e.target.value);setFormError(null);}} placeholder="At least 6 characters" className="h-9 rounded-none border-0 bg-transparent px-0 pr-12 text-base shadow-none placeholder:text-[#aeaeb2] focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-12 sm:rounded-xl sm:border sm:border-[#ddd4c8] sm:bg-white sm:px-4 sm:pr-12 sm:text-sm sm:focus-visible:ring-[#a78c6a]" />
+                  <Input aria-invalid={formError?.field==='password'} aria-describedby={formError?'registration-error signup-password-requirements':'signup-password-requirements'} id="password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={12} maxLength={4096} value={password} onChange={e => {setPassword(e.target.value);setFormError(null);}} placeholder="12+ characters" className="h-9 rounded-none border-0 bg-transparent px-0 pr-12 text-base shadow-none placeholder:text-[#aeaeb2] focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-12 sm:rounded-xl sm:border sm:border-[#ddd4c8] sm:bg-white sm:px-4 sm:pr-12 sm:text-sm sm:focus-visible:ring-[#a78c6a]" />
                   <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={()=>setShowPassword(v=>!v)} className="absolute -inset-y-1 right-0 flex w-11 items-center justify-center rounded-xl text-[#8e8e93] hover:text-[#27272a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a88c6c] sm:inset-y-0 sm:right-1">{showPassword ? <EyeOff className="h-[19px] w-[19px]"/>:<Eye className="h-[19px] w-[19px]"/>}</button>
                 </div>
               </div>
+            </div>
+            <div id="signup-password-requirements" className="space-y-2 px-0.5" aria-label="Password requirements">
+              <p className="text-xs font-medium text-[#70695f]">Your password must include:</p>
+              <ul className="grid grid-cols-1 gap-x-3 gap-y-1.5 min-[360px]:grid-cols-2">
+                {passwordRequirements.map(requirement => (
+                  <li key={requirement.key} className={`flex min-w-0 items-start gap-2 text-xs leading-5 ${requirement.met ? 'text-[#386954]' : 'text-[#77717a]'}`}>
+                    {requirement.met ? <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : <Circle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#b6adb0]" aria-hidden="true" />}
+                    <span><span className="sr-only">{requirement.met ? 'Met: ' : 'Needed: '}</span>{requirement.label}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
             {formError&&<div id="registration-error" role="alert" className="border-l-[3px] border-red-400 bg-red-50/80 px-3 py-3 text-sm text-red-800 sm:rounded-xl sm:border sm:border-red-200"><p className="font-semibold">{formError.title}</p><p className="mt-1 text-xs leading-5">{formError.description}</p></div>}
             {!auth&&<p role="status" className="text-xs text-amber-800">Account creation is temporarily unavailable. Please try again later.</p>}
