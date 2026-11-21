@@ -39,7 +39,8 @@ test('buyer followups and admin replies use existing verified support endpoint',
   assert.match(customer, /action: 'followup'/);
   assert.match(admin, /action: 'reply' \| 'close'/);
   assert.match(admin, /orderBy\('updatedAt', 'desc'\)/);
-  assert.match(admin, /ticket.route !== 'seller'/);
+  assert.match(admin, /ticket.route === 'admin'/);
+  assert.match(admin, /!ticket.route/);
   const rules = read('firestore.rules');
   assert.match(rules, /match \/support_tickets\/\{ticketId\} \{[\s\S]*?allow create, update, delete: if false;/);
 });
