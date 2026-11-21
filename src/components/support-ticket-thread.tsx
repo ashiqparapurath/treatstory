@@ -87,7 +87,7 @@ export function SupportTicketThread({ ticket, perspective, onSend, onClose }: Pr
           return <div key={item.id} className={'flex ' + (mine ? 'justify-end' : 'justify-start')}>
             <div className={'min-w-0 max-w-[90%] [overflow-wrap:anywhere] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[75%] ' + (mine ? 'rounded-br-md bg-[#302a24] text-white' : 'rounded-bl-md border border-[#e8e1d7] bg-white text-[#332d27]')}>
               <div className={'flex items-center gap-2 text-[11px] font-semibold ' + (mine ? 'text-[#ecdbc8]' : 'text-[#866d52]')}>
-                <MessageCircle className="h-3 w-3" />{mine ? 'You' : item.sender === 'support' ? (ticket.route === 'seller' ? ticket.sellerName || 'Seller' : 'TreatStory support') : 'Customer'}
+                <MessageCircle className="h-3 w-3" />{item.sender === 'system' ? 'TreatStory' : mine ? 'You' : item.sender === 'support' ? (ticket.route === 'seller' ? ticket.sellerName || 'Seller' : 'TreatStory support') : 'Customer'}
               </div>
               <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6">{item.body}</p>
               {time(item.sentAt) && <p className={'mt-2 text-right text-[10px] ' + (mine ? 'text-[#d1c1af]' : 'text-[#988b7d]')}>{time(item.sentAt)}</p>}
