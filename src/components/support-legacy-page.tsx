@@ -84,7 +84,7 @@ export default function SupportPage() {
       <MessageSquareText className="h-10 w-10 text-[#a88c69]" />
       <h1 className="mt-5 text-3xl font-semibold">TreatStory support</h1>
       <p className="mt-3 max-w-md text-sm text-[#85796b]">{isUserLoading ? 'Checking your account…' : 'Sign in to view your private support requests and conversations.'}</p>
-      {!isUserLoading && <Link href={'/login?next=' + encodeURIComponent('/support' + (typeof window !== 'undefined' ? window.location.search : (targetSellerId ? '?seller=' + encodeURIComponent(targetSellerId) + (queryOrderId ? '&order=' + encodeURIComponent(queryOrderId) : '') : '')))} className="editorial-button mt-7">Sign in to request support</Link>}
+      {!isUserLoading && <Link href={'/login?next=' + encodeURIComponent('/support' + (openTicketId ? '?ticket=' + encodeURIComponent(openTicketId) : targetSellerId ? '?seller=' + encodeURIComponent(targetSellerId) + (queryOrderId ? '&order=' + encodeURIComponent(queryOrderId) : '') : ''))} className="editorial-button mt-7">Sign in to request support</Link>}
     </main>
   </div>;
 
