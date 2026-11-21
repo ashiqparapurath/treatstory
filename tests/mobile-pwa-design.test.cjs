@@ -309,15 +309,22 @@ test('mobile product page keeps optional notes collapsed and has clear price-req
   assert.match(reviews,/md:mt-7 md:rounded-2xl md:p-7/);
 });
 
-test('mobile and desktop seller contact buttons use separate WhatsApp and TreatStory icons',()=>{
+test('mobile seller contact actions are accessible bubbles next to the seller name',()=>{
   const page=read('src/components/product-detail-client.tsx');
   const reviews=read('src/components/product-reviews.tsx');
-  assert.match(page,/space-y-4 pb-7 pt-6 md:py-0/);
-  assert.match(page,/data-testid="product-order-controls" className="flex flex-col gap-4"/);
-  assert.match(page,/aria-label="Contact seller"/);
-  assert.match(page,/grid gap-2/);
-  assert.match(page,/MessageSquareText aria-hidden="true"/);
-  assert.match(page,/<WhatsAppIcon className="h-5 w-5 shrink-0"/);
+  const start=page.indexOf('className="mt-5 md:hidden"');
+  const end=page.indexOf('className="mt-4 hidden min-h-14',start);
+  assert.ok(start>=0&&end>start,'mobile seller header exists');
+  const header=page.slice(start,end);
+  assert.match(header,/role="group" aria-label=\{'Message ' \+ sellerName\}/);
+  assert.match(header,/Chat with ' \+ sellerName \+ ' on TreatStory/);
+  assert.match(header,/Chat with ' \+ sellerName \+ ' on WhatsApp/);
+  assert.match(header,/href=\{sellerChatHref\}/);
+  assert.match(header,/href=\{whatsAppHref\}/);
+  assert.match(header,/h-11 w-11/);
+  assert.match(header,/<MessageSquareText aria-hidden="true"/);
+  assert.match(header,/<WhatsAppIcon className="h-5 w-5"/);
+  assert.match(page,/aria-label="Contact seller" className="hidden .*md:block"/);
   assert.match(page,/Chat on TreatStory/);
   assert.match(page,/Chat on WhatsApp/);
   assert.match(page,/Request a custom quote for this creation/);
@@ -325,36 +332,20 @@ test('mobile and desktop seller contact buttons use separate WhatsApp and TreatS
   assert.match(reviews,/p-5 shadow-\[0_4px_16px/);
 });
 
-test('contact actions stay visible and do not require opening a mobile dropdown',()=>{
+test('mobile header bubbles replace duplicate large contact actions',()=>{
   const detail=read('src/components/product-detail-client.tsx');
-  const start=detail.indexOf('aria-label="Contact seller"');
-  const end=detail.indexOf('Your preferences are kept with your selected size',start);
-  assert.ok(start>0 && end>start,'contact panel follows purchase actions');
-  const contact=detail.slice(start,end);
-  assert.match(contact,/Chat on TreatStory/);
-  assert.match(contact,/Chat on WhatsApp/);
-  assert.match(contact,/min-h-12 min-w-0 items-center justify-center/);
-  assert.doesNotMatch(contact,/<details|<summary/);
-  assert.match(contact,/sm:grid-cols-2/);
+  const headerStart=detail.indexOf('className="mt-5 md:hidden"');
+  const headerEnd=detail.indexOf('className="mt-4 hidden min-h-14',headerStart);
+  const header=detail.slice(headerStart,headerEnd);
+  assert.match(header,/Chat with ' \+ sellerName \+ ' on TreatStory/);
+  assert.match(header,/Chat with ' \+ sellerName \+ ' on WhatsApp/);
+  assert.match(header,/flex shrink-0 items-center gap-2/);
+  assert.match(detail,/aria-label="Contact seller" className="hidden/);
+  assert.match(detail,/data-testid="product-order-controls" className="flex flex-col gap-4"/);
+  assert.match(detail,/ref=\{purchaseControls\} id="purchase-actions"/);
+  assert.match(detail,/onClick=\{buyNow\}/);
+  assert.match(detail,/onClick=\{\(\) => void addCurrent\(\)\}/);
 });
-
-test('mobile seller header has WhatsApp shortcut while review and purchase layout remain intact',()=>{
-  const detail=read('src/components/product-detail-client.tsx');
-  const start=detail.indexOf('className="mt-5 md:hidden"');
-  const end=detail.indexOf('className="mt-4 hidden min-h-14',start);
-  assert.ok(start>=0 && end>start,'seller profile row exists');
-  const sellerRow=detail.slice(start,end);
-  assert.match(sellerRow,/aria-label=\{'Message ' \+ sellerName \+ ' on WhatsApp'\}/);
-  assert.equal((sellerRow.match(/href=\{'https:\/\/wa\.me\/'/g)||[]).length,1);
-  assert.match(sellerRow,/<WhatsAppIcon className="h-5 w-5"/);
-  assert.doesNotMatch(sellerRow,/href=\{'tel:\+'|aria-label=\{'Call '/);
-  assert.match(detail,/px-4 pt-2 md:col-span-2 md:px-0 md:pt-0/);
-  assert.match(detail,/aria-label="Contact seller"/);
-  const controls=detail.slice(detail.indexOf('data-testid="product-order-controls"'),detail.indexOf('<ProductReviews productId='));
-  assert.ok(controls.indexOf('Add a note') < controls.indexOf('id="purchase-actions"'));
-  assert.ok(controls.indexOf('id="purchase-actions"') < controls.indexOf('aria-label="Contact seller"'));
-});
-
 
 test('Explore offers working Category, Price, Availability and Sort controls for both product sources',()=>{
   const page=read('src/app/products/page.tsx');
