@@ -58,13 +58,32 @@ test('WhatsApp action uses its brand icon; TreatStory messaging uses regular cha
   assert.doesNotMatch(detail, /MessageCircle/);
 });
 
-test('price requests preserve their selected seller and product through login', () => {
+test('mobile chat icons stay beside seller and desktop contact card is not duplicated', () => {
+  const detail = read('src/components/product-detail-client.tsx');
+  const start = detail.indexOf('className="mt-5 md:hidden"');
+  const end = detail.indexOf('className="mt-4 hidden min-h-14', start);
+  assert.ok(start >= 0 && end > start);
+  const header = detail.slice(start, end);
+  assert.match(header, /role="group" aria-label=\{'Message ' \+ sellerName\}/);
+  assert.match(header, /<MessageSquareText aria-hidden="true"/);
+  assert.match(header, /<WhatsAppIcon className="h-5 w-5"/);
+  assert.match(detail, /aria-label="Contact seller" className="hidden .*md:block"/);
+});
+
+test('hidden-price quote links preserve seller, product and selected size', () => {
   const custom = read('src/app/custom-orders/page.tsx');
   const detail = read('src/components/product-detail-client.tsx');
   assert.match(custom, /'\/login\?next='/);
   assert.match(custom, /encodeURIComponent\(sellerId\)/);
   assert.match(custom, /encodeURIComponent\(productId\)/);
+  assert.match(custom, /requestedSize \? '&size='/);
   assert.match(detail, /\/custom-orders\?seller=/);
+  assert.match(detail, /\(askPrice \? '&mode=price' : ''\)/);
+  assert.match(detail, /selectedWeight \? '&size='/);
+  assert.match(custom, /priceRequestDescription\(linkedProduct, requestedSize\)/);
+  assert.match(custom, /setDescription\(current => !current.trim\(\) \|\| current === autoDescription.current/);
+  assert.match(custom, /Selected product details/);
+  assert.match(custom, /required=\{!priceOnRequest\}/);
 });
 
 test('seller product delivery fee is respected in custom quote totals', () => {
