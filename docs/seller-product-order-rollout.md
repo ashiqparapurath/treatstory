@@ -57,3 +57,18 @@ When a buyer checks out with several products from **one seller**, TreatStory ap
 The field is optional on the product schema; old records keep their store-wide fallback. Editing an existing product and clearing the override removes the field rather than silently preserving the last custom charge.
 
 Deployment note: **Firestore security rules must be deployed** to permit the new `deliveryCharge` product field for any browser-side Firestore writes. The API uses server-owned writes, but the new rules provide coherent validation for direct authorized legacy writes too. The existing `firebase-rollout.yml` workflow deploys production rules/indexes separately from the Next.js/Vercel application.
+
+
+## Seller contact bubbles and market-price quotation prefill
+
+On **mobile product details**, website chat and WhatsApp are accessible as two clearly labeled, 44px round icon actions immediately beside the seller name. The longer **Contact seller** card is desktop-only to avoid duplicate controls on small screens. Website chat opens the seller's own TreatStory support thread; WhatsApp opens the seller's WhatsApp contact externally when available. The site and WhatsApp buttons have different icons and accessible labels.
+
+For hidden-price products, **Request current price / Ask for price** navigates to `/custom-orders?seller=<sellerId>&product=<productId>&mode=price`, including the selected size where applicable. The quotation form:
+- Automatically selects the seller and linked published product.
+- Prefills **Occasion: Price enquiry** and an editable description containing verified product name, category, selected variant size, optional SKU and listing description.
+- Only accepts size details that match the product's own configured size options; unrecognized URL-supplied sizes are ignored.
+- Makes a buyer's approximate budget **optional** for price-on-request listings; a blank budget is stored as zero using the existing quote schema and displayed to buyer/seller as **Budget not specified**.
+- Still requires the buyer to select a preferred fulfillment date and explicitly submit the request. No quote price is invented or charged automatically.
+- Preserves seller, product and size through sign-in; it does not overwrite already edited text when product data arrives.
+
+The seller reviews the submitted request and sends a confirmed quote using the existing custom-order workflow. Standard fixed-price products retain their normal Buy now / Add to bag actions and optional custom quote link.
