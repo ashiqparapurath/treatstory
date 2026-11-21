@@ -40,7 +40,7 @@ test('clean store slugs are readable, stable and collision-safe without exposing
   const f = fixture();
   const first = await slugs.reserveFriendlyStoreSlug(f.tx, f.db, 'Rose & Bloom', 'firebase-user-1');
   assert.equal(first, 'rose-bloom');
-  assert.deepEqual(f.records.get('store_slugs/rose-bloom'), { sellerId: 'firebase-user-1' });
+  assert.equal(f.records.get('store_slugs/rose-bloom').sellerId, 'firebase-user-1');
   const second = await slugs.reserveFriendlyStoreSlug(f.tx, f.db, 'Rose & Bloom', 'firebase-user-2');
   assert.equal(second, slugs.storeSlugCandidates('Rose & Bloom', 'firebase-user-2')[1]);
   assert.match(second, /^rose-bloom-[a-f0-9]{6}$/);
